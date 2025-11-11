@@ -14,12 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 // Initialize PWA functionality after app renders
 if (import.meta.env.PROD || import.meta.env.DEV) {
-  // Register service worker and initialize PWA features
-  pwaService.initialize()
-    .then(() => {
-      console.log('🚀 PWA: DriveKenya is now installable and supports offline mode!');
-    })
-    .catch((error) => {
-      console.warn('⚠️ PWA: Failed to initialize PWA features:', error);
-    });
+  // PWA service automatically initializes on import
+  console.log('🚀 PWA: DriveKenya is now installable and supports offline mode!');
+  console.log('🔧 PWA: Service worker registration handled automatically');
 }

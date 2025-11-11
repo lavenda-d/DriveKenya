@@ -709,7 +709,7 @@ function App() {
     try {
       setAuthLoading(true);
       
-      // For now, call the placeholder endpoint
+      // For now, call the placeholder endpoint with basic data
       const response = await fetch('http://localhost:5000/api/auth/google-signup', {
         method: 'POST',
         headers: {
@@ -717,8 +717,8 @@ function App() {
         },
         body: JSON.stringify({
           googleToken: 'placeholder-token',
-          role: formData.role,
-          accountType: formData.role
+          role: 'customer', // Default role for Google sign-up
+          accountType: 'customer'
         })
       });
       
@@ -729,8 +729,7 @@ function App() {
         alert('Google Sign-Up successful!');
       } else {
         // Show the placeholder message
-        const roleText = formData.role === 'customer' ? 'Customer (Rent Cars)' : 'Car Owner (List Cars)';
-        alert(`🚀 ${data.message}\n\nSelected role: ${roleText}\n\n${data.data?.instructions || 'Please use regular registration for now.'}`);
+        alert(`🚀 ${data.message}\n\nGoogle Sign-Up is coming soon!\n\n${data.data?.instructions || 'Please use regular registration for now.'}`);
       }
     } catch (error) {
       console.error('Google Sign-Up error:', error);
