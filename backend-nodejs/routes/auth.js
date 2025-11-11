@@ -82,7 +82,12 @@ router.post('/register', validateRegistration, async (req, res, next) => {
 
     // Hash password
     const saltRounds = 12;
+    console.log('🔐 Hashing password with salt rounds:', saltRounds);
     const passwordHash = await bcrypt.hash(password, saltRounds);
+    console.log('✅ Password hash created:', { 
+      length: passwordHash.length, 
+      prefix: passwordHash.substring(0, 10) 
+    });
 
     // Create user
     const result = query(
@@ -127,6 +132,7 @@ router.post('/login', validateLogin, async (req, res, next) => {
     }
 
     const { email, password } = req.body;
+    console.log('🔍 Login attempt:', { email, passwordLength: password.length });
 
     // Find user
     const result = query(
@@ -134,7 +140,10 @@ router.post('/login', validateLogin, async (req, res, next) => {
       [email]
     );
 
+    console.log('👤 User query result:', { found: result.rows.length > 0, email });
+
     if (result.rows.length === 0) {
+      console.log('❌ User not found for email:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -142,10 +151,18 @@ router.post('/login', validateLogin, async (req, res, next) => {
     }
 
     const user = result.rows[0];
+    console.log('🔐 Password comparison:', { 
+      inputLength: password.length, 
+      hashLength: user.password.length,
+      hashPrefix: user.password.substring(0, 10) 
+    });
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log('✅ Password valid:', isValidPassword);
+    
     if (!isValidPassword) {
+      console.log('❌ Password mismatch for user:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'

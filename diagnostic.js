@@ -25,6 +25,7 @@ async function checkFileSystem() {
     { name: 'frontend folder', path: path.join(__dirname, 'frontend') },
     { name: 'backend package.json', path: path.join(__dirname, 'backend-nodejs', 'package.json') },
     { name: 'backend .env file', path: path.join(__dirname, 'backend-nodejs', '.env') },
+    { name: 'frontend .env file', path: path.join(__dirname, 'frontend', '.env') },
     { name: 'backend server.js', path: path.join(__dirname, 'backend-nodejs', 'server.js') },
     { name: 'backend node_modules', path: path.join(__dirname, 'backend-nodejs', 'node_modules') },
     { name: 'frontend package.json', path: path.join(__dirname, 'frontend', 'package.json') },
@@ -37,30 +38,63 @@ async function checkFileSystem() {
       console.log(`   ✅ ${check.name}`);
     } else {
       console.log(`   ❌ ${check.name} - MISSING`);
+      if (check.name.includes('.env')) {
+        console.log(`   📁 Expected at: ${check.path}`);
+      }
       allGood = false;
     }
   }
   
-  // Check .env content
+  // Check backend .env content
   try {
-    const envPath = path.join(__dirname, 'backend-nodejs', '.env');
-    if (fs.existsSync(envPath)) {
-      const envContent = fs.readFileSync(envPath, 'utf8');
+    const backendEnvPath = path.join(__dirname, 'backend-nodejs', '.env');
+    if (fs.existsSync(backendEnvPath)) {
+      const envContent = fs.readFileSync(backendEnvPath, 'utf8');
       const hasJwtSecret = envContent.includes('JWT_SECRET=');
       const hasPort = envContent.includes('PORT=');
+      const hasNodeEnv = envContent.includes('NODE_ENV=');
       
-      console.log(`   ${hasJwtSecret ? '✅' : '❌'} .env has JWT_SECRET`);
-      console.log(`   ${hasPort ? '✅' : '❌'} .env has PORT`);
+      console.log(`   ${hasJwtSecret ? '✅' : '❌'} Backend .env has JWT_SECRET`);
+      console.log(`   ${hasPort ? '✅' : '❌'} Backend .env has PORT`);
+      console.log(`   ${hasNodeEnv ? '✅' : '❌'} Backend .env has NODE_ENV`);
       
       if (hasJwtSecret) {
         const jwtLine = envContent.split('\n').find(line => line.startsWith('JWT_SECRET='));
         const jwtValue = jwtLine?.split('=')[1]?.trim();
         console.log(`   🔑 JWT_SECRET: ${jwtValue?.slice(0, 20)}...`);
       }
+    } else {
+      console.log(`   ❌ Backend .env file missing at: ${backendEnvPath}`);
+      console.log(`   💡 Create it from: backend-nodejs/.env.example`);
+      allGood = false;
     }
   } catch (error) {
-    console.log(`   ❌ Error reading .env: ${error.message}`);
+    console.log(`   ❌ Error reading backend .env: ${error.message}`);
     allGood = false;
+  }
+  
+  // Check frontend .env content
+  try {
+    const frontendEnvPath = path.join(__dirname, 'frontend', '.env');
+    if (fs.existsSync(frontendEnvPath)) {
+      const envContent = fs.readFileSync(frontendEnvPath, 'utf8');
+      const hasApiUrl = envContent.includes('VITE_API_URL=');
+      const hasWebSocketUrl = envContent.includes('VITE_WEBSOCKET_URL=');
+      
+      console.log(`   ${hasApiUrl ? '✅' : '❌'} Frontend .env has VITE_API_URL`);
+      console.log(`   ${hasWebSocketUrl ? '✅' : '❌'} Frontend .env has VITE_WEBSOCKET_URL`);
+      
+      if (hasApiUrl) {
+        const apiLine = envContent.split('\n').find(line => line.startsWith('VITE_API_URL='));
+        const apiValue = apiLine?.split('=')[1]?.trim();
+        console.log(`   🌐 API URL: ${apiValue}`);
+      }
+    } else {
+      console.log(`   ⚠️ Frontend .env file missing (optional)`);
+      console.log(`   📁 Would be at: ${frontendEnvPath}`);
+    }
+  } catch (error) {
+    console.log(`   ❌ Error reading frontend .env: ${error.message}`);
   }
   
   console.log('');
