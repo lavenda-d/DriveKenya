@@ -125,29 +125,71 @@ async function checkDatabase() {
   }
 }
 
+async function checkEnvironmentVariables() {
+  console.log('5️⃣ Testing Environment Variables...');
+  
+  try {
+    // Test login endpoint which requires JWT_SECRET
+    const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: 'test@example.com',
+        password: 'testpass'
+      }),
+      timeout: 5000
+    });
+    
+    if (response.status === 500) {
+      console.log('   ❌ Environment Variables: MISSING');
+      console.log('   🔧 Error: .env file not found or JWT_SECRET missing');
+      console.log('   📋 Solution: Create backend-nodejs/.env file\n');
+      return false;
+    } else {
+      console.log('   ✅ Environment Variables: CONFIGURED');
+      console.log('   🔑 JWT_SECRET and other vars are loaded\n');
+      return true;
+    }
+  } catch (error) {
+    console.log('   ❌ Environment Variables: TEST FAILED');
+    console.log(`   🔧 Error: ${error.message}\n`);
+    return false;
+  }
+}
+
 function printTroubleshootingSteps() {
   console.log('🛠️ TROUBLESHOOTING STEPS:');
   console.log('========================\n');
   
-  console.log('📋 Step 1: Start Backend Server');
+  console.log('📋 Step 1: Create Environment Variables');
   console.log('   cd backend-nodejs');
+  console.log('   copy .env.example .env');
+  console.log('   # Edit .env file if needed\n');
+  
+  console.log('📋 Step 2: Install Dependencies');
   console.log('   npm install');
+  console.log('   cd ../frontend');
+  console.log('   npm install\n');
+  
+  console.log('📋 Step 3: Start Backend Server');
+  console.log('   cd backend-nodejs');
   console.log('   npm start\n');
   
-  console.log('📋 Step 2: Start Frontend Server');
+  console.log('📋 Step 4: Start Frontend Server');
   console.log('   cd frontend');
-  console.log('   npm install');
   console.log('   npm run dev\n');
   
-  console.log('📋 Step 3: Check Ports');
+  console.log('📋 Step 5: Check Ports');
   console.log('   Backend should run on: http://localhost:5000');
   console.log('   Frontend should run on: http://localhost:3000\n');
   
-  console.log('📋 Step 4: Check Console Logs');
+  console.log('📋 Step 6: Check Console Logs');
   console.log('   Backend: Look for "🚗 Nairobi Car Hire API server running"');
   console.log('   Frontend: Open browser DevTools console\n');
   
-  console.log('📋 Step 5: Test Health Check');
+  console.log('📋 Step 7: Test Health Check');
   console.log('   Visit: http://localhost:5000/health');
   console.log('   Should show: {"status":"OK","message":"Nairobi Car Hire API is running"}\n');
 }
@@ -164,18 +206,26 @@ async function runDiagnostics() {
   const googleSignUp = await checkGoogleSignUpEndpoint();
   const cors = await checkCORS();
   const database = await checkDatabase();
+  const envVars = await checkEnvironmentVariables();
   
   console.log('📊 DIAGNOSTIC SUMMARY:');
   console.log('======================');
   console.log(`Backend Server: ${backendHealth ? '✅' : '❌'}`);
   console.log(`Google Sign-Up: ${googleSignUp ? '✅' : '❌'}`);
   console.log(`CORS Config:    ${cors ? '✅' : '❌'}`);
-  console.log(`Database:       ${database ? '✅' : '❌'}\n`);
+  console.log(`Database:       ${database ? '✅' : '❌'}`);
+  console.log(`Environment:    ${envVars ? '✅' : '❌'}\n`);
   
-  if (backendHealth && googleSignUp && cors && database) {
+  if (backendHealth && googleSignUp && cors && database && envVars) {
     console.log('🎉 ALL SYSTEMS WORKING! Your collaborator should be able to use the app now.');
   } else {
     console.log('⚠️ Some issues detected. Check the steps above.');
+    
+    if (!envVars) {
+      console.log('\n🔑 CRITICAL: Missing .env file!');
+      console.log('📋 Create: backend-nodejs/.env');
+      console.log('📄 Copy from: backend-nodejs/.env.example');
+    }
   }
 }
 

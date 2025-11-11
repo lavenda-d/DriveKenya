@@ -189,8 +189,8 @@ router.get('/verify', async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const result = await query(
-      'SELECT id, name, email, phone, is_car_owner, role, is_verified FROM users WHERE id = $1',
+    const result = query(
+      'SELECT id, first_name, last_name, email, phone, role, email_verified FROM users WHERE id = ?',
       [decoded.userId]
     );
 

@@ -2,9 +2,30 @@
 
 If you're getting **"Internal Server Error"**, follow these steps:
 
-## 🔧 Quick Fix Steps
+## � QUICK SETUP (Recommended)
 
-### 1. Run the Diagnostic Tool
+### 1. Auto-Setup Script
+```bash
+cd DriveKenya
+node setup.js
+```
+This will automatically create the `.env` file and check your Node.js version!
+
+### 2. Follow the Output Instructions
+The setup script will tell you exactly what to do next.
+
+---
+
+## 🔧 Manual Fix Steps
+
+### 1. Create Environment Variables
+```bash
+cd backend-nodejs
+copy .env.example .env
+```
+**🔑 CRITICAL:** The `.env` file contains JWT secrets and is NOT in Git for security!
+
+### 2. Run the Diagnostic Tool
 ```bash
 cd car-hiring-system-for-nairobi
 node diagnostic.js
@@ -15,7 +36,7 @@ node diagnostic.js
 
 This will tell you exactly what's wrong!
 
-### 2. If Backend Server is NOT Running:
+### 3. If Backend Server is NOT Running:
 ```bash
 cd backend-nodejs
 npm install
@@ -41,8 +62,14 @@ Visit these URLs:
 ## 🐛 Common Issues & Solutions
 
 ### ❌ "Internal Server Error" 
-**Cause:** Backend server not running
-**Fix:** Start backend with `npm start` in `backend-nodejs/` folder
+**Cause:** Backend server not running OR missing .env file
+**Fix:** 
+1. Create `.env` file: `copy backend-nodejs/.env.example backend-nodejs/.env`
+2. Start backend: `npm start` in `backend-nodejs/` folder
+
+### ❌ "JWT Error" / "500 Error on Login"
+**Cause:** Missing `.env` file with JWT_SECRET
+**Fix:** Copy `.env.example` to `.env` in `backend-nodejs/` folder
 
 ### ❌ "Network Error" / "CORS Error"
 **Cause:** Backend running on wrong port or CORS issues  
