@@ -17,8 +17,5 @@
   "bugs": {
     "url": "https://github.com/lavenda-d/DriveKenya/issues"
   },
-  "homepage": "https://github.com/lavenda-d/DriveKenya#readme",
-  "dependencies": {
-    "node-fetch": "^3.3.2"
-  }
+  "homepage": "https://github.com/lavenda-d/DriveKenya#readme"
 }

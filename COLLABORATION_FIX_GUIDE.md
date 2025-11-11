@@ -10,6 +10,9 @@ cd car-hiring-system-for-nairobi
 node diagnostic.js
 ```
 
+**Requirements:** Node.js 18+ (uses built-in fetch)
+**Check version:** `node --version`
+
 This will tell you exactly what's wrong!
 
 ### 2. If Backend Server is NOT Running:

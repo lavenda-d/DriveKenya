@@ -2,7 +2,8 @@
 // Collaboration Diagnostic Script
 // Run this to debug server connection issues
 
-import fetch from 'node-fetch';
+// Use Node.js built-in fetch (available in Node.js 18+)
+// No external dependencies required!
 
 console.log('🔍 DriveKenya Collaboration Diagnostic Tool');
 console.log('===========================================\n');
@@ -181,6 +182,6 @@ async function runDiagnostics() {
 // Run diagnostics
 runDiagnostics().catch(error => {
   console.error('❌ Diagnostic failed:', error.message);
-  console.log('\n🔧 Make sure you have node-fetch installed:');
-  console.log('   npm install node-fetch');
+  console.log('\n🔧 Make sure you have Node.js 18+ installed for built-in fetch support');
+  console.log('   Check your Node.js version: node --version');
 });
