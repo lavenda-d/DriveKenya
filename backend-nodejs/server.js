@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createServer } from 'http';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -16,10 +17,14 @@ import reviewRoutes from './routes/reviews.js';
 import messageRoutes from './routes/messages.js';
 import contactRoutes from './routes/contact.js';
 import paymentRoutes from './routes/payments.js';
+import notificationRoutes from './routes/notifications.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 import { authenticateToken } from './middleware/auth.js';
+
+// Import WebSocket service
+import { initializeSocket } from './services/socketService.js';
 
 // Load environment variables
 dotenv.config();
@@ -28,29 +33,80 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+
+// Universal CORS middleware - MUST be the ABSOLUTE FIRST middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log(`🌍 CORS: ${req.method} ${req.path} from origin: ${origin || 'no origin'}`);
+  
+  // Allow all origins for development
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH,HEAD');
+  res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization,Cache-Control,X-HTTP-Method-Override');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log(`🔍 Handling OPTIONS preflight for ${req.path}`);
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
+const server = createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// Security middleware
-app.use(helmet());
+// Initialize WebSocket
+const io = initializeSocket(server);
+
+// Test CORS endpoint - should be accessible
+app.get('/api/test-cors', (req, res) => {
+  console.log('🧪 Test CORS endpoint hit');
+  res.json({ success: true, message: 'CORS is working!', origin: req.headers.origin });
+});
+
+// Security middleware with CORS-friendly configuration
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false
+}));
 app.use(compression());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS), // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
-});
-app.use(limiter);
+// Rate limiting - DISABLED for development to prevent 429 errors
+// const limiter = rateLimit({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000, // 15 minutes
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS), // limit each IP to 100 requests per windowMs
+//   message: 'Too many requests from this IP, please try again later.',
+// });
+// app.use(limiter);
 
-// CORS configuration
-app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:3001',
-    process.env.FRONTEND_URL
-  ].filter(Boolean),
+console.log('⚠️ Rate limiting disabled for development');
+
+// Enhanced CORS configuration is now handled by universal middleware above
+// This is kept for reference but not needed
+const corsOptions = {
+  origin: function (origin, callback) {
+    callback(null, true); // Allow all origins in development
+  },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Cache-Control',
+    'X-HTTP-Method-Override'
+  ],
+  exposedHeaders: ['Authorization'],
+  maxAge: 86400,
+  preflightContinue: false,
+  optionsSuccessStatus: 200
+};
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -163,6 +219,15 @@ app.put('/api/bookings/:id/cancel', authenticateToken, async (req, res) => {
       message: error.message 
     });
   }
+});
+
+// OPTIONS handler for booking create route
+app.options('/api/bookings/create', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || 'http://localhost:3000');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
 });
 
 // Create booking endpoint - WORKING VERSION
@@ -493,7 +558,12 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
 app.get('/api/cars-simple', async (req, res) => {
   try {
     const { query } = await import('./config/database-sqlite.js');
-    const result = query('SELECT * FROM cars WHERE available = 1 ORDER BY created_at DESC');
+    const result = query(`
+      SELECT * FROM cars
+      WHERE available = 1 
+      ORDER BY created_at DESC
+    `);
+    
     const cars = result.rows.map(car => ({
       id: car.id,
       make: car.make,
@@ -505,7 +575,12 @@ app.get('/api/cars-simple', async (req, res) => {
       description: car.description,
       features: JSON.parse(car.features || '[]'),
       images: JSON.parse(car.images || '[]'),
-      available: car.available === 1
+      available: car.available === 1,
+      host_id: car.host_id, // Include host_id for chat functionality
+      owner_name: car.owner_name, // Owner name from cars table
+      owner_email: car.owner_email, // Owner email from cars table
+      owner_phone: car.owner_phone, // Owner phone from cars table
+      name: `${car.make} ${car.model}` // Add name property for chat modal
     }));
     
     res.json({
@@ -523,6 +598,55 @@ app.get('/api/cars-simple', async (req, res) => {
   }
 });
 
+// Get chat notification counts for authenticated user
+app.get('/api/chat/notifications', authenticateToken, async (req, res) => {
+  try {
+    const { query } = await import('./config/database-sqlite.js');
+    
+    // Get total unread count across all chat rooms for this user
+    const result = query(`
+      SELECT 
+        SUM(unread_count) as total_unread,
+        COUNT(*) as chat_rooms_with_messages
+      FROM chat_notifications 
+      WHERE user_id = ? AND unread_count > 0
+    `, [req.user.id]);
+
+    const notificationData = result.rows[0] || { total_unread: 0, chat_rooms_with_messages: 0 };
+
+    // Get detailed breakdown by chat room
+    const roomBreakdown = query(`
+      SELECT 
+        cn.chat_room,
+        cn.unread_count,
+        cn.last_updated,
+        cm.message as last_message,
+        u.first_name || ' ' || u.last_name as sender_name
+      FROM chat_notifications cn
+      LEFT JOIN chat_messages cm ON cn.last_message_id = cm.id
+      LEFT JOIN users u ON cm.sender_id = u.id
+      WHERE cn.user_id = ? AND cn.unread_count > 0
+      ORDER BY cn.last_updated DESC
+    `, [req.user.id]);
+
+    res.json({
+      success: true,
+      data: {
+        total_unread: notificationData.total_unread || 0,
+        chat_rooms_with_messages: notificationData.chat_rooms_with_messages || 0,
+        chat_rooms: roomBreakdown.rows
+      }
+    });
+
+  } catch (error) {
+    console.error('Notifications error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch notifications'
+    });
+  }
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
@@ -534,6 +658,7 @@ app.use('/api/contact', contactRoutes);
 // Message endpoints - require authentication  
 app.use('/api/messages', authenticateToken, messageRoutes);
 app.use('/api/payments', authenticateToken, paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Test booking endpoint (public, no auth for testing)
 app.get('/api/bookings/test', (req, res) => {
@@ -556,9 +681,10 @@ app.use('*', (req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
+// Start server with WebSocket support
+server.listen(PORT, () => {
   console.log(`🚗 Nairobi Car Hire API server running on port ${PORT}`);
+  console.log(`🔌 WebSocket server initialized for real-time chat`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
 });

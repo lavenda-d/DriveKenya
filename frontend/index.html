@@ -1,11 +1,130 @@
+<!DOCTYPE html>
 <html lang='en'>
     <head>
         <meta charset='UTF-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+        
+        <!-- SEO and Meta Tags -->
         <title>DriveKenya - Premium Car Rental Platform</title>
+        <meta name='description' content='Rent premium cars in Nairobi with DriveKenya. Real-time booking, chat support, and seamless experience. Available 24/7.' />
+        <meta name='keywords' content='car rental, nairobi, kenya, vehicle hire, car booking, transportation' />
+        <meta name='author' content='DriveKenya' />
+        
+        <!-- Open Graph Meta Tags -->
+        <meta property='og:title' content='DriveKenya - Premium Car Rental Platform' />
+        <meta property='og:description' content='Rent premium cars in Nairobi with real-time booking and chat support' />
+        <meta property='og:type' content='website' />
+        <meta property='og:url' content='https://driveKenya.com' />
+        <meta property='og:image' content='/icons/icon-512x512.png' />
+        
+        <!-- Twitter Card Meta Tags -->
+        <meta name='twitter:card' content='summary_large_image' />
+        <meta name='twitter:title' content='DriveKenya - Premium Car Rental Platform' />
+        <meta name='twitter:description' content='Rent premium cars in Nairobi with real-time booking and chat support' />
+        <meta name='twitter:image' content='/icons/icon-512x512.png' />
+        
+        <!-- PWA Manifest -->
+        <link rel='manifest' href='/manifest.json' />
+        
+        <!-- PWA Meta Tags -->
+        <meta name='theme-color' content='#3b82f6' />
+        <meta name='background-color' content='#0f172a' />
+        <meta name='display' content='standalone' />
+        <meta name='orientation' content='portrait-primary' />
+        
+        <!-- Apple PWA Support -->
+        <meta name='apple-mobile-web-app-capable' content='yes' />
+        <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
+        <meta name='apple-mobile-web-app-title' content='DriveKenya' />
+        <link rel='apple-touch-icon' href='/icons/icon-192x192.png' />
+        <link rel='apple-touch-icon' sizes='152x152' href='/icons/icon-152x152.png' />
+        <link rel='apple-touch-icon' sizes='180x180' href='/icons/icon-192x192.png' />
+        <link rel='apple-touch-icon' sizes='167x167' href='/icons/icon-192x192.png' />
+        
+        <!-- Microsoft PWA Support -->
+        <meta name='msapplication-TileImage' content='/icons/icon-144x144.png' />
+        <meta name='msapplication-TileColor' content='#3b82f6' />
+        <meta name='msapplication-config' content='/browserconfig.xml' />
+        
+        <!-- Favicon -->
+        <link rel='icon' type='image/svg+xml' href='/favicon.svg' />
+        <link rel='icon' type='image/png' href='/favicon.png' />
+        <link rel='shortcut icon' href='/favicon.ico' />
+        
+        <!-- Preload Critical Resources -->
+        <link rel='preload' href='/src/main.tsx' as='script' />
+        <link rel='preload' href='/src/index.css' as='style' />
+        
+        <!-- DNS Prefetch for External Resources -->
+        <link rel='dns-prefetch' href='//fonts.googleapis.com' />
+        <link rel='dns-prefetch' href='//fonts.gstatic.com' />
+        
+        <!-- Security Headers -->
+        <meta http-equiv='X-Content-Type-Options' content='nosniff' />
+        <meta http-equiv='X-Frame-Options' content='DENY' />
+        <meta http-equiv='X-XSS-Protection' content='1; mode=block' />
+        
+        <!-- Service Worker Registration -->
+        <script>
+            // Register service worker
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then((registration) => {
+                            console.log('🚀 PWA: Service Worker registered successfully');
+                        })
+                        .catch((error) => {
+                            console.error('❌ PWA: Service Worker registration failed:', error);
+                        });
+                });
+            }
+            
+            // Prevent zoom on iOS Safari
+            document.addEventListener('gesturestart', function (e) {
+                e.preventDefault();
+            });
+            
+            // Handle PWA install prompt
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                // Show install button or banner
+                window.dispatchEvent(new CustomEvent('pwa-install-available'));
+            });
+        </script>
     </head>
     <body>
         <div id='root'></div>
         <script type='module' src='/src/main.tsx'></script>
+        
+        <!-- PWA Install Banner Styles -->
+        <style>
+            /* Prevent selection on mobile */
+            body {
+                -webkit-user-select: none;
+                -webkit-touch-callout: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            /* PWA splash screen simulation */
+            .pwa-splash {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+            }
+            
+            .pwa-splash.hide {
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+        </style>
     </body>
 </html>

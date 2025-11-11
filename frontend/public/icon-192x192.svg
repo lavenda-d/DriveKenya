@@ -1,0 +1,6 @@
+<!-- SVG icon for DriveKenya PWA -->
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+    <rect width="192" height="192" fill="#3b82f6" rx="32"/>
+    <text x="96" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="80" fill="white">🚗</text>
+    <text x="96" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white" font-weight="bold">DriveKenya</text>
+</svg>

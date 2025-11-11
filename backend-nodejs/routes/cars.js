@@ -28,9 +28,8 @@ router.get('/', async (req, res, next) => {
     } = req.query;
 
     let queryText = `
-      SELECT c.*, u.first_name || ' ' || u.last_name as owner_name, u.phone as owner_phone
+      SELECT c.*
       FROM cars c
-      JOIN users u ON c.host_id = u.id
       WHERE c.available = true
     `;
     
@@ -421,6 +420,45 @@ router.get('/my/cars', authenticateToken, async (req, res, next) => {
     res.json({
       success: true,
       data: { cars: result.rows }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get cars owned by the authenticated user
+router.get('/my-cars', authenticateToken, requireVerified, async (req, res, next) => {
+  try {
+    const result = query(
+      'SELECT * FROM cars WHERE host_id = ? ORDER BY created_at DESC',
+      [req.user.id]
+    );
+
+    const cars = result.rows.map(car => ({
+      id: car.id,
+      make: car.make,
+      model: car.model,
+      year: car.year,
+      color: car.color,
+      price_per_day: car.price_per_day,
+      location: car.location,
+      description: car.description,
+      features: JSON.parse(car.features || '[]'),
+      images: JSON.parse(car.images || '[]'),
+      available: car.available === 1,
+      license_plate: car.license_plate,
+      owner_name: car.owner_name,
+      owner_email: car.owner_email,
+      owner_phone: car.owner_phone,
+      created_at: car.created_at,
+      updated_at: car.updated_at
+    }));
+
+    res.json({
+      success: true,
+      message: `Found ${cars.length} cars`,
+      data: { cars }
     });
 
   } catch (error) {

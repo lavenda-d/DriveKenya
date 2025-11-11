@@ -29,9 +29,13 @@ const validateRegistration = [
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long'),
   body('phone')
-    .optional()
+    .optional({ checkFalsy: true })
     .isMobilePhone()
-    .withMessage('Valid phone number is required'),
+    .withMessage('Phone number must be valid if provided'),
+  body('role')
+    .optional()
+    .isIn(['customer', 'owner', 'host'])
+    .withMessage('Role must be either customer, owner, or host'),
 ];
 
 const validateLogin = [
@@ -56,7 +60,12 @@ router.post('/register', validateRegistration, async (req, res, next) => {
       });
     }
 
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, role, accountType } = req.body;
+    
+    // Determine the user role (prioritize 'role', then 'accountType', default to 'customer')
+    const userRole = role || accountType || 'customer';
+    // Map 'owner' to 'host' for consistency with existing database
+    const finalRole = userRole === 'owner' ? 'host' : userRole;
 
     // Check if user already exists
     const existingUser = query(
@@ -77,23 +86,24 @@ router.post('/register', validateRegistration, async (req, res, next) => {
 
     // Create user
     const result = query(
-      `INSERT INTO users (first_name, last_name, email, password, phone)
-       VALUES (?, ?, ?, ?, ?)`,
-      [name.split(' ')[0] || name, name.split(' ').slice(1).join(' ') || '', email, passwordHash, phone || '']
+      `INSERT INTO users (first_name, last_name, email, password, phone, role)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [name.split(' ')[0] || name, name.split(' ').slice(1).join(' ') || '', email, passwordHash, phone || '', finalRole]
     );
 
     const token = generateToken(result.insertId);
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: `${finalRole === 'host' ? 'Car owner' : 'Customer'} registered successfully`,
       data: {
         user: {
           id: result.insertId,
           name: name,
           email: email,
           phone: phone || '',
-          role: 'customer'
+          role: finalRole,
+          accountType: finalRole
         },
         token
       }
@@ -215,6 +225,28 @@ router.get('/verify', async (req, res, next) => {
         message: 'Invalid or expired token'
       });
     }
+    next(error);
+  }
+});
+
+// Google Sign-Up endpoint (placeholder for future OAuth integration)
+router.post('/google-signup', async (req, res, next) => {
+  try {
+    const { googleToken, role, accountType } = req.body;
+    
+    // TODO: Verify Google token with Google OAuth API
+    // For now, return a placeholder response
+    res.status(200).json({
+      success: false,
+      message: 'Google Sign-Up is coming soon! Please use regular registration for now.',
+      data: {
+        isPlaceholder: true,
+        selectedRole: role || accountType || 'customer',
+        instructions: 'This feature will be implemented with Google OAuth 2.0 integration.'
+      }
+    });
+
+  } catch (error) {
     next(error);
   }
 });

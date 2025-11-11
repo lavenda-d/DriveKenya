@@ -32,11 +32,14 @@ const createTables = () => {
     )
   `);
 
-  // Cars table
+  // Cars table with owner information
   db.exec(`
     CREATE TABLE IF NOT EXISTS cars (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       host_id INTEGER NOT NULL,
+      owner_name TEXT NOT NULL,
+      owner_email TEXT NOT NULL,
+      owner_phone TEXT,
       make TEXT NOT NULL,
       model TEXT NOT NULL,
       year INTEGER NOT NULL,
@@ -102,6 +105,20 @@ const createTables = () => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Chat messages table for real-time chat
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_room TEXT NOT NULL,
+      sender_id INTEGER NOT NULL,
+      message TEXT NOT NULL,
+      message_type TEXT DEFAULT 'text' CHECK(message_type IN ('text', 'image', 'file')),
+      read_status BOOLEAN DEFAULT FALSE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 

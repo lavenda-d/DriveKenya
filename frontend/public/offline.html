@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveKenya - Offline</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    
+    .offline-container {
+      max-width: 500px;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+    }
+    
+    .offline-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+      background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 24px;
+      opacity: 0.9;
+      line-height: 1.6;
+    }
+    
+    .retry-btn {
+      background: linear-gradient(45deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 10px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .retry-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .features {
+      margin-top: 30px;
+      text-align: left;
+    }
+    
+    .feature {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+    
+    .feature-icon {
+      margin-right: 12px;
+      font-size: 1.2rem;
+    }
+    
+    .cached-indicator {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(46, 204, 113, 0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(46, 204, 113, 0.3);
+      font-size: 0.8rem;
+    }
+    
+    @media (max-width: 600px) {
+      .offline-container {
+        margin: 20px;
+        padding: 30px 20px;
+      }
+      
+      .offline-icon {
+        font-size: 60px;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+      
+      .cached-indicator {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin-bottom: 20px;
+        display: inline-block;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="cached-indicator">
+    📱 PWA Mode Active
+  </div>
+  
+  <div class="offline-container">
+    <div class="offline-icon">🛜</div>
+    <h1>You're Offline</h1>
+    <p>Don't worry! DriveKenya works offline too. You can still browse cached cars and access your saved data.</p>
+    
+    <button class="retry-btn" onclick="window.location.reload()">
+      🔄 Try Again
+    </button>
+    
+    <button class="retry-btn" onclick="goHome()">
+      🏠 Go Home
+    </button>
+    
+    <div class="features">
+      <div class="feature">
+        <span class="feature-icon">📱</span>
+        <span>Cached car listings available</span>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">💾</span>
+        <span>Your data is saved locally</span>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🔄</span>
+        <span>Will sync when back online</span>
+      </div>
+      <div class="feature">
+        <span class="feature-icon">🔔</span>
+        <span>Offline actions will be queued</span>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    function goHome() {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        // If service worker is active, navigate to app shell
+        window.location.href = '/';
+      } else {
+        // Fallback
+        window.location.reload();
+      }
+    }
+    
+    // Check for connection periodically
+    let connectionCheckInterval;
+    
+    function checkConnection() {
+      if (navigator.onLine) {
+        clearInterval(connectionCheckInterval);
+        showConnectionRestored();
+      }
+    }
+    
+    function showConnectionRestored() {
+      const container = document.querySelector('.offline-container');
+      container.innerHTML = `
+        <div class="offline-icon">✅</div>
+        <h1>Back Online!</h1>
+        <p>Your connection has been restored. Redirecting to DriveKenya...</p>
+      `;
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    }
+    
+    // Start checking connection
+    connectionCheckInterval = setInterval(checkConnection, 3000);
+    
+    // Listen for online event
+    window.addEventListener('online', showConnectionRestored);
+    
+    // Auto-retry when back online
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'CACHE_UPDATED') {
+          showConnectionRestored();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

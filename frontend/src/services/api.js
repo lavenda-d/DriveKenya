@@ -262,6 +262,15 @@ export const authStorage = {
   clearAuth: () => {
     localStorage.removeItem('driveKenya_token');
     localStorage.removeItem('driveKenya_user');
+    // Clear any old token storage keys to prevent conflicts
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
+  
+  // Function to clear all auth data and force fresh login
+  clearAllAuthData: () => {
+    authStorage.clearAuth();
+    console.log('🗑️ Cleared all authentication data - please login again');
   }
 };
 

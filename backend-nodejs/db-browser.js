@@ -41,6 +41,9 @@ const htmlTemplate = (title, content) => `
             <a href="/rentals">Rentals</a>
             <a href="/reviews">Reviews</a>
             <a href="/messages">Messages</a>
+            <a href="/notifications">Notifications</a>
+            <a href="/chat_messages">Chat Messages</a>
+            <a href="/chat_notifications">Chat Notifications</a>
         </div>
         ${content}
     </div>
@@ -58,7 +61,10 @@ app.get('/', (req, res) => {
         'SELECT COUNT(*) as count FROM cars',
         'SELECT COUNT(*) as count FROM rentals',
         'SELECT COUNT(*) as count FROM reviews',
-        'SELECT COUNT(*) as count FROM messages'
+        'SELECT COUNT(*) as count FROM messages',
+        'SELECT COUNT(*) as count FROM notifications',
+        'SELECT COUNT(*) as count FROM chat_messages',
+        'SELECT COUNT(*) as count FROM chat_notifications'
     ];
     
     Promise.all(queries.map(query => 
@@ -77,6 +83,9 @@ app.get('/', (req, res) => {
             <p><strong>📋 Rentals:</strong> ${counts[2]} bookings</p>
             <p><strong>⭐ Reviews:</strong> ${counts[3]} reviews</p>
             <p><strong>💬 Messages:</strong> ${counts[4]} messages</p>
+            <p><strong>🔔 Notifications:</strong> ${counts[5]} notifications</p>
+            <p><strong>💬 Chat Messages:</strong> ${counts[6]} chat messages</p>
+            <p><strong>🔔 Chat Notifications:</strong> ${counts[7]} chat notifications</p>
         </div>
         <p>Click on the navigation links above to view detailed data for each table.</p>
         `;
@@ -122,6 +131,9 @@ app.get('/cars', viewTable('cars'));
 app.get('/rentals', viewTable('rentals'));
 app.get('/reviews', viewTable('reviews'));
 app.get('/messages', viewTable('messages'));
+app.get('/notifications', viewTable('notifications'));
+app.get('/chat_messages', viewTable('chat_messages'));
+app.get('/chat_notifications', viewTable('chat_notifications'));
 
 app.listen(port, () => {
     console.log(`🌐 Database Browser running at http://localhost:${port}`);

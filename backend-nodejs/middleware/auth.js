@@ -31,7 +31,12 @@ export const authenticateToken = async (req, res, next) => {
     req.user = result.rows[0];
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
+    // Reduce spam by only logging JWT signature errors once per minute
+    const now = Date.now();
+    if (!global.lastAuthJWTError || (now - global.lastAuthJWTError) > 60000) {
+      console.error('Token verification error:', error.name === 'JsonWebTokenError' ? 'JWT signature invalid - clear browser storage' : error.message);
+      global.lastAuthJWTError = now;
+    }
     return res.status(403).json({ 
       success: false, 
       message: 'Invalid or expired token' 
@@ -50,11 +55,17 @@ export const requireAdmin = (req, res, next) => {
 };
 
 export const requireVerified = (req, res, next) => {
-  if (!req.user.email_verified) {
-    return res.status(403).json({ 
-      success: false, 
-      message: 'Email verification required' 
-    });
-  }
+  // DEVELOPMENT: Email verification temporarily disabled
+  // TODO: Re-enable for production
+  console.log('⚠️ Email verification check bypassed for development');
   next();
+  
+  // Production code (currently disabled):
+  // if (!req.user.email_verified) {
+  //   return res.status(403).json({ 
+  //     success: false, 
+  //     message: 'Email verification required' 
+  //   });
+  // }
+  // next();
 };

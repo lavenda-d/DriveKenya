@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://driveKenya.com/sitemap.xml
+
+# Block admin and sensitive areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login/
+Disallow: /register/
+
+# Allow main pages
+Allow: /
+Allow: /cars/
+Allow: /about/
+Allow: /contact/
+Allow: /booking/
