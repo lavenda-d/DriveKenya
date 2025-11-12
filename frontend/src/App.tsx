@@ -1,52 +1,127 @@
 import { useState, useEffect } from 'react';
-import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api.js';
-import ChatModal from './components/ChatModal.jsx';
-import NotificationBadge from './components/NotificationBadge.jsx';
-import NotificationCenter from './components/NotificationCenter.jsx';
-import ToastNotification from './components/ToastNotification.jsx';
-import PWAInstallPrompt from './components/PWAInstallPrompt.jsx';
-import PWAStatus from './components/PWAStatus.jsx';
-import BookingFlow from './components/BookingFlow.jsx';
-import CustomerChatSelector from './components/CustomerChatSelector.jsx';
-import GoogleMapEnhanced from './components/GoogleMapEnhanced.jsx';
-import { chatService } from './services/chatService.js';
-import { notificationService } from './services/notificationService.js';
-import { pwaService } from './services/pwaService.js';
+import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
+import ChatModal from './components/ChatModal';
+import NotificationBadge from './components/NotificationBadge';
+import NotificationCenter from './components/NotificationCenter';
+import ToastNotification from './components/ToastNotification';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import PWAStatus from './components/PWAStatus';
+import BookingFlow from './components/BookingFlow';
+import CustomerChatSelector from './components/CustomerChatSelector';
+import GoogleMapEnhanced from './components/GoogleMapEnhanced';
+import { chatService } from './services/chatService';
+import { notificationService } from './services/notificationService';
+import { pwaService } from './services/pwaService';
 
-function App() {
+// Type definitions
+interface Car {
+  id: string;
+  name: string;
+  make: string;
+  model: string;
+  category: string;
+  price_per_day: number;
+  location: string;
+  rating?: number;
+  specs?: {
+    transmission?: string;
+    fuelType?: string;
+  };
+  features?: string[];
+  amenities?: string[];
+  [key: string]: any;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+  [key: string]: any;
+}
+
+interface AuthToken {
+  token: string;
+  expiresIn: number;
+}
+
+interface Notification {
+  id: string;
+  message: string;
+  type: string;
+  read: boolean;
+  createdAt: string;
+}
+
+interface Booking {
+  id: string;
+  car: Car;
+  user: User;
+  startDate: string;
+  endDate: string;
+  status: string;
+  totalPrice: number;
+}
+
+const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
-  const [selectedCar, setSelectedCar] = useState(null);
+  const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [priceRange, setPriceRange] = useState([0, 15000]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'map'
-  
+  // Advanced filters state
+  const [transmission, setTransmission] = useState('all');
+  const [fuelType, setFuelType] = useState('all');
+  const [minRating, setMinRating] = useState(0);
+  const [features, setFeatures] = useState<Record<string, boolean>>({
+    ac: false,
+    bluetooth: false,
+    gps: false,
+    usb: false,
+    sunroof: false,
+    parkingSensors: false,
+    camera: false,
+    leatherSeats: false
+  });
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // API state
-  const [cars, setCars] = useState([]);
+  const [cars, setCars] = useState<Car[]>([]);
   const [apiConnected, setApiConnected] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<Error | null>(null);
 
   // Auth state
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authLoading, setAuthLoading] = useState(false);
 
   // Booking state
-  const [userBookings, setUserBookings] = useState([]);
+  const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   // My Cars state
-  const [myCars, setMyCars] = useState([]);
+  const [myCars, setMyCars] = useState<Car[]>([]);
   const [myCarsLoading, setMyCarsLoading] = useState(true);
 
   // Messages panel state
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
 
   // Car listing form state
-  const [carForm, setCarForm] = useState({
+  const [carForm, setCarForm] = useState<{
+    make: string;
+    model: string;
+    year: string;
+    color: string;
+    price_per_day: string;
+    location: string;
+    description: string;
+    features: string[];
+  }>({
     make: '',
     model: '',
     year: '',
@@ -70,7 +145,7 @@ function App() {
   // Chat state
   const [showChatModal, setShowChatModal] = useState(false);
   const [showCustomerSelector, setShowCustomerSelector] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSubmittingContact, setIsSubmittingContact] = useState(false);
   const [contactSubmitMessage, setContactSubmitMessage] = useState('');
@@ -157,10 +232,8 @@ function App() {
       try {
         setLoading(true);
         setError(null);
-        
         const connectionStatus = await checkAPIConnection();
         setApiConnected(connectionStatus.connected);
-        
         if (connectionStatus.connected) {
           const response = await carsAPI.getAllCars();
           if (response.success && response.cars) {
@@ -200,7 +273,6 @@ function App() {
         setLoading(false);
       }
     };
-    
     loadCars();
   }, []);
 
@@ -225,7 +297,6 @@ function App() {
         setMyCarsLoading(false);
         return;
       }
-
       try {
         // Filter cars where host_id matches current user
         const userOwnedCars = cars.filter(car => car.host_id === user.id);
@@ -236,19 +307,16 @@ function App() {
         setMyCarsLoading(false);
       }
     };
-
     loadMyCars();
   }, [user, cars]);
 
   // Initialize chat service and notifications
   const initializeChatService = () => {
     chatService.connect();
-    
     // Set up notification handler
     const unsubscribeNotifications = chatService.onNotification((notification) => {
       setNotifications(prev => [...prev, { ...notification, id: Date.now(), timestamp: new Date() }]);
       setUnreadCount(prev => prev + 1);
-      
       // Show browser notification if permission granted
       if (Notification.permission === 'granted') {
         new Notification('DriveKenya', {
@@ -257,7 +325,6 @@ function App() {
         });
       }
     });
-
     return unsubscribeNotifications;
   };
 
@@ -273,7 +340,6 @@ function App() {
     const handleOpenChatFromNotification = (event) => {
       const { carId, otherParticipantId, chatRoom } = event.detail;
       console.log('🔔 Opening chat from notification event:', { carId, otherParticipantId, chatRoom });
-      
       // Find the car by ID
       const car = cars.find(c => c.id.toString() === carId.toString());
       if (car) {
@@ -283,16 +349,13 @@ function App() {
           customerId: otherParticipantId,
           customerName: `User ${otherParticipantId}` // We'll use a generic name for now
         };
-        
         setSelectedCar(carWithCustomer);
         setShowChatModal(true);
       } else {
         console.error('❌ Car not found for notification chat:', carId);
       }
     };
-
     window.addEventListener('openChatFromNotification', handleOpenChatFromNotification);
-    
     return () => {
       window.removeEventListener('openChatFromNotification', handleOpenChatFromNotification);
     };
@@ -337,22 +400,19 @@ function App() {
         };
         response = await authAPI.register(registerData);
       }
-
       if (response.success) {
         const userData = response.data?.user || response.user;
         const tokenData = response.data?.token || response.token;
-        
         setUser(userData);
         setToken(tokenData);
         authStorage.setUser(userData);
         authStorage.setToken(tokenData);
         setShowAuthModal(false);
-        
         console.log('✅ Authentication successful!', { user: userData, token: tokenData, actualRole: userData.role });
-        
         if (authMode === 'register') {
           const roleText = userData.role === 'customer' ? 'car renter' : userData.role === 'host' ? 'car owner' : userData.role;
-          alert(`🎉 Registration successful! Welcome to DriveKenya as a ${roleText}!\n\n${userData.role === 'host' ? 'You can now list your cars and start earning!' : 'You can now browse and rent amazing cars!'}`);
+          alert(`🎉 Registration successful! Welcome to DriveKenya as a ${roleText}!
+${userData.role === 'host' ? 'You can now list your cars and start earning!' : 'You can now browse and rent amazing cars!'}`);
         } else {
           const roleText = userData.role === 'customer' ? 'Customer' : userData.role === 'host' ? 'Car Owner' : userData.role;
           console.log(`Welcome back! Logged in as: ${roleText} (Role from DB: ${userData.role})`);
@@ -380,10 +440,8 @@ function App() {
       setShowAuthModal(true);
       return;
     }
-
     console.log('🚀 Frontend booking data being sent:', bookingData);
     console.log('🚗 Selected car:', selectedCar);
-
     setBookingLoading(true);
     try {
       const response = await bookingsAPI.createBooking(bookingData, token);
@@ -408,7 +466,6 @@ function App() {
       setShowAuthModal(true);
       return;
     }
-
     try {
       // Transform the new booking data format to match the API
       const apiBookingData = {
@@ -427,7 +484,10 @@ function App() {
 
       const response = await bookingsAPI.createBooking(apiBookingData, token);
       if (response.success) {
-        alert(`🎉 Booking confirmed successfully!\n\nBooking Number: ${bookingData.bookingNumber}\nTotal Cost: KSH ${bookingData.totalCost.toLocaleString()}\n\nYou will receive a confirmation email shortly.`);
+        alert(`🎉 Booking confirmed successfully!
+Booking Number: ${bookingData.bookingNumber}
+Total Cost: KSH ${bookingData.totalCost.toLocaleString()}
+You will receive a confirmation email shortly.`);
         setShowBookingModal(false);
         setSelectedCar(null);
         loadUserBookings();
@@ -451,20 +511,16 @@ function App() {
 
   const handleSubmitCar = async (e) => {
     e.preventDefault();
-    
     if (!user) {
       setShowAuthModal(true);
       return;
     }
-
     if (!carForm.make || !carForm.model || !carForm.year || !carForm.price_per_day) {
       setCarSubmitMessage('Please fill in all required fields');
       return;
     }
-
     setIsSubmittingCar(true);
     setCarSubmitMessage('');
-
     try {
       const dailyRate = parseFloat(carForm.price_per_day);
       const carData = {
@@ -484,7 +540,7 @@ function App() {
 
       console.log('🚗 Sending car data:', carData);
       console.log('🔑 Token:', token ? 'Present' : 'Missing');
-      
+
       await carsAPI.addCar(carData, token);
       setCarSubmitMessage('🎉 Car listed successfully! It will appear in our catalog shortly.');
       setCarForm({
@@ -516,15 +572,12 @@ function App() {
 
   const handleSubmitContact = async (e) => {
     e.preventDefault();
-    
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
       setContactSubmitMessage('Please fill in all required fields');
       return;
     }
-
     setIsSubmittingContact(true);
     setContactSubmitMessage('');
-
     try {
       await messagesAPI.sendContactMessage(contactForm);
       setContactSubmitMessage('🎉 Thank you for your message! We will get back to you soon.');
@@ -548,9 +601,7 @@ function App() {
       setShowAuthModal(true);
       return;
     }
-
     console.log('🎯 Opening chat for car:', car.name, 'Current user role:', user.role);
-    
     // If user is car owner (host), show customer selector
     if (user.role === 'host' && car.host_id === user.id) {
       setSelectedCar(car);
@@ -564,14 +615,12 @@ function App() {
 
   const handleCustomerSelect = (customer) => {
     console.log('👤 Selected customer for chat:', customer);
-    
     // Add customer info to selected car
     const carWithCustomer = {
       ...selectedCar,
       customerId: customer.id,
       customerName: customer.name
     };
-    
     setSelectedCar(carWithCustomer);
     setShowCustomerSelector(false);
     setShowChatModal(true);
@@ -587,12 +636,70 @@ function App() {
     setSelectedCar(null);
   };
 
+  // Generate search suggestions based on input
+  useEffect(() => {
+    if (searchTerm.length > 1) {
+      const suggestions = [
+        ...new Set([
+          ...cars
+            .filter(car =>
+              car.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              car.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              car.model?.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map(car => car.name),
+          ...cars
+            .filter(car => car.location?.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map(car => `${car.location} (${car.city || 'Nairobi'})`),
+          ...Object.keys(features)
+            .filter(feature =>
+              feature.toLowerCase().includes(searchTerm.toLowerCase()) &&
+              features[feature] === false
+            )
+            .map(feature => `With ${feature.replace(/([A-Z])/g, ' $1').toLowerCase()}`)
+        ])
+      ].slice(0, 5);
+      setSearchSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setSearchSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchTerm, cars, features]);
+
   const filteredCars = cars.filter(car => {
-    const matchesSearch = car.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         car.location?.toLowerCase().includes(searchTerm.toLowerCase());
+    // Basic search
+    const matchesSearch =
+      car.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      car.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      car.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      car.location?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Category filter
     const matchesCategory = selectedCategory === 'all' || car.category === selectedCategory;
-    const matchesPrice = car.price >= priceRange[0] && car.price <= priceRange[1];
-    return matchesSearch && matchesCategory && matchesPrice;
+
+    // Price range filter
+    const matchesPrice = car.price_per_day >= priceRange[0] && car.price_per_day <= priceRange[1];
+
+    // Transmission filter
+    const matchesTransmission = transmission === 'all' ||
+      (car.specs?.transmission?.toLowerCase() === transmission.toLowerCase());
+
+    // Fuel type filter
+    const matchesFuelType = fuelType === 'all' ||
+      (car.specs?.fuelType?.toLowerCase() === fuelType.toLowerCase());
+
+    // Rating filter
+    const matchesRating = car.rating >= minRating;
+
+    // Features filter (all selected features must match)
+    const matchesFeatures = Object.entries(features).every(([feature, isSelected]) => {
+      if (!isSelected) return true; // Skip unselected features
+      return car.features?.includes(feature) || car.amenities?.includes(feature);
+    });
+
+    return matchesSearch && matchesCategory && matchesPrice &&
+           matchesTransmission && matchesFuelType && matchesRating && matchesFeatures;
   });
 
   // Enhanced Navigation Component with Auth
@@ -600,20 +707,19 @@ function App() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/20">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          <div 
+          <div
             className="text-2xl font-bold text-white cursor-pointer hover:text-blue-400 transition-colors"
             onClick={() => setCurrentPage('home')}
           >
             Drive<span className="text-blue-400">Kenya</span>
           </div>
-          
           <div className="hidden md:flex space-x-4">
             {[
               { id: 'home', label: 'Home', icon: '🏠' },
               { id: 'cars', label: 'Cars', icon: '🚗' },
               { id: 'listcar', label: 'List Car', icon: '📝' },
               { id: 'bookings', label: 'Rentals', icon: '📋' },
-              { id: 'mycars', label: 'My Cars', icon: '�' },
+              { id: 'mycars', label: 'My Cars', icon: '🚘' },
               { id: 'about', label: 'About', icon: 'ℹ️' },
               { id: 'contact', label: 'Contact', icon: '📞' }
             ].map(item => (
@@ -621,8 +727,8 @@ function App() {
                 key={item.id}
                 onClick={() => setCurrentPage(item.id)}
                 className={`px-3 py-2 rounded-full transition-all duration-200 text-sm ${
-                  currentPage === item.id 
-                    ? 'bg-blue-500/20 text-white border border-blue-400/30' 
+                  currentPage === item.id
+                    ? 'bg-blue-500/20 text-white border border-blue-400/30'
                     : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`}
               >
@@ -631,7 +737,6 @@ function App() {
               </button>
             ))}
           </div>
-          
           <div className="flex items-center space-x-4">
             <div className="hidden md:block">
               <span className="text-white/60 text-sm flex items-center">
@@ -648,11 +753,10 @@ function App() {
                 )}
               </span>
             </div>
-            
             {user ? (
               <div className="flex items-center space-x-3">
                 <NotificationBadge className="mr-2">
-                  <button 
+                  <button
                     onClick={() => setShowNotificationCenter(!showNotificationCenter)}
                     className="text-white text-lg hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-white/10"
                     title="Notifications"
@@ -661,7 +765,7 @@ function App() {
                   </button>
                 </NotificationBadge>
                 <NotificationBadge className="mr-2">
-                  <button 
+                  <button
                     onClick={() => setShowMessagesPanel(!showMessagesPanel)}
                     className="text-white text-lg hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-white/10"
                     title="Messages"
@@ -677,13 +781,13 @@ function App() {
                     {(() => {
                       console.log('🔍 User object in navigation:', user);
                       console.log('🔍 User role:', user.role);
-                      return user.role === 'host' ? '🔑 Car Owner Account' : 
-                             user.role === 'admin' ? '👑 Admin Account' : 
+                      return user.role === 'host' ? '🔑 Car Owner Account' :
+                             user.role === 'admin' ? '👑 Admin Account' :
                              '🚗 Customer Account';
                     })()} • Role: {user.role || 'undefined'}
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={handleLogout}
                   className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-white px-4 py-2 rounded-full font-semibold transition-all"
                 >
@@ -691,7 +795,7 @@ function App() {
                 </button>
               </div>
             ) : (
-              <button 
+              <button
                 onClick={() => setShowAuthModal(true)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg"
               >
@@ -703,12 +807,11 @@ function App() {
       </div>
     </nav>
   );
-  
+
   // Google Sign-Up handler
   const handleGoogleSignUp = async () => {
     try {
       setAuthLoading(true);
-      
       // For now, call the placeholder endpoint with basic data
       const response = await fetch('http://localhost:5000/api/auth/google-signup', {
         method: 'POST',
@@ -721,15 +824,15 @@ function App() {
           accountType: 'customer'
         })
       });
-      
       const data = await response.json();
-      
       if (data.success) {
         // Handle successful Google sign-up
         alert('Google Sign-Up successful!');
       } else {
         // Show the placeholder message
-        alert(`🚀 ${data.message}\n\nGoogle Sign-Up is coming soon!\n\n${data.data?.instructions || 'Please use regular registration for now.'}`);
+        alert(`🚀 ${data.message}
+Google Sign-Up is coming soon!
+${data.data?.instructions || 'Please use regular registration for now.'}`);
       }
     } catch (error) {
       console.error('Google Sign-Up error:', error);
@@ -772,12 +875,11 @@ function App() {
                 {authMode === 'login' ? 'Welcome Back' : 'Join DriveKenya'}
               </h2>
               <p className="text-white/70">
-                {authMode === 'login' 
-                  ? 'Sign in to access your account' 
+                {authMode === 'login'
+                  ? 'Sign in to access your account'
                   : 'Create your account and start your journey'}
               </p>
             </div>
-
             {/* Role Selection */}
             <div className="mb-6">
               <p className="text-white/80 text-sm mb-3">
@@ -820,7 +922,6 @@ function App() {
                 </button>
               </div>
             </div>
-
             {/* Google Sign-Up (only for register mode) */}
             {authMode === 'register' && (
               <div className="mb-6">
@@ -837,7 +938,6 @@ function App() {
                   </svg>
                   <span>Continue with Google</span>
                 </button>
-                
                 <div className="flex items-center my-4">
                   <div className="flex-1 border-t border-white/20"></div>
                   <span className="px-3 text-white/50 text-sm">or</span>
@@ -845,7 +945,6 @@ function App() {
                 </div>
               </div>
             )}
-
             <form onSubmit={handleSubmit} className="space-y-4">
               {authMode === 'register' && (
                 <>
@@ -874,7 +973,6 @@ function App() {
                   />
                 </>
               )}
-              
               <input
                 type="email"
                 placeholder="Email Address"
@@ -883,7 +981,6 @@ function App() {
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-              
               <input
                 type="password"
                 placeholder="Password"
@@ -892,7 +989,6 @@ function App() {
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-
               <button
                 type="submit"
                 disabled={authLoading}
@@ -901,23 +997,20 @@ function App() {
                 {authLoading ? 'Processing...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
               </button>
             </form>
-
             <div className="mt-6 text-center">
               <button
                 onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
                 className="text-blue-400 hover:text-blue-300 transition-colors"
               >
-                {authMode === 'login' 
-                  ? "Don't have an account? Sign up" 
+                {authMode === 'login'
+                  ? "Don't have an account? Sign up"
                   : 'Already have an account? Sign in'}
               </button>
             </div>
-
             <button
               onClick={() => setShowAuthModal(false)}
               className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl"
             >
-              
             </button>
           </div>
         </div>
@@ -928,7 +1021,6 @@ function App() {
   // Enhanced Booking Flow
   const renderBookingFlow = () => {
     if (!showBookingModal || !selectedCar) return null;
-
     return (
       <BookingFlow
         selectedCar={{
@@ -944,7 +1036,6 @@ function App() {
     );
   };
 
-
   // Enhanced Home Page
   const renderHome = () => (
     <div className="min-h-screen">
@@ -959,14 +1050,12 @@ function App() {
               </span>
             </div>
           </div>
-          
           <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tight">
             Drive<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Kenya</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/80 mb-8 leading-relaxed">
             Premium car rentals across Kenya with real-time booking and authentic reviews.
           </p>
-          
           {/* Role-based Welcome Message */}
           {user && (
             <div className="mb-8">
@@ -979,9 +1068,9 @@ function App() {
                   })()}
                 </span>
                 <span className="text-white font-medium">
-                  {user.role === 'host' ? 
+                  {user.role === 'host' ?
                     `Welcome back, Car Owner! Manage your ${myCars.length} listed vehicles` :
-                    user.role === 'admin' ? 
+                    user.role === 'admin' ?
                     'Welcome back, Admin! Full system access' :
                     `Welcome back, ${user.name?.split(' ')[0] || 'Driver'}! Ready to explore?`
                   }
@@ -989,7 +1078,6 @@ function App() {
               </div>
             </div>
           )}
-          
           {loading && (
             <div className="mb-8">
               <div className="inline-flex items-center space-x-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-3">
@@ -998,9 +1086,8 @@ function App() {
               </div>
             </div>
           )}
-          
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
+            <button
               onClick={() => setCurrentPage('cars')}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
             >
@@ -1010,13 +1097,13 @@ function App() {
               <>
                 {user.role === 'host' ? (
                   <>
-                    <button 
+                    <button
                       onClick={() => setCurrentPage('mycars')}
                       className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
                     >
                       🔑 My Cars ({myCars.length})
                     </button>
-                    <button 
+                    <button
                       onClick={() => setCurrentPage('listcar')}
                       className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 backdrop-blur-sm"
                     >
@@ -1024,7 +1111,7 @@ function App() {
                     </button>
                   </>
                 ) : (
-                  <button 
+                  <button
                     onClick={() => setCurrentPage('bookings')}
                     className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 backdrop-blur-sm"
                   >
@@ -1033,7 +1120,7 @@ function App() {
                 )}
               </>
             ) : (
-              <button 
+              <button
                 onClick={() => setShowAuthModal(true)}
                 className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 backdrop-blur-sm"
               >
@@ -1043,7 +1130,6 @@ function App() {
           </div>
         </div>
       </section>
-
       {/* Stats Section */}
       <section className="py-20 bg-gradient-to-r from-slate-900 to-blue-900">
         <div className="max-w-6xl mx-auto px-6">
@@ -1067,7 +1153,6 @@ function App() {
           </div>
         </div>
       </section>
-
       {/* Featured Cars */}
       <section className="py-20 bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900">
         <div className="max-w-6xl mx-auto px-6">
@@ -1075,15 +1160,14 @@ function App() {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Featured Cars</h2>
             <p className="text-xl text-white/70">Discover our most popular vehicles</p>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {filteredCars.slice(0, 3).map(car => (
               <div key={car.id} className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden hover:scale-105 transition-all duration-300">
                 <div className="relative overflow-hidden">
-                  <img 
-                    src={car.image} 
-                    alt={car.name} 
-                    className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-300" 
+                  <img
+                    src={car.image}
+                    alt={car.name}
+                    className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
                      {car.rating?.toFixed(1) || '4.8'}
@@ -1097,7 +1181,7 @@ function App() {
                       <div className="text-2xl font-bold text-white">KSh {car.price?.toLocaleString()}</div>
                       <div className="text-white/60 text-sm">per day</div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => {
                         setSelectedCar(car);
                         if (user) {
@@ -1130,7 +1214,6 @@ function App() {
             {apiConnected ? 'Real-time data from our database' : 'Demo data'}  {filteredCars.length} of {cars.length} cars shown
           </p>
         </div>
-
         {/* View Toggle */}
         <div className="mb-8">
           <div className="flex justify-center">
@@ -1138,8 +1221,8 @@ function App() {
               <button
                 onClick={() => setViewMode('grid')}
                 className={`px-6 py-2 rounded-full font-medium transition-all ${
-                  viewMode === 'grid' 
-                    ? 'bg-white text-slate-900' 
+                  viewMode === 'grid'
+                    ? 'bg-white text-slate-900'
                     : 'text-white hover:bg-white/10'
                 }`}
               >
@@ -1148,8 +1231,8 @@ function App() {
               <button
                 onClick={() => setViewMode('map')}
                 className={`px-6 py-2 rounded-full font-medium transition-all ${
-                  viewMode === 'map' 
-                    ? 'bg-white text-slate-900' 
+                  viewMode === 'map'
+                    ? 'bg-white text-slate-900'
                     : 'text-white hover:bg-white/10'
                 }`}
               >
@@ -1158,21 +1241,54 @@ function App() {
             </div>
           </div>
         </div>
-
         {/* Enhanced Search and Filter Section */}
-        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 mb-8 shadow-2xl">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
+        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 mb-8 shadow-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            {/* Search with suggestions */}
+            <div className="relative">
               <label className="block text-white/70 text-sm font-medium mb-2">🔍 Search</label>
-              <input
-                type="text"
-                placeholder="Car name or location..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Car name, model, or location..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => searchTerm.length > 1 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                )}
+                {showSuggestions && searchSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg">
+                    {searchSuggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="px-4 py-2 hover:bg-gray-700 cursor-pointer text-white"
+                        onMouseDown={() => {
+                          if (suggestion.startsWith('With ')) {
+                            const feature = suggestion.substring(5).replace(/\s+/g, '').toLowerCase();
+                            setFeatures(prev => ({ ...prev, [feature]: true }));
+                            setSearchTerm('');
+                          } else {
+                            setSearchTerm(suggestion.split(' (')[0]);
+                          }
+                          setShowSuggestions(false);
+                        }}
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            
             <div>
               <label className="block text-white/70 text-sm font-medium mb-2">🏷️ Category</label>
               <select
@@ -1184,16 +1300,18 @@ function App() {
                 <option value="economy">Economy</option>
                 <option value="suv">SUV</option>
                 <option value="luxury">Luxury</option>
+                <option value="convertible">Convertible</option>
+                <option value="van">Van</option>
               </select>
             </div>
-            
             <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">💰 Price Range (KSh/day)</label>
+              <label className="block text-white/70 text-sm font-medium mb-2">💰 Price (KSh/day)</label>
               <div className="flex space-x-2">
                 <input
                   type="number"
                   placeholder="Min"
                   value={priceRange[0]}
+                  min="0"
                   onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
                   className="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -1201,23 +1319,119 @@ function App() {
                   type="number"
                   placeholder="Max"
                   value={priceRange[1]}
+                  min={priceRange[0] + 100}
                   onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 15000])}
                   className="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
-            
-            <div className="flex items-end">
-              <button
-                onClick={() => {setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]);}}
-                className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105"
-              >
-                🗑️ Clear Filters
-              </button>
+            <div className="flex flex-col space-y-2">
+              <div>
+                <label className="block text-white/70 text-sm font-medium mb-2">⭐ Min. Rating</label>
+                <div className="flex items-center space-x-2">
+                  {[0, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      onClick={() => setMinRating(rating === minRating ? 0 : rating)}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        minRating === rating
+                          ? 'bg-yellow-500 text-black'
+                          : 'bg-white/10 text-white/70 hover:bg-white/20'
+                      }`}
+                    >
+                      {rating === 0 ? 'Any' : `${rating}+`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Advanced Filters */}
+          <div className="border-t border-white/10 pt-4">
+            <div className="flex flex-wrap items-center gap-6">
+              <div>
+                <label className="block text-white/70 text-sm font-medium mb-2">⚙️ Transmission</label>
+                <div className="flex space-x-2">
+                  {['All', 'Automatic', 'Manual'].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setTransmission(type === 'All' ? 'all' : type.toLowerCase())}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        transmission === type.toLowerCase() || (type === 'All' && transmission === 'all')
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white/10 text-white/70 hover:bg-white/20'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-white/70 text-sm font-medium mb-2">⛽ Fuel Type</label>
+                <div className="flex space-x-2">
+                  {['All', 'Petrol', 'Diesel', 'Hybrid', 'Electric'].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setFuelType(type === 'All' ? 'all' : type.toLowerCase())}
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        fuelType === type.toLowerCase() || (type === 'All' && fuelType === 'all')
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white/10 text-white/70 hover:bg-white/20'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1">
+                <label className="block text-white/70 text-sm font-medium mb-2">🔧 Features</label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.keys(features).map((feature) => (
+                    <button
+                      key={feature}
+                      onClick={() => setFeatures(prev => ({ ...prev, [feature]: !prev[feature] }))}
+                      className={`px-3 py-1 rounded-full text-sm flex items-center space-x-1 ${
+                        features[feature]
+                          ? 'bg-green-600 text-white'
+                          : 'bg-white/10 text-white/70 hover:bg-white/20'
+                      }`}
+                    >
+                      <span>{features[feature] ? '✓' : '+'}</span>
+                      <span>{feature.replace(/([A-Z])/g, ' $1').trim()}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedCategory('all');
+                    setPriceRange([0, 15000]);
+                    setTransmission('all');
+                    setFuelType('all');
+                    setMinRating(0);
+                    setFeatures({
+                      ac: false,
+                      bluetooth: false,
+                      gps: false,
+                      usb: false,
+                      sunroof: false,
+                      parkingSensors: false,
+                      camera: false,
+                      leatherSeats: false
+                    });
+                  }}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg font-medium transition-all"
+                >
+                  Clear Filters
+                </button>
+              </div>
             </div>
           </div>
         </div>
-
         {/* View Mode Toggle */}
         <div className="mb-8">
           <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl p-4 flex justify-between items-center">
@@ -1248,9 +1462,22 @@ function App() {
             </div>
           </div>
         </div>
-
-        {/* Conditional Content Based on View Mode */}
-        {viewMode === 'map' ? (
+        {/* Conditional Content Based on View Mode and Car Count */}
+        {filteredCars.length === 0 && !loading ? ( // Render the "No cars found" message if no cars match filters
+          <div className="text-center py-20">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12 max-w-lg mx-auto">
+              <div className="text-6xl mb-4">🔍</div>
+              <h3 className="text-2xl font-bold text-white mb-4">No cars found</h3>
+              <p className="text-white/70 mb-6">Try adjusting your filters or search terms</p>
+              <button
+                onClick={() => {setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]);}}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-full font-semibold transition-all"
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+        ) : viewMode === 'map' ? ( // If cars exist and view mode is map
           /* Map View */
           <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden shadow-2xl mb-8">
             <div className="p-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/20">
@@ -1270,7 +1497,7 @@ function App() {
                 }}
                 showLocationSelector={false}
                 initialCenter={{
-                  lat: -1.2864,  // Nairobi CBD coordinates  
+                  lat: -1.2864,  // Nairobi CBD coordinates
                   lng: 36.8172
                 }}
                 initialZoom={13}
@@ -1281,7 +1508,7 @@ function App() {
               />
             </div>
           </div>
-        ) : (
+        ) : ( // If cars exist and view mode is grid
           /* Grid View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredCars.map(car => (
@@ -1321,7 +1548,7 @@ function App() {
                       <div className="flex space-x-2">
                         {user && (
                           <NotificationBadge>
-                            <button 
+                            <button
                               onClick={() => handleOpenChat(car)}
                               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
                               title={user?.role === 'host' && car.host_id === user.id ? "Chat with customers" : "Chat with owner"}
@@ -1330,7 +1557,7 @@ function App() {
                             </button>
                           </NotificationBadge>
                         )}
-                        <button 
+                        <button
                           onClick={() => {
                             setSelectedCar(car);
                             if (user) {
@@ -1351,113 +1578,116 @@ function App() {
             ))}
           </div>
         )}
-
-        {filteredCars.length === 0 && !loading && (
-          <div className="text-center py-20">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12 max-w-lg mx-auto">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-bold text-white mb-4">No cars found</h3>
-              <p className="text-white/70 mb-6">Try adjusting your filters or search terms</p>
-              <button
-                onClick={() => {setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]);}}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-full font-semibold transition-all"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 
-
   // Enhanced Bookings Page
-  const renderBookings = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
-        
-        {!user ? (
-          <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
-            <div className="text-6xl mb-4"></div>
-            <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
-            <p className="text-white/70 mb-6">Please sign in to view your bookings</p>
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
-            >
-              Sign In
-            </button>
+  const renderBookings = () => {
+    if (!user) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
+              <div className="text-6xl mb-4">🔐</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
+              <p className="text-white/70 mb-6">Please sign in to view your bookings</p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+              >
+                Sign In
+              </button>
+            </div>
           </div>
-        ) : userBookings.length === 0 ? (
-          <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
-            <div className="text-6xl mb-4"></div>
-            <h3 className="text-2xl font-bold text-white mb-4">No bookings yet</h3>
-            <p className="text-white/70 mb-6">Browse our cars to make your first reservation!</p>
-            <button
-              onClick={() => setCurrentPage('cars')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
-            >
-              Browse Cars
-            </button>
+        </div>
+      );
+    }
+
+    if (userBookings.length === 0) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
+              <div className="text-6xl mb-4">📆</div>
+              <h3 className="text-2xl font-bold text-white mb-4">No Bookings Yet</h3>
+              <p className="text-white/70 mb-6">You haven't made any bookings yet. Start by browsing our available cars!</p>
+              <button
+                onClick={() => setCurrentPage('cars')}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+              >
+                Browse Cars
+              </button>
+            </div>
           </div>
-        ) : (
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
           <div className="space-y-6">
             {userBookings.map((booking) => (
-              <div key={booking.id} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between">
-                  <div className="mb-4 md:mb-0">
-                    <h3 className="text-xl font-bold text-white mb-2">
-                      {booking.car?.name || 'Unknown Car'} ({booking.car?.year || 'N/A'})
-                    </h3>
-                    <div className="text-white/70 space-y-1">
-                      <div> {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}</div>
-                      <div> KSh {booking.totalPrice?.toLocaleString()}</div>
-                      <div> {booking.pickupLocation || booking.car?.location}</div>
-                      <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        booking.status === 'confirmed' ? 'bg-green-500/20 text-green-300' :
-                        booking.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
-                        booking.status === 'cancelled' ? 'bg-red-500/20 text-red-300' :
-                        'bg-blue-500/20 text-blue-300'
-                      }`}>
-                        {booking.status.toUpperCase()}
-                      </div>
-                    </div>
+              <div key={booking.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{booking.car?.name || 'Car Rental'}</h3>
+                    <p className="text-white/70">
+                      {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-white/60 text-sm mt-1">
+                      Status: <span className={`font-medium ${booking.status === 'confirmed' ? 'text-green-400' : booking.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {booking.status}
+                      </span>
+                    </p>
                   </div>
-                  <div className="flex space-x-2">
-                    {booking.status === 'pending' && (
-                      <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to cancel this booking?')) {
-                            bookingsAPI.cancelBooking(booking.id, token);
-                            loadUserBookings();
-                          }
-                        }}
-                        className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-red-300 px-4 py-2 rounded-lg font-semibold transition-all"
-                      >
-                        Cancel
-                      </button>
-                    )}
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-white">KSh {booking.totalPrice?.toLocaleString()}</div>
+                    <p className="text-white/60 text-sm">Total</p>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <div className="flex justify-between items-center">
+                    <div className="text-white/70 text-sm">
+                      Booking ID: {booking.id}
+                    </div>
+                    <div className="flex space-x-2">
+                      {booking.status === 'pending' && (
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to cancel this booking?')) {
+                              bookingsAPI.cancelBooking(booking.id, token);
+                              loadUserBookings();
+                            }
+                          }}
+                          className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-red-300 px-4 py-2 rounded-lg font-semibold transition-all"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // My Cars Page - Show cars owned by current user
   const renderMyCars = () => {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
-          <p className="text-white/70 text-center mb-12">Manage your listed vehicles and view performance</p>
-          
-          {!user ? (
+    // Handle case when user is not logged in
+    if (!user) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">🔐</div>
               <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
@@ -1469,12 +1699,31 @@ function App() {
                 Sign In
               </button>
             </div>
-          ) : myCarsLoading ? (
+          </div>
+        </div>
+      );
+    }
+
+    // Handle loading state
+    if (myCarsLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">⏳</div>
               <h3 className="text-2xl font-bold text-white mb-4">Loading Your Cars...</h3>
             </div>
-          ) : myCars.length === 0 ? (
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+          {myCars.length === 0 ? (
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">🚗</div>
               <h3 className="text-2xl font-bold text-white mb-4">No cars listed yet</h3>
@@ -1491,8 +1740,8 @@ function App() {
               {myCars.map((car) => (
                 <div key={car.id} className="bg-black/40 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden group hover:scale-[1.02] transition-all duration-300">
                   <div className="relative">
-                    <img 
-                      src={car.images && car.images.length > 0 ? car.images[0] : '/default-car.jpg'} 
+                    <img
+                      src={car.images && car.images.length > 0 ? car.images[0] : '/default-car.jpg'}
                       alt={`${car.make} ${car.model}`}
                       className="w-full h-48 object-cover"
                     />
@@ -1502,12 +1751,10 @@ function App() {
                       </span>
                     </div>
                   </div>
-                  
                   <div className="p-6">
                     <h3 className="text-2xl font-bold text-white mb-2">{car.make} {car.model}</h3>
                     <p className="text-white/60 mb-2">{car.year} • {car.location}</p>
                     <p className="text-white/70 mb-4 text-sm line-clamp-2">{car.description}</p>
-                    
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <div className="text-2xl font-bold text-white">KSh {car.price_per_day?.toLocaleString()}</div>
@@ -1518,7 +1765,6 @@ function App() {
                         <span className="text-white">{car.rating || 4.8}</span>
                       </div>
                     </div>
-                    
                     <div className="space-y-2">
                       <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition-all">
                         View Messages
@@ -1542,7 +1788,6 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
       <div className="max-w-4xl mx-auto px-6 py-20">
         <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">List Your Car</h1>
-        
         {!user ? (
           <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
             <div className="text-6xl mb-4">🔐</div>
@@ -1558,72 +1803,70 @@ function App() {
         ) : (
           <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
             <p className="text-white/80 text-lg mb-6">Start earning by renting out your vehicle on DriveKenya!</p>
-            
             {carSubmitMessage && (
               <div className={`mb-6 p-4 rounded-lg ${
-                carSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' : 
+                carSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' :
                 'bg-green-500/20 border border-green-400/30 text-green-300'
               }`}>
                 {carSubmitMessage}
               </div>
             )}
-
             <form onSubmit={handleSubmitCar}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <input 
+                <input
                   name="make"
                   value={carForm.make}
                   onChange={handleCarFormChange}
-                  placeholder="Car Make *" 
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Car Make *"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
-                <input 
+                <input
                   name="model"
                   value={carForm.model}
                   onChange={handleCarFormChange}
-                  placeholder="Car Model *" 
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Car Model *"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
-                <input 
+                <input
                   name="year"
                   value={carForm.year}
                   onChange={handleCarFormChange}
-                  placeholder="Year *" 
+                  placeholder="Year *"
                   type="number"
                   min="1990"
                   max={new Date().getFullYear() + 1}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
-                <input 
+                <input
                   name="price_per_day"
                   value={carForm.price_per_day}
                   onChange={handleCarFormChange}
-                  placeholder="Price per day (KSh) *" 
+                  placeholder="Price per day (KSh) *"
                   type="number"
                   min="1"
                   step="0.01"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
-                <input 
+                <input
                   name="color"
                   value={carForm.color}
                   onChange={handleCarFormChange}
-                  placeholder="Color" 
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Color"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <input 
+                <input
                   name="location"
                   value={carForm.location}
                   onChange={handleCarFormChange}
-                  placeholder="Location (e.g., Nairobi CBD)" 
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Location (e.g., Nairobi CBD)"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <textarea 
+              <textarea
                 name="description"
                 value={carForm.description}
                 onChange={handleCarFormChange}
@@ -1631,7 +1874,7 @@ function App() {
                 rows={3}
                 className="w-full mt-6 px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               ></textarea>
-              <button 
+              <button
                 type="submit"
                 disabled={isSubmittingCar}
                 className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
@@ -1692,52 +1935,50 @@ function App() {
             </div>
             <div>
               <h3 className="text-white font-semibold text-xl mb-4">Send Message</h3>
-              
               {contactSubmitMessage && (
                 <div className={`mb-4 p-3 rounded-lg ${
-                  contactSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' : 
+                  contactSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' :
                   'bg-green-500/20 border border-green-400/30 text-green-300'
                 }`}>
                   {contactSubmitMessage}
                 </div>
               )}
-
               <form onSubmit={handleSubmitContact}>
                 <div className="space-y-4">
-                  <input 
+                  <input
                     name="name"
                     value={contactForm.name}
                     onChange={handleContactFormChange}
-                    placeholder="Your Name *" 
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    placeholder="Your Name *"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
-                  <input 
+                  <input
                     name="email"
                     value={contactForm.email}
                     onChange={handleContactFormChange}
-                    placeholder="Your Email *" 
+                    placeholder="Your Email *"
                     type="email"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
-                  <input 
+                  <input
                     name="subject"
                     value={contactForm.subject}
                     onChange={handleContactFormChange}
-                    placeholder="Subject (optional)" 
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    placeholder="Subject (optional)"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <textarea 
+                  <textarea
                     name="message"
                     value={contactForm.message}
                     onChange={handleContactFormChange}
-                    placeholder="Your Message *" 
+                    placeholder="Your Message *"
                     rows={4}
                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   ></textarea>
-                  <button 
+                  <button
                     type="submit"
                     disabled={isSubmittingContact}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
@@ -1757,7 +1998,6 @@ function App() {
   return (
     <div className="min-h-screen font-['Poppins'] bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900">
       <Navigation />
-      
       {currentPage === 'home' && renderHome()}
       {currentPage === 'cars' && renderCars()}
       {currentPage === 'listcar' && renderListCar()}
@@ -1765,16 +2005,14 @@ function App() {
       {currentPage === 'mycars' && renderMyCars()}
       {currentPage === 'about' && renderAbout()}
       {currentPage === 'contact' && renderContact()}
-      
       <AuthModal />
       {renderBookingFlow()}
-      <ChatModal 
-        isOpen={showChatModal} 
-        onClose={closeChatModal} 
-        car={selectedCar} 
-        currentUser={user} 
+      <ChatModal
+        isOpen={showChatModal}
+        onClose={closeChatModal}
+        car={selectedCar}
+        currentUser={user}
       />
-      
       {/* Customer Chat Selector for Car Owners */}
       {showCustomerSelector && selectedCar && (
         <CustomerChatSelector
@@ -1784,7 +2022,6 @@ function App() {
           onClose={closeCustomerSelector}
         />
       )}
-      
       {/* Messages Panel */}
       {showMessagesPanel && (
         <div className="fixed top-20 right-4 w-80 bg-gray-900/95 backdrop-blur-sm border border-white/20 rounded-2xl shadow-2xl z-40 max-h-96 overflow-hidden">
@@ -1795,7 +2032,7 @@ function App() {
                 {user?.role === 'host' ? '🔑 Car Owner Inbox' : '🚗 Customer Messages'}
               </p>
             </div>
-            <button 
+            <button
               onClick={() => setShowMessagesPanel(false)}
               className="text-white/60 hover:text-white transition-colors"
             >
@@ -1810,8 +2047,8 @@ function App() {
                 </div>
                 <p>No messages yet</p>
                 <p className="text-sm">
-                  {user?.role === 'host' 
-                    ? 'Customer inquiries will appear here!' 
+                  {user?.role === 'host'
+                    ? 'Customer inquiries will appear here!'
                     : 'Start a conversation with a car owner!'}
                 </p>
               </div>
@@ -1821,7 +2058,7 @@ function App() {
                   <div key={notification.id} className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors cursor-pointer">
                     <div className="flex items-start space-x-3">
                       <div className="text-2xl">
-                        {notification.senderRole === 'host' ? '🔑' : 
+                        {notification.senderRole === 'host' ? '🔑' :
                          notification.senderRole === 'customer' ? '🚗' : '💬'}
                       </div>
                       <div className="flex-1">
@@ -1849,17 +2086,14 @@ function App() {
           </div>
         </div>
       )}
-
       {/* Notification Center */}
       <NotificationCenter
         isOpen={showNotificationCenter}
         onClose={() => setShowNotificationCenter(false)}
         user={user}
       />
-
       {/* Toast Notifications */}
       <ToastNotification />
-
       {/* PWA Components */}
       <PWAInstallPrompt />
       <PWAStatus />

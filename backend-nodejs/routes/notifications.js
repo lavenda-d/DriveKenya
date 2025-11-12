@@ -10,7 +10,7 @@ router.get('/count', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     
     // Count unread notifications
-    const countResult = query(`
+    const countResult = await query(`
       SELECT COUNT(*) as total_unread 
       FROM notifications 
       WHERE user_id = ? AND is_read = 0
@@ -61,7 +61,7 @@ router.get('/', authenticateToken, async (req, res) => {
         break;
     }
     
-    const notifications = query(`
+    const notifications = await query(`
       SELECT id, type, title, message, priority, action_url, is_read, created_at, data
       FROM notifications
       ${whereClause}
@@ -103,7 +103,7 @@ router.post('/', authenticateToken, async (req, res) => {
     // If no recipient_id provided, use current user
     const targetUserId = recipient_id || req.user.id;
     
-    const result = query(`
+    const result = await query(`
       INSERT INTO notifications (user_id, type, title, message, priority, action_url, data)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
@@ -148,7 +148,7 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
     const notificationId = req.params.id;
     const userId = req.user.id;
     
-    query(`
+    await query(`
       UPDATE notifications 
       SET is_read = 1, read_at = CURRENT_TIMESTAMP 
       WHERE id = ? AND user_id = ?
@@ -172,7 +172,7 @@ router.put('/read-all', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     
-    query(`
+    await query(`
       UPDATE notifications 
       SET is_read = 1, read_at = CURRENT_TIMESTAMP 
       WHERE user_id = ? AND is_read = 0
@@ -197,7 +197,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     const notificationId = req.params.id;
     const userId = req.user.id;
     
-    query(`
+    await query(`
       DELETE FROM notifications 
       WHERE id = ? AND user_id = ?
     `, [notificationId, userId]);
