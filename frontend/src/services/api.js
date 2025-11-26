@@ -68,6 +68,34 @@ export const carsAPI = {
       Authorization: `Bearer ${token}`,
     },
   }),
+
+  // Update per-car scheduling settings (requires authentication)
+  updateScheduling: (carId, { buffer_hours = 0, min_notice_hours = 0 }, token) => apiRequest(`/cars/${carId}/scheduling`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ buffer_hours, min_notice_hours }),
+  }),
+
+  // Create a blackout period for a car (requires authentication)
+  createBlackout: (carId, { start, end, reason }, token) => apiRequest(`/cars/${carId}/blackouts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ start, end, reason }),
+  }),
+
+  // Delete a blackout by id (requires authentication)
+  deleteBlackout: (blackoutId, token) => apiRequest(`/blackouts/${blackoutId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }),
 };
 
 // Auth API
@@ -145,6 +173,25 @@ export const bookingsAPI = {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  }),
+
+  // Availability (public)
+  getAvailability: (carId, start, end) => apiRequest(`/availability/${carId}?start=${start}&end=${end}`),
+
+  // Recurring bookings
+  recurringPreview: (payload) => apiRequest('/bookings/recurring/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }),
+
+  createRecurring: (payload, token) => apiRequest('/bookings/recurring/create', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   }),
 };
 

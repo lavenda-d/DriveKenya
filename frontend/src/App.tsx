@@ -15,16 +15,15 @@ import { chatService } from './services/chatService';
 import { notificationService } from './services/notificationService';
 import { pwaService } from './services/pwaService';
 import './animations.css';
-import ImageUploader from './components/ImageUploader';
 import ImageGallery from './components/ImageGallery';
-import ImageManager from './components/ImageManager';
 import Viewer360 from './components/Viewer360';
 import CarSpecs from './components/CarSpecs';
-import SpecsEditor from './components/SpecsEditor';
 import enhancedCarsAPI from './services/enhancedCarsAPI';
 import ReviewSummary from './components/reviews/ReviewSummary';
 import ReviewsList from './components/reviews/ReviewsList';
 import ReviewForm from './components/reviews/ReviewForm';
+import AvailabilityCalendar from './components/AvailabilityCalendar';
+import OwnerSchedulingAndBlackouts from './components/OwnerSchedulingAndBlackouts';
 
 // Type definitions
 interface Car {
@@ -109,6 +108,29 @@ const App: React.FC = () => {
   // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+
+  // Handle user logout
+  const handleLogout = async () => {
+    try {
+      // Clear user data from state
+      setUser(null);
+      setToken(null);
+      
+      // Clear auth data from storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // Reset any other relevant state
+      setShowAuthModal(false);
+      setShowNotificationPanel(false);
+      
+      // Redirect to home page
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authLoading, setAuthLoading] = useState(false);
@@ -121,7 +143,6 @@ const App: React.FC = () => {
 
   // My Cars state
   const [myCars, setMyCars] = useState<Car[]>([]);
-  const [myCarsLoading, setMyCarsLoading] = useState(true);
 
   // Messages panel state
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
@@ -320,10 +341,8 @@ const App: React.FC = () => {
   // Load user's cars when user or cars change
   useEffect(() => {
     const loadMyCars = () => {
-      setMyCarsLoading(true);
       if (!user) {
         setMyCars([]);
-        setMyCarsLoading(false);
         return;
       }
       try {
@@ -332,8 +351,6 @@ const App: React.FC = () => {
         setMyCars(userOwnedCars);
       } catch (error) {
         console.error('Failed to fetch user cars:', error);
-      } finally {
-        setMyCarsLoading(false);
       }
     };
     loadMyCars();
@@ -427,6 +444,38 @@ const App: React.FC = () => {
         api: apiBookingData
       });
 
+      // If recurrence requested, use recurring endpoint
+      if (bookingData.recurrence?.enabled) {
+        const recurrence = {
+          frequency: 'weekly',
+          interval: 1,
+          count: Math.max(1, Number(bookingData.recurrence.count) || 1),
+          byWeekday: [new Date(bookingData.pickupDate).getDay()],
+        };
+        const payload = {
+          carId: apiBookingData.carId,
+          startDate: apiBookingData.startDate,
+          endDate: apiBookingData.endDate,
+          pickupLocation: apiBookingData.pickupLocation,
+          dropoffLocation: apiBookingData.dropoffLocation,
+          specialRequests: apiBookingData.specialRequests,
+          recurrence,
+          skipConflicts: false,
+        };
+        const resp = await bookingsAPI.createRecurring(payload, token);
+        if (resp.success) {
+          alert(`🎉 Recurring bookings created! Series #${resp.seriesId}\nCreated: ${resp.created.length} out of ${resp.preview.length}`);
+          setShowBookingModal(false);
+          setSelectedCar(null);
+          loadUserBookings();
+          return;
+        } else {
+          alert(resp.message || 'Recurring booking failed');
+          return;
+        }
+      }
+
+      // Single booking
       const response = await bookingsAPI.createBooking(apiBookingData, token);
       if (response.success) {
         alert(`🎉 Booking confirmed successfully!
@@ -747,7 +796,7 @@ You will receive a confirmation email shortly.`);
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-2 rounded-full font-semibold transition-all"
               >
                 Sign In
               </button>
@@ -813,33 +862,31 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
     const handleAuth = async (form: { firstName: string; lastName: string; email: string; password: string; phone: string; role: string }) => {
       try {
         setAuthLoading(true);
-        setAuthMessage('');
-        setNeedsVerificationEmail(null);
-        if (authMode === 'login') {
-          const response = await authAPI.login({ email: form.email, password: form.password });
-          if (response.success && response.data?.token) {
-            const newToken = response.data.token;
-            const newUser = response.data.user;
-            setToken(newToken);
-            setUser(newUser);
-            authStorage.setToken(newToken);
-            authStorage.setUser(newUser);
-            setShowAuthModal(false);
-            loadUserBookings();
-          }
-        } else {
+        if (authMode === 'register') {
           const payload = {
-            name: `${form.firstName} ${form.lastName}`.trim(),
+            firstName: form.firstName,
+            lastName: form.lastName,
             email: form.email,
             password: form.password,
             phone: form.phone,
-            role: form.role,
-            accountType: form.role
+            role: form.role
           };
           const response = await authAPI.register(payload);
           if (response.success) {
             setAuthMode('login');
             setAuthMessage('Verification email sent. Please check your inbox to verify your account, then sign in.');
+          }
+        } else {
+          // Handle login logic here
+          const response = await authAPI.login({
+            email: form.email,
+            password: form.password
+          });
+          if (response.success && response.token) {
+            // Handle successful login
+            setToken(response.token);
+            setUser(response.user);
+            setShowAuthModal(false);
           }
         }
       } catch (error: any) {
@@ -1009,7 +1056,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
               >
                 {authLoading ? 'Processing...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
               </button>
@@ -1240,16 +1287,16 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 onClick={() => setViewMode('grid')}
                 className={`px-6 py-2 rounded-full font-medium transition-all ${viewMode === 'grid'
                     ? 'bg-white text-slate-900'
-                    : 'text-white hover:bg-white/10'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
                   }`}
               >
-                🏷️ Grid View
+                📋 Grid View
               </button>
               <button
                 onClick={() => setViewMode('map')}
                 className={`px-6 py-2 rounded-full font-medium transition-all ${viewMode === 'map'
                     ? 'bg-white text-slate-900'
-                    : 'text-white hover:bg-white/10'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
                   }`}
               >
                 🗺️ Map View
@@ -1643,6 +1690,20 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <ReviewsList key={`list-${reviewsKey}`} carId={selectedCar.id} isHost={!!user && (selectedCar as any).host_id === (user as any)?.id} />
             </div>
           </div>
+
+          {/* Availability Calendar */}
+          <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">📅 Availability</h2>
+            <AvailabilityCalendar carId={selectedCar.id} />
+          </div>
+
+          {/* Owner Scheduling & Blackouts (Owners only) */}
+          {user && (selectedCar as any).host_id === (user as any)?.id && (
+            <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">🔧 Owner Scheduling & Blackouts</h2>
+              <OwnerSchedulingAndBlackouts carId={selectedCar.id} token={token} />
+            </div>
+          )}
 
           {/* Book */}
           <div className="bg-white rounded-lg shadow-2xl p-6">

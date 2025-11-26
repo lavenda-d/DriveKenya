@@ -231,7 +231,7 @@ app.options('/api/bookings/create', (req, res) => {
   res.sendStatus(200);
 });
 
-// Create booking endpoint - WORKING VERSION
+// Create booking endpoint - conflict-checked
 app.post('/api/bookings/create', async (req, res) => {
   try {
     // Manual auth check since middleware has issues with body parsing
@@ -284,15 +284,64 @@ app.post('/api/bookings/create', async (req, res) => {
       });
     }
 
+    // Calculate dates and enforce min notice
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    const now = new Date();
+    const minNotice = Number(carResult.rows[0].min_notice_hours || 0);
+    if (minNotice > 0 && startDateObj.getTime() < now.getTime() + (minNotice * 60 * 60 * 1000)) {
+      return res.status(400).json({ success: false, message: `Bookings must be made at least ${minNotice} hours in advance` });
+    }
+
     // Calculate total price if not provided
     let finalTotalPrice = totalPrice;
     if (!finalTotalPrice) {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
       const days = Math.ceil((endDateObj - startDateObj) / (1000 * 60 * 60 * 24));
       const carPrice = carResult.rows[0].price_per_day;
       finalTotalPrice = days * carPrice;
       console.log(`💰 Calculated price: ${days} days × ${carPrice} = ${finalTotalPrice}`);
+    }
+
+    // Check for conflicting bookings (respect buffer_days)
+    const bufferDays = Math.ceil((carResult.rows[0].buffer_hours || 0) / 24);
+    const dateMinusDays = (d, n) => {
+      const x = new Date(d);
+      x.setDate(x.getDate() - n);
+      return x.toISOString().split('T')[0];
+    };
+    const datePlusDays = (d, n) => {
+      const x = new Date(d);
+      x.setDate(x.getDate() + n);
+      return x.toISOString().split('T')[0];
+    };
+    const checkStart = bufferDays > 0 ? dateMinusDays(startDate, bufferDays) : startDate;
+    const checkEnd = bufferDays > 0 ? datePlusDays(endDate, bufferDays) : endDate;
+    const conflictCheck = query(`
+      SELECT COUNT(*) as count FROM rentals 
+      WHERE car_id = ? 
+      AND status NOT IN ('cancelled','completed')
+      AND ((start_date <= ? AND end_date > ?) OR (start_date < ? AND end_date >= ?) OR (start_date >= ? AND end_date <= ?))
+    `, [carId, checkStart, checkStart, checkEnd, checkEnd, checkStart, checkEnd]);
+
+    if ((conflictCheck.rows?.[0]?.count || 0) > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Car is already booked for the selected dates'
+      });
+    }
+
+    // Check blackouts
+    const blackoutConflict = query(`
+      SELECT COUNT(*) as count FROM car_blackouts
+      WHERE car_id = ?
+      AND NOT (date(end_datetime) <= date(?) OR date(start_datetime) >= date(?))
+    `, [carId, startDate, endDate]);
+
+    if ((blackoutConflict.rows?.[0]?.count || 0) > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Selected dates fall within a blackout period for this car'
+      });
     }
 
     // Create booking
@@ -427,7 +476,9 @@ app.get('/api/cars/my/cars', authenticateToken, async (req, res) => {
       images: JSON.parse(car.images || '[]'),
       available: car.available === 1,
       license_plate: car.license_plate,
-      created_at: car.created_at
+      created_at: car.created_at,
+      buffer_hours: car.buffer_hours || 0,
+      min_notice_hours: car.min_notice_hours || 0
     }));
 
     res.json({

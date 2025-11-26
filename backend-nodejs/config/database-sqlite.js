@@ -216,6 +216,51 @@ const createTables = () => {
     )
   `);
 
+  // Availability windows per car
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS car_availability_windows (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      car_id INTEGER NOT NULL,
+      start_date DATE,
+      end_date DATE,
+      days_of_week TEXT,
+      start_time TEXT,
+      end_time TEXT,
+      timezone TEXT DEFAULT 'Africa/Nairobi',
+      is_recurring BOOLEAN DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Blackout periods per car
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS car_blackouts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      car_id INTEGER NOT NULL,
+      start_datetime DATETIME NOT NULL,
+      end_datetime DATETIME NOT NULL,
+      reason TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Recurring booking series
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS rental_series (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      car_id INTEGER NOT NULL,
+      renter_id INTEGER NOT NULL,
+      recurrence_rule TEXT NOT NULL,
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
+      FOREIGN KEY (renter_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   const userCols = db.prepare("PRAGMA table_info(users)").all();
   const hasCol = (name) => userCols.some(c => c.name === name);
   if (!hasCol('avatar_url')) db.exec("ALTER TABLE users ADD COLUMN avatar_url TEXT");
@@ -231,6 +276,12 @@ const createTables = () => {
   const hasCarCol = (name) => carCols.some(c => c.name === name);
   if (!hasCarCol('rating')) db.exec("ALTER TABLE cars ADD COLUMN rating DECIMAL(3,2)");
   if (!hasCarCol('review_count')) db.exec("ALTER TABLE cars ADD COLUMN review_count INTEGER DEFAULT 0");
+  if (!hasCarCol('buffer_hours')) db.exec("ALTER TABLE cars ADD COLUMN buffer_hours INTEGER DEFAULT 0");
+  if (!hasCarCol('min_notice_hours')) db.exec("ALTER TABLE cars ADD COLUMN min_notice_hours INTEGER DEFAULT 0");
+
+  const rentalCols = db.prepare("PRAGMA table_info(rentals)").all();
+  const hasRentalCol = (name) => rentalCols.some(c => c.name === name);
+  if (!hasRentalCol('series_id')) db.exec("ALTER TABLE rentals ADD COLUMN series_id INTEGER");
 
   const reviewCols = db.prepare("PRAGMA table_info(reviews)").all();
   const hasReviewCol = (name) => reviewCols.some(c => c.name === name);
