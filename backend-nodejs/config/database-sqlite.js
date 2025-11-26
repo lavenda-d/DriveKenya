@@ -27,6 +27,14 @@ const createTables = () => {
       phone TEXT,
       role TEXT DEFAULT 'customer' CHECK(role IN ('customer', 'admin', 'host')),
       email_verified BOOLEAN DEFAULT FALSE,
+      avatar_url TEXT,
+      is_verified BOOLEAN DEFAULT FALSE,
+      profile_completed BOOLEAN DEFAULT FALSE,
+      last_login_at DATETIME,
+      failed_login_attempts INTEGER DEFAULT 0,
+      locked_until DATETIME,
+      email_verification_token TEXT,
+      email_verification_sent_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -163,6 +171,31 @@ const createTables = () => {
       FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
     )
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      file_url TEXT NOT NULL,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  const userCols = db.prepare("PRAGMA table_info(users)").all();
+  const hasCol = (name) => userCols.some(c => c.name === name);
+  if (!hasCol('avatar_url')) db.exec("ALTER TABLE users ADD COLUMN avatar_url TEXT");
+  if (!hasCol('is_verified')) db.exec("ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE");
+  if (!hasCol('profile_completed')) db.exec("ALTER TABLE users ADD COLUMN profile_completed BOOLEAN DEFAULT FALSE");
+  if (!hasCol('last_login_at')) db.exec("ALTER TABLE users ADD COLUMN last_login_at DATETIME");
+  if (!hasCol('failed_login_attempts')) db.exec("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0");
+  if (!hasCol('locked_until')) db.exec("ALTER TABLE users ADD COLUMN locked_until DATETIME");
+  if (!hasCol('email_verification_token')) db.exec("ALTER TABLE users ADD COLUMN email_verification_token TEXT");
+  if (!hasCol('email_verification_sent_at')) db.exec("ALTER TABLE users ADD COLUMN email_verification_sent_at DATETIME");
 
   console.log('✅ Database tables created successfully');
 };

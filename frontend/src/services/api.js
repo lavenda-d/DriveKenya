@@ -4,9 +4,11 @@ const API_BASE_URL = 'http://localhost:5000/api';
 // API Helper function with error handling
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
+  const isFormData = options && options.body && typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
   const config = {
     headers: {
-      'Content-Type': 'application/json',
+      ...defaultHeaders,
       ...options.headers,
     },
     ...options,
@@ -80,6 +82,12 @@ export const authAPI = {
   register: (userData) => apiRequest('/auth/register', {
     method: 'POST',
     body: JSON.stringify(userData),
+  }),
+  
+  // Resend verification email
+  resendVerification: (email) => apiRequest('/auth/resend-verification', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
   }),
   
   // Get current user
@@ -156,6 +164,49 @@ export const usersAPI = {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(profileData),
+  }),
+  
+  // Upload profile avatar (FormData)
+  uploadAvatar: (file, token) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    return apiRequest('/users/avatar', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+    });
+  },
+
+  // Upload verification document (FormData)
+  uploadDocument: (file, type, token) => {
+    const form = new FormData();
+    form.append('document', file);
+    form.append('type', type);
+    return apiRequest('/users/documents', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+    });
+  },
+
+  // List user's documents
+  getDocuments: (token) => apiRequest('/users/documents', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }),
+
+  // Admin: update document status
+  updateDocumentStatus: (id, status, notes, token) => apiRequest(`/users/documents/${id}/status`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status, notes }),
   }),
 };
 

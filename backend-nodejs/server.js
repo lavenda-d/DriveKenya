@@ -21,7 +21,8 @@ import notificationRoutes from './routes/notifications.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
-import { authenticateToken } from './middleware/auth.js';
+import { authenticateToken, requireAdmin } from './middleware/auth.js';
+import { uploadAvatar, uploadDocument } from './middleware/uploadUser.js';
 
 // Import WebSocket service
 import { initializeSocket } from './services/socketService.js';
@@ -448,7 +449,7 @@ app.get('/api/cars/my/cars', authenticateToken, async (req, res) => {
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
     const { query } = await import('./config/database-sqlite.js');
-    const result = query('SELECT id, email, first_name, last_name, phone, role, email_verified, created_at FROM users WHERE id = ?', [req.user.id]);
+    const result = query('SELECT id, email, first_name, last_name, phone, role, email_verified, avatar_url, is_verified, created_at FROM users WHERE id = ?', [req.user.id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -469,6 +470,8 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
         phone: user.phone,
         role: user.role,
         email_verified: user.email_verified === 1,
+        avatar_url: user.avatar_url || null,
+        is_verified: user.is_verified === 1,
         created_at: user.created_at
       }
     });
@@ -486,7 +489,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 app.get('/api/users/profile', authenticateToken, async (req, res) => {
   try {
     const { query } = await import('./config/database-sqlite.js');
-    const result = query('SELECT id, email, first_name, last_name, phone, role, email_verified, created_at FROM users WHERE id = ?', [req.user.id]);
+    const result = query('SELECT id, email, first_name, last_name, phone, role, email_verified, avatar_url, is_verified, created_at FROM users WHERE id = ?', [req.user.id]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -506,6 +509,8 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
         phone: user.phone,
         role: user.role,
         email_verified: user.email_verified === 1,
+        avatar_url: user.avatar_url || null,
+        is_verified: user.is_verified === 1,
         created_at: user.created_at
       }
     });

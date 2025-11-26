@@ -55,17 +55,16 @@ export const requireAdmin = (req, res, next) => {
 };
 
 export const requireVerified = (req, res, next) => {
-  // DEVELOPMENT: Email verification temporarily disabled
-  // TODO: Re-enable for production
-  console.log('⚠️ Email verification check bypassed for development');
+  const enforce = (process.env.ENFORCE_EMAIL_VERIFICATION || '').toLowerCase() === 'true' || process.env.NODE_ENV === 'production';
+  if (!enforce) {
+    console.log('⚠️ Email verification check bypassed for development');
+    return next();
+  }
+  if (!req.user.email_verified) {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Email verification required' 
+    });
+  }
   next();
-  
-  // Production code (currently disabled):
-  // if (!req.user.email_verified) {
-  //   return res.status(403).json({ 
-  //     success: false, 
-  //     message: 'Email verification required' 
-  //   });
-  // }
-  // next();
 };

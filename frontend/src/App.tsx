@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
-import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+
+import { carsAPI, authAPI, bookingsAPI, messagesAPI, usersAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
+
 import ChatModal from './components/ChatModal';
 import NotificationBadge from './components/NotificationBadge';
 import NotificationCenter from './components/NotificationCenter';
@@ -107,6 +109,8 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authLoading, setAuthLoading] = useState(false);
+  const [authMessage, setAuthMessage] = useState('');
+  const [needsVerificationEmail, setNeedsVerificationEmail] = useState<string | null>(null);
 
   // Booking state
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
@@ -118,6 +122,13 @@ const App: React.FC = () => {
 
   // Messages panel state
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
+  const [profileForm, setProfileForm] = useState({ first_name: '', last_name: '', phone: '' });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const [docType, setDocType] = useState('id_card');
+  const [docFile, setDocFile] = useState(null);
+  const [docUploading, setDocUploading] = useState(false);
 
   // Car listing form state
   const [carForm, setCarForm] = useState<{
@@ -181,7 +192,7 @@ const App: React.FC = () => {
           // Initialize notification service after successful auth
           notificationService.initialize();
         })
-        .catch((error) => {
+        .catch((error: any) => {
           console.warn('🔐 Saved token is invalid, clearing storage...', error);
           authStorage.clearAllAuthData();
           setShowAuthModal(true);
@@ -197,7 +208,7 @@ const App: React.FC = () => {
   }, [user, token]);
 
   // Function to handle JWT signature errors and clear storage
-  const handleJWTError = (error) => {
+  const handleJWTError = (error: any) => {
     if (error.message && (error.message.includes('signature') || error.message.includes('Invalid or expired token'))) {
       console.warn('🔐 JWT authentication error detected, clearing storage...', error);
       authStorage.clearAllAuthData();
@@ -217,8 +228,8 @@ const App: React.FC = () => {
   useEffect(() => {
     const originalFetch = window.fetch;
     window.fetch = function (...args) {
-      return originalFetch.apply(this, arguments)
-        .catch(error => {
+      return originalFetch(...args)
+        .catch((error: any) => {
           if (handleJWTError(error)) {
             throw new Error('Authentication expired, please login again');
           }
@@ -390,90 +401,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Authentication functions
-  const handleAuth = async (formData) => {
-    setAuthLoading(true);
-    try {
-      let response;
-      if (authMode === 'login') {
-        // For login, include role preference
-        response = await authAPI.login({
-          email: formData.email,
-          password: formData.password,
-          role: formData.role
-        });
-      } else {
-        // Transform the form data for registration to match backend expectations
-        const registerData = {
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone || '',
-          role: formData.role,
-          accountType: formData.role // Also send as accountType for clarity
-        };
-        response = await authAPI.register(registerData);
-      }
-      if (response.success) {
-        const userData = response.data?.user || response.user;
-        const tokenData = response.data?.token || response.token;
-        setUser(userData);
-        setToken(tokenData);
-        authStorage.setUser(userData);
-        authStorage.setToken(tokenData);
-        setShowAuthModal(false);
-        console.log('✅ Authentication successful!', { user: userData, token: tokenData, actualRole: userData.role });
-        if (authMode === 'register') {
-          const roleText = userData.role === 'customer' ? 'car renter' : userData.role === 'host' ? 'car owner' : userData.role;
-          alert(`🎉 Registration successful! Welcome to DriveKenya as a ${roleText}!
-${userData.role === 'host' ? 'You can now list your cars and start earning!' : 'You can now browse and rent amazing cars!'}`);
-        } else {
-          const roleText = userData.role === 'customer' ? 'Customer' : userData.role === 'host' ? 'Car Owner' : userData.role;
-          console.log(`Welcome back! Logged in as: ${roleText} (Role from DB: ${userData.role})`);
-        }
-      } else {
-        alert(response.message || 'Authentication failed');
-      }
-    } catch (error) {
-      alert(error.message || 'Authentication failed');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setToken(null);
-    setUserBookings([]);
-    authStorage.clearAuth();
-  };
-
-  // Booking functions
-  const handleBooking = async (bookingData) => {
-    if (!token) {
-      setShowAuthModal(true);
-      return;
-    }
-    console.log('🚀 Frontend booking data being sent:', bookingData);
-    console.log('🚗 Selected car:', selectedCar);
-    setBookingLoading(true);
-    try {
-      const response = await bookingsAPI.createBooking(bookingData, token);
-      if (response.success) {
-        alert('Booking created successfully!');
-        setShowBookingModal(false);
-        setSelectedCar(null);
-        loadUserBookings();
-      } else {
-        alert(response.message || 'Booking failed');
-      }
-    } catch (error) {
-      alert(error.message || 'Booking failed');
-    } finally {
-      setBookingLoading(false);
-    }
-  };
-
   // New function to handle booking completion from BookingFlow
   const handleBookingComplete = async (bookingData) => {
     if (!token) {
@@ -515,7 +442,7 @@ You will receive a confirmation email shortly.`);
   };
 
   // Car form handlers
-  const handleCarFormChange = (e) => {
+  const handleCarFormChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setCarForm(prev => ({
       ...prev,
@@ -523,7 +450,7 @@ You will receive a confirmation email shortly.`);
     }));
   };
 
-  const handleSubmitCar = async (e) => {
+  const handleSubmitCar = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) {
       setShowAuthModal(true);
@@ -580,7 +507,7 @@ You will receive a confirmation email shortly.`);
   };
 
   // Contact form handlers
-  const handleContactFormChange = (e) => {
+  const handleContactFormChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setContactForm(prev => ({
       ...prev,
@@ -588,7 +515,7 @@ You will receive a confirmation email shortly.`);
     }));
   };
 
-  const handleSubmitContact = async (e) => {
+  const handleSubmitContact = async (e: FormEvent) => {
     e.preventDefault();
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
       setContactSubmitMessage('Please fill in all required fields');
@@ -614,7 +541,7 @@ You will receive a confirmation email shortly.`);
   };
 
   // Chat handling functions
-  const handleOpenChat = (car) => {
+  const handleOpenChat = (car: Car) => {
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -631,15 +558,16 @@ You will receive a confirmation email shortly.`);
     }
   };
 
-  const handleCustomerSelect = (customer) => {
+  const handleCustomerSelect = (customer: User) => {
     console.log('👤 Selected customer for chat:', customer);
+    if (!selectedCar) return;
     // Add customer info to selected car
     const carWithCustomer = {
       ...selectedCar,
       customerId: customer.id,
       customerName: customer.name
     };
-    setSelectedCar(carWithCustomer);
+    setSelectedCar(carWithCustomer as Car);
     setShowCustomerSelector(false);
     setShowChatModal(true);
   };
@@ -738,6 +666,7 @@ You will receive a confirmation email shortly.`);
               { id: 'listcar', label: 'List Car', icon: '📝' },
               { id: 'bookings', label: 'Rentals', icon: '📋' },
               { id: 'mycars', label: 'My Cars', icon: '🚘' },
+              { id: 'profile', label: 'Profile', icon: '👤' },
               { id: 'about', label: 'About', icon: 'ℹ️' },
               { id: 'contact', label: 'Contact', icon: '📞' }
             ].map(item => (
@@ -872,9 +801,52 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
 
     if (!showAuthModal) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: FormEvent) => {
       e.preventDefault();
       handleAuth(formData);
+    };
+
+    const handleAuth = async (form: { firstName: string; lastName: string; email: string; password: string; phone: string; role: string }) => {
+      try {
+        setAuthLoading(true);
+        setAuthMessage('');
+        setNeedsVerificationEmail(null);
+        if (authMode === 'login') {
+          const response = await authAPI.login({ email: form.email, password: form.password });
+          if (response.success && response.data?.token) {
+            const newToken = response.data.token;
+            const newUser = response.data.user;
+            setToken(newToken);
+            setUser(newUser);
+            authStorage.setToken(newToken);
+            authStorage.setUser(newUser);
+            setShowAuthModal(false);
+            loadUserBookings();
+          }
+        } else {
+          const payload = {
+            name: `${form.firstName} ${form.lastName}`.trim(),
+            email: form.email,
+            password: form.password,
+            phone: form.phone,
+            role: form.role,
+            accountType: form.role
+          };
+          const response = await authAPI.register(payload);
+          if (response.success) {
+            setAuthMode('login');
+            setAuthMessage('Verification email sent. Please check your inbox to verify your account, then sign in.');
+          }
+        }
+      } catch (error: any) {
+        const message = error?.message || 'Authentication failed';
+        setAuthMessage(message);
+        if (authMode === 'login' && message.toLowerCase().includes('verify')) {
+          setNeedsVerificationEmail(form.email);
+        }
+      } finally {
+        setAuthLoading(false);
+      }
     };
 
     return (
@@ -897,6 +869,32 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   : 'Create your account and start your journey'}
               </p>
             </div>
+            {authMessage && (
+              <div className={`mb-4 p-3 rounded-lg ${authMessage.toLowerCase().includes('error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' : 'bg-blue-500/20 border border-blue-400/30 text-blue-200'}`}>
+                <div className="flex items-center justify-between">
+                  <span>{authMessage}</span>
+                  {authMode === 'login' && needsVerificationEmail && (
+                    <button
+                      type="button"
+                      className="ml-3 px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm"
+                      onClick={async () => {
+                        try {
+                          setAuthLoading(true);
+                          await authAPI.resendVerification(needsVerificationEmail);
+                          setAuthMessage('Verification email resent. Please check your inbox.');
+                        } catch (e: any) {
+                          setAuthMessage(e?.message || 'Failed to resend verification email');
+                        } finally {
+                          setAuthLoading(false);
+                        }
+                      }}
+                    >
+                      Resend
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             {/* Role Selection */}
             <div className="mb-6">
               <p className="text-white/80 text-sm mb-3">
@@ -1184,8 +1182,9 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                     alt={car.name}
                     className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
-                    {car.rating?.toFixed(1) || '4.8'}
+                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full flex items-center">
+                    <span className="text-yellow-400">⭐</span>
+                    <span className="text-white text-sm ml-1">{car.rating?.toFixed(1) || '4.8'}</span>
                   </div>
                 </div>
                 <div className="p-6">
@@ -1478,7 +1477,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <p className="text-white/70 mb-6">Try adjusting your filters or search terms</p>
               <button
                 onClick={() => { setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]); }}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-full font-semibold transition-all"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-3 rounded-full font-semibold transition-all"
               >
                 Reset Filters
               </button>
@@ -1531,7 +1530,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   <img src={car.image} alt={car.name} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300" />
                   <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full flex items-center">
                     <span className="text-yellow-400">⭐</span>
-                    <span className="text-white text-sm ml-1">{car.rating?.toFixed(1) || '4.8'}</span>
+                    <span className="text-white">{car.rating?.toFixed(1) || '4.8'}</span>
                   </div>
                   {car.available && (
                     <div className="absolute top-4 left-4 bg-green-500/80 text-white px-2 py-1 rounded-full text-xs font-semibold">
@@ -1580,7 +1579,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                               setShowAuthModal(true);
                             }
                           }}
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
                         >
                           Book Now
                         </button>
@@ -1609,7 +1608,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <p className="text-white/70 mb-6">Please sign in to view your bookings</p>
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
               >
                 Sign In
               </button>
@@ -1630,7 +1629,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <p className="text-white/70 mb-6">You haven't made any bookings yet. Start by browsing our available cars!</p>
               <button
                 onClick={() => setCurrentPage('cars')}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
               >
                 Browse Cars
               </button>
@@ -1708,7 +1707,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <p className="text-white/70 mb-6">Please sign in to view your cars</p>
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
               >
                 Sign In
               </button>
@@ -1744,7 +1743,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <p className="text-white/70 mb-6">Start earning by listing your first car!</p>
               <button
                 onClick={() => setCurrentPage('listcar')}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
               >
                 List Your Car
               </button>
@@ -1809,7 +1808,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <p className="text-white/70 mb-6">Please sign in to list your car for rental</p>
             <button
               onClick={() => setShowAuthModal(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
             >
               Sign In
             </button>
@@ -1890,7 +1889,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <button
                 type="submit"
                 disabled={isSubmittingCar}
-                className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
+                className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
               >
                 {isSubmittingCar ? 'Listing Car...' : 'List My Car'}
               </button>
@@ -2055,7 +2054,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           <div className="bg-white rounded-lg shadow-2xl p-6">
             <button
               onClick={() => setShowBookingModal(true)}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105"
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:from-blue-700 hover:to-purple-600 transition-all transform hover:scale-105"
             >
               Book This Car
             </button>
@@ -2157,7 +2156,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   <button
                     type="submit"
                     disabled={isSubmittingContact}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
                   >
                     {isSubmittingContact ? 'Sending...' : 'Send Message'}
                   </button>
@@ -2179,6 +2178,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       {currentPage === 'listcar' && renderListCar()}
       {currentPage === 'bookings' && renderBookings()}
       {currentPage === 'mycars' && renderMyCars()}
+      {currentPage === 'profile' && renderProfile()}
       {currentPage === 'about' && renderAbout()}
       {currentPage === 'contact' && renderContact()}
       <AuthModal />

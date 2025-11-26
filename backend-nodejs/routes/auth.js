@@ -3,8 +3,38 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import { query } from '../config/database-sqlite.js';
+import nodemailer from 'nodemailer';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+
+const mailTransporter = (() => {
+  if (process.env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: (process.env.SMTP_SECURE || 'false').toLowerCase() === 'true',
+      auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      } : undefined,
+    });
+  }
+  return nodemailer.createTransport({ jsonTransport: true });
+})();
+
+const sendVerificationEmail = async (to, token, name) => {
+  const verifyLink = `${BACKEND_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+  const from = process.env.EMAIL_FROM || 'no-reply@drivekenya.local';
+  const subject = 'Verify your DriveKenya email';
+  const displayName = (name || '').toString().trim();
+  const text = `Hello${displayName ? ' ' + displayName : ''},\n\nPlease verify your email by clicking the link below:\n${verifyLink}\n\nIf you did not create an account, you can ignore this email.`;
+  const html = `<p>Hello${displayName ? ' ' + displayName : ''},</p><p>Please verify your email by clicking the link below:</p><p><a href="${verifyLink}">Verify Email</a></p><p>If you did not create an account, you can ignore this email.</p>`;
+  await mailTransporter.sendMail({ from, to, subject, text, html });
+};
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -96,6 +126,15 @@ router.post('/register', validateRegistration, async (req, res, next) => {
       [name.split(' ')[0] || name, name.split(' ').slice(1).join(' ') || '', email, passwordHash, phone || '', finalRole]
     );
 
+    const emailToken = uuidv4();
+    query('UPDATE users SET email_verification_token = ?, email_verification_sent_at = CURRENT_TIMESTAMP, email_verified = 0 WHERE id = ?', [emailToken, result.insertId]);
+    try {
+      await sendVerificationEmail(email, emailToken, name.split(' ')[0] || name);
+      console.log('✉️ Sent verification email to', email);
+    } catch (e) {
+      console.error('Email send error:', e.message);
+    }
+
     const token = generateToken(result.insertId);
 
     res.status(201).json({
@@ -110,10 +149,60 @@ router.post('/register', validateRegistration, async (req, res, next) => {
           role: finalRole,
           accountType: finalRole
         },
-        token
+        token,
+        emailVerificationSent: true
       }
     });
 
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/resend-verification', async (req, res, next) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+    const result = query('SELECT id, first_name, email_verified FROM users WHERE email = ?', [email]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      if (!user.email_verified) {
+        const token = uuidv4();
+        query('UPDATE users SET email_verification_token = ?, email_verification_sent_at = CURRENT_TIMESTAMP WHERE id = ?', [token, user.id]);
+        try {
+          await sendVerificationEmail(email, token, user.first_name);
+          console.log('✉️ Resent verification email to', email);
+        } catch (e) {
+          console.error('Email resend error:', e.message);
+        }
+      }
+    }
+    res.json({ success: true, message: 'If the email exists and is unverified, a verification email has been sent.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/verify-email', async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ success: false, message: 'Verification token is required' });
+    }
+    const result = query('SELECT id FROM users WHERE email_verification_token = ?', [token]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification token' });
+    }
+    const userId = result.rows[0].id;
+    query('UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_sent_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [userId]);
+    const redirectUrl = `${FRONTEND_URL}?emailVerified=1`;
+    try {
+      return res.redirect(302, redirectUrl);
+    } catch (_) {
+      return res.json({ success: true, message: 'Email verified successfully' });
+    }
   } catch (error) {
     next(error);
   }
@@ -136,7 +225,7 @@ router.post('/login', validateLogin, async (req, res, next) => {
 
     // Find user
     const result = query(
-      'SELECT id, first_name, last_name, email, password, phone, role, email_verified FROM users WHERE email = ?',
+      'SELECT id, first_name, last_name, email, password, phone, role, email_verified, failed_login_attempts, locked_until, avatar_url, is_verified FROM users WHERE email = ?',
       [email]
     );
 
@@ -151,6 +240,16 @@ router.post('/login', validateLogin, async (req, res, next) => {
     }
 
     const user = result.rows[0];
+    if (user.locked_until) {
+      const lockedUntil = new Date(user.locked_until);
+      if (!isNaN(lockedUntil.getTime()) && lockedUntil > new Date()) {
+        return res.status(423).json({
+          success: false,
+          message: 'Account locked. Try again later.'
+        });
+      }
+    }
+
     console.log('🔐 Password comparison:', { 
       inputLength: password.length, 
       hashLength: user.password.length,
@@ -163,13 +262,28 @@ router.post('/login', validateLogin, async (req, res, next) => {
     
     if (!isValidPassword) {
       console.log('❌ Password mismatch for user:', email);
+      const attempts = (user.failed_login_attempts || 0) + 1;
+      let lockUntil = null;
+      if (attempts >= 5) {
+        lockUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      }
+      query('UPDATE users SET failed_login_attempts = ?, locked_until = COALESCE(?, locked_until) WHERE id = ?', [attempts, lockUntil, user.id]);
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: attempts >= 5 ? 'Too many failed attempts. Account locked for 15 minutes.' : 'Invalid email or password'
+      });
+    }
+    if (!user.email_verified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Email not verified. Please check your inbox for the verification email or resend a new one.',
+        needs_verification: true
       });
     }
 
     const token = generateToken(user.id);
+
+    query('UPDATE users SET failed_login_attempts = 0, locked_until = NULL, last_login_at = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
 
     res.json({
       success: true,
@@ -181,7 +295,9 @@ router.post('/login', validateLogin, async (req, res, next) => {
           email: user.email,
           phone: user.phone,
           role: user.role,
-          isVerified: user.email_verified
+          isVerified: user.email_verified,
+          avatar_url: user.avatar_url,
+          is_profile_verified: user.is_verified
         },
         token
       }
