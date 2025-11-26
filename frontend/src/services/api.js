@@ -210,6 +210,50 @@ export const usersAPI = {
   }),
 };
 
+// Reviews API
+export const reviewsAPI = {
+  // Create a review with optional photos (FormData)
+  createReview: ({ carId, rentalId, rating, ratings = {}, comment, images = [] }, token) => {
+    const form = new FormData();
+    form.append('carId', String(carId));
+    form.append('rentalId', String(rentalId));
+    form.append('rating', String(rating));
+    if (ratings.vehicle) form.append('rating_vehicle', String(ratings.vehicle));
+    if (ratings.cleanliness) form.append('rating_cleanliness', String(ratings.cleanliness));
+    if (ratings.communication) form.append('rating_communication', String(ratings.communication));
+    if (ratings.value) form.append('rating_value', String(ratings.value));
+    if (comment) form.append('comment', comment);
+    images.forEach(file => form.append('images', file));
+    return apiRequest('/reviews', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+  },
+
+  // Get paginated reviews for a car
+  getCarReviews: (carId, { page = 1, limit = 10 } = {}) => {
+    const qs = new URLSearchParams({ page: String(page), limit: String(limit) }).toString();
+    return apiRequest(`/reviews/car/${carId}?${qs}`);
+  },
+
+  // Get ratings summary and category breakdown
+  getCarReviewSummary: (carId) => apiRequest(`/reviews/car/${carId}/summary`),
+
+  // Owner response: create or update
+  upsertOwnerResponse: (reviewId, content, token) => apiRequest(`/reviews/${reviewId}/response`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ content }),
+  }),
+
+  // Owner response: delete
+  deleteOwnerResponse: (reviewId, token) => apiRequest(`/reviews/${reviewId}/response`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  }),
+};
+
 // Messages API
 export const messagesAPI = {
   // Send contact form message (no authentication required)
@@ -330,6 +374,7 @@ export default {
   authAPI,
   bookingsAPI,
   usersAPI,
+  reviewsAPI,
   messagesAPI,
   systemAPI,
   checkAPIConnection,

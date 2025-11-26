@@ -581,6 +581,8 @@ app.get('/api/cars-simple', async (req, res) => {
       features: JSON.parse(car.features || '[]'),
       images: JSON.parse(car.images || '[]'),
       available: car.available === 1,
+      rating: car.rating || null,
+      review_count: car.review_count || 0,
       host_id: car.host_id, // Include host_id for chat functionality
       owner_name: car.owner_name, // Owner name from cars table
       owner_email: car.owner_email, // Owner email from cars table

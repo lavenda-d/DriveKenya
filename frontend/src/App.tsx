@@ -22,6 +22,9 @@ import Viewer360 from './components/Viewer360';
 import CarSpecs from './components/CarSpecs';
 import SpecsEditor from './components/SpecsEditor';
 import enhancedCarsAPI from './services/enhancedCarsAPI';
+import ReviewSummary from './components/reviews/ReviewSummary';
+import ReviewsList from './components/reviews/ReviewsList';
+import ReviewForm from './components/reviews/ReviewForm';
 
 // Type definitions
 interface Car {
@@ -166,6 +169,7 @@ const App: React.FC = () => {
   const [showImageManager, setShowImageManager] = useState(false);
   const [showSpecsEditor, setShowSpecsEditor] = useState(false);
   const [uploadingCarId, setUploadingCarId] = useState<string | null>(null);
+  const [reviewsKey, setReviewsKey] = useState(0);
 
   // Chat state
   const [showChatModal, setShowChatModal] = useState(false);
@@ -498,7 +502,7 @@ You will receive a confirmation email shortly.`);
       setUploadingCarId(newCarId);
       setShowImageUploader(true);
       setCarSubmitMessage('🎉 Car listed successfully! Now add some images.');
-    } catch (error) {
+    } catch (error: any) {
       setCarSubmitMessage(`❌ Error: ${error.message}`);
       console.error('Add car error:', error);
     } finally {
@@ -532,7 +536,7 @@ You will receive a confirmation email shortly.`);
         subject: '',
         message: ''
       });
-    } catch (error) {
+    } catch (error: any) {
       setContactSubmitMessage(`❌ Error: ${error.message}`);
       console.error('Contact form error:', error);
     } finally {
@@ -1102,7 +1106,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={() => setCurrentPage('cars')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
             >
               🚗 Browse {cars.length} Cars
             </button>
@@ -1184,7 +1188,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   />
                   <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full flex items-center">
                     <span className="text-yellow-400">⭐</span>
-                    <span className="text-white text-sm ml-1">{car.rating?.toFixed(1) || '4.8'}</span>
+                    <span className="text-white">{car.rating?.toFixed(1) || '4.8'}</span>
                   </div>
                 </div>
                 <div className="p-6">
@@ -1204,7 +1208,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                           setShowAuthModal(true);
                         }
                       }}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-2 rounded-full font-semibold transition-all"
                     >
                       Book Now
                     </button>
@@ -1554,625 +1558,108 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                       ))}
                     </div>
                     <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-2xl font-bold text-white">KSh {car.price?.toLocaleString()}</div>
-                        <div className="text-white/60 text-sm">per day</div>
-                      </div>
-                      <div className="flex space-x-2">
-                        {user && (
-                          <NotificationBadge>
-                            <button
-                              onClick={() => handleOpenChat(car)}
-                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
-                              title={user?.role === 'host' && car.host_id === user.id ? "Chat with customers" : "Chat with owner"}
-                            >
-                              💬
-                            </button>
-                          </NotificationBadge>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedCar(car);
-                            if (user) {
-                              setShowBookingModal(true);
-                            } else {
-                              setShowAuthModal(true);
-                            }
-                          }}
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
-                        >
-                          Book Now
-                        </button>
-                      </div>
+                      <div className="text-2xl font-bold text-white">KSh {car.price?.toLocaleString()}</div>
+                      <div className="text-white/60 text-sm">per day</div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  // Enhanced Bookings Page
-  const renderBookings = () => {
-    if (!user) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-          <div className="max-w-6xl mx-auto px-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
-              <div className="text-6xl mb-4">🔐</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
-              <p className="text-white/70 mb-6">Please sign in to view your bookings</p>
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
-              >
-                Sign In
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (userBookings.length === 0) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-          <div className="max-w-6xl mx-auto px-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
-              <div className="text-6xl mb-4">📆</div>
-              <h3 className="text-2xl font-bold text-white mb-4">No Bookings Yet</h3>
-              <p className="text-white/70 mb-6">You haven't made any bookings yet. Start by browsing our available cars!</p>
-              <button
-                onClick={() => setCurrentPage('cars')}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
-              >
-                Browse Cars
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
-          <div className="space-y-6">
-            {userBookings.map((booking) => (
-              <div key={booking.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-white">{booking.car?.name || 'Car Rental'}</h3>
-                    <p className="text-white/70">
-                      {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
-                    </p>
-                    <p className="text-white/60 text-sm mt-1">
-                      Status: <span className={`font-medium ${booking.status === 'confirmed' ? 'text-green-400' : booking.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
-                        {booking.status}
-                      </span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-white">KSh {booking.totalPrice?.toLocaleString()}</div>
-                    <p className="text-white/60 text-sm">Total</p>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-white/10">
                   <div className="flex justify-between items-center">
-                    <div className="text-white/70 text-sm">
-                      Booking ID: {booking.id}
-                    </div>
-                    <div className="flex space-x-2">
-                      {booking.status === 'pending' && (
-                        <button
-                          onClick={() => {
-                            if (confirm('Are you sure you want to cancel this booking?')) {
-                              bookingsAPI.cancelBooking(booking.id, token);
-                              loadUserBookings();
-                            }
-                          }}
-                          className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-red-300 px-4 py-2 rounded-lg font-semibold transition-all"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedCar(car);
+                        if (user) {
+                          setShowBookingModal(true);
+                        } else {
+                          setShowAuthModal(true);
+                        }
+                      }}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-2 rounded-full font-semibold transition-all"
+                    >
+                      Book Now
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedCar(car);
+                        setCurrentPage('car-detail');
+                      }}
+                      className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-2 rounded-full font-semibold transition-all"
+                    >
+                      View Details
+                    </button>
                   </div>
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // My Cars Page - Show cars owned by current user
-  const renderMyCars = () => {
-    // Handle case when user is not logged in
-    if (!user) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-          <div className="max-w-6xl mx-auto px-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
-              <div className="text-6xl mb-4">🔐</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
-              <p className="text-white/70 mb-6">Please sign in to view your cars</p>
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
-              >
-                Sign In
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Handle loading state
-    if (myCarsLoading) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-          <div className="max-w-6xl mx-auto px-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
-              <div className="text-6xl mb-4">⏳</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Loading Your Cars...</h3>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
-          {myCars.length === 0 ? (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
-              <div className="text-6xl mb-4">🚗</div>
-              <h3 className="text-2xl font-bold text-white mb-4">No cars listed yet</h3>
-              <p className="text-white/70 mb-6">Start earning by listing your first car!</p>
-              <button
-                onClick={() => setCurrentPage('listcar')}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
-              >
-                List Your Car
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {myCars.map((car) => (
-                <div key={car.id} className="bg-black/40 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden group hover:scale-[1.02] transition-all duration-300">
-                  <div className="relative">
-                    <img
-                      src={car.images && car.images.length > 0 ? car.images[0] : '/default-car.jpg'}
-                      alt={`${car.make} ${car.model}`}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${car.available ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                        {car.available ? 'Available' : 'Unavailable'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-2xl font-bold text-white mb-2">{car.make} {car.model}</h3>
-                    <p className="text-white/60 mb-2">{car.year} • {car.location}</p>
-                    <p className="text-white/70 mb-4 text-sm line-clamp-2">{car.description}</p>
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <div className="text-2xl font-bold text-white">KSh {car.price_per_day?.toLocaleString()}</div>
-                        <div className="text-white/60 text-sm">per day</div>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-yellow-400">⭐</span>
-                        <span className="text-white">{car.rating || 4.8}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition-all">
-                        View Messages
-                      </button>
-                      <button className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white py-2 rounded-lg font-semibold transition-all">
-                        Edit Car
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // List Car Form - Enhanced with proper backend integration
-  const renderListCar = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-      <div className="max-w-4xl mx-auto px-6 py-20">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">List Your Car</h1>
-        {!user ? (
-          <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
-            <div className="text-6xl mb-4">🔐</div>
-            <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
-            <p className="text-white/70 mb-6">Please sign in to list your car for rental</p>
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-3 rounded-full font-semibold transition-all"
-            >
-              Sign In
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-            <p className="text-white/80 text-lg mb-6">Start earning by renting out your vehicle on DriveKenya!</p>
-            {carSubmitMessage && (
-              <div className={`mb-6 p-4 rounded-lg ${carSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' :
-                  'bg-green-500/20 border border-green-400/30 text-green-300'
-                }`}>
-                {carSubmitMessage}
-              </div>
-            )}
-            <form onSubmit={handleSubmitCar}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <input
-                  name="make"
-                  value={carForm.make}
-                  onChange={handleCarFormChange}
-                  placeholder="Car Make *"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <input
-                  name="model"
-                  value={carForm.model}
-                  onChange={handleCarFormChange}
-                  placeholder="Car Model *"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <input
-                  name="year"
-                  value={carForm.year}
-                  onChange={handleCarFormChange}
-                  placeholder="Year *"
-                  type="number"
-                  min="1990"
-                  max={new Date().getFullYear() + 1}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <input
-                  name="price_per_day"
-                  value={carForm.price_per_day}
-                  onChange={handleCarFormChange}
-                  placeholder="Price per day (KSh) *"
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <input
-                  name="color"
-                  value={carForm.color}
-                  onChange={handleCarFormChange}
-                  placeholder="Color"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  name="location"
-                  value={carForm.location}
-                  onChange={handleCarFormChange}
-                  placeholder="Location (e.g., Nairobi CBD)"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <textarea
-                name="description"
-                value={carForm.description}
-                onChange={handleCarFormChange}
-                placeholder="Description (optional)"
-                rows={3}
-                className="w-full mt-6 px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              ></textarea>
-              <button
-                type="submit"
-                disabled={isSubmittingCar}
-                className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
-              >
-                {isSubmittingCar ? 'Listing Car...' : 'List My Car'}
-              </button>
-            </form>
           </div>
         )}
       </div>
     </div>
   );
 
-  {/* Enhanced Car Detail View */ }
-  {
-    selectedCar && currentPage === 'car-detail' && (
+  // Car Detail View
+  const renderCarDetail = () => {
+    if (!selectedCar) return null;
+    return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 pt-20 px-4">
         <div className="max-w-7xl mx-auto py-8">
           {/* Back Button */}
           <button
-            onClick={() => {
-              setSelectedCar(null);
-              setCurrentPage('cars');
-            }}
+            onClick={() => { setSelectedCar(null); setCurrentPage('cars'); }}
             className="mb-6 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
           >
             ← Back to Cars
           </button>
-          {/* Car Header */}
+
+          {/* Header */}
           <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {selectedCar.make} {selectedCar.model}
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{selectedCar.make} {selectedCar.model}</h1>
             <p className="text-gray-600">{selectedCar.year} • {selectedCar.location}</p>
-            <p className="text-2xl font-bold text-blue-600 mt-4">
-              KSH {selectedCar.price_per_day?.toLocaleString()}/day
-            </p>
+            <p className="text-2xl font-bold text-blue-600 mt-4">KSH {selectedCar.price_per_day?.toLocaleString?.() || selectedCar.price?.toLocaleString?.()}</p>
           </div>
-          {/* Image Gallery */}
+
+          {/* Gallery */}
           <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">📸 Photos</h2>
             <ImageGallery carId={selectedCar.id} />
           </div>
-          {/* 360° Viewer (if 360 images exist) */}
-          {selectedCar.car_images?.filter(img => img.image_type === '360').length > 0 && (
+
+          {/* 360 Viewer */}
+          {selectedCar.car_images?.filter((img: any) => img.image_type === '360').length > 0 && (
             <div className="mb-6">
-              <Viewer360
-                images360={selectedCar.car_images.filter(img => img.image_type === '360')}
-              />
+              <Viewer360 images360={selectedCar.car_images.filter((img: any) => img.image_type === '360')} />
             </div>
           )}
-          {/* Specifications */}
+
+          {/* Specs */}
           <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
             <CarSpecs carId={selectedCar.id} />
           </div>
-          {/* Owner Controls */}
-          {user && selectedCar.host_id === user.id && (
+
+          {/* Reviews */}
+          <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">⭐ Reviews</h2>
             <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow-2xl p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">🔧 Manage Your Car</h2>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => setShowImageManager(true)}
-                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
-                  >
-                    📷 Manage Images
-                  </button>
-                  <button
-                    onClick={() => setShowSpecsEditor(true)}
-                    className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-semibold"
-                  >
-                    📝 Edit Specifications
-                  </button>
-                </div>
-              </div>
-              {/* Image Manager Modal */}
-              {showImageManager && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                  <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-                    <div className="p-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold">Manage Images</h2>
-                        <button
-                          onClick={() => setShowImageManager(false)}
-                          className="text-gray-500 hover:text-gray-700 text-3xl"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <ImageManager
-                        carId={selectedCar.id}
-                        token={token}
-                        onUpdate={() => {
-                          // Refresh car data
-                          carsAPI.getCarById(selectedCar.id).then(response => {
-                            setSelectedCar(response.data.car);
-                          });
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              {/* Specs Editor Modal */}
-              {showSpecsEditor && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                  <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                    <div className="p-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold">Edit Specifications</h2>
-                        <button
-                          onClick={() => setShowSpecsEditor(false)}
-                          className="text-gray-500 hover:text-gray-700 text-3xl"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <SpecsEditor
-                        carId={selectedCar.id}
-                        token={token}
-                        onUpdate={() => {
-                          // Refresh car data
-                          carsAPI.getCarById(selectedCar.id).then(response => {
-                            setSelectedCar(response.data.car);
-                          });
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              {/* Image Uploader Modal */}
-              {showImageUploader && uploadingCarId && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                  <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                    <div className="p-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold">Upload Car Images</h2>
-                        <button
-                          onClick={() => {
-                            setShowImageUploader(false);
-                            setUploadingCarId(null);
-                          }}
-                          className="text-gray-500 hover:text-gray-700 text-3xl"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <ImageUploader
-                        carId={uploadingCarId}
-                        token={token}
-                        onUploadComplete={() => {
-                          setShowImageUploader(false);
-                          setUploadingCarId(null);
-                          alert('✅ Images uploaded successfully! You can add more images anytime from your car dashboard.');
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+              <ReviewSummary key={`sum-${reviewsKey}`} carId={selectedCar.id} />
+              <ReviewForm carId={selectedCar.id} onSubmitted={() => setReviewsKey(k => k + 1)} />
+              <ReviewsList key={`list-${reviewsKey}`} carId={selectedCar.id} isHost={!!user && (selectedCar as any).host_id === (user as any)?.id} />
             </div>
-          )}
-          {/* Booking Section */}
+          </div>
+
+          {/* Book */}
           <div className="bg-white rounded-lg shadow-2xl p-6">
-            <button
-              onClick={() => setShowBookingModal(true)}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:from-blue-700 hover:to-purple-600 transition-all transform hover:scale-105"
-            >
+            <button onClick={() => setShowBookingModal(true)} className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:from-blue-700 hover:to-purple-600 transition-all transform hover:scale-105">
               Book This Car
             </button>
           </div>
         </div>
       </div>
-    )
-  }
-
-  const renderAbout = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">About DriveKenya</h1>
-        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-          <p className="text-white/80 text-lg mb-6">
-            DriveKenya is Kenya's premier car rental platform, connecting travelers with quality vehicles across the country.
-            From budget-friendly economy cars to luxury vehicles, we offer the perfect ride for every journey.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div className="text-center">
-              <div className="text-4xl mb-4"></div>
-              <h3 className="text-white font-semibold mb-2">Wide Selection</h3>
-              <p className="text-white/70">Economy to luxury vehicles</p>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl mb-4"></div>
-              <h3 className="text-white font-semibold mb-2">Trusted & Safe</h3>
-              <p className="text-white/70">All vehicles verified and insured</p>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl mb-4"></div>
-              <h3 className="text-white font-semibold mb-2">Best Prices</h3>
-              <p className="text-white/70">Competitive rates nationwide</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderContact = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-      <div className="max-w-4xl mx-auto px-6 py-20">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">Contact Us</h1>
-        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-white font-semibold text-xl mb-4">Get in Touch</h3>
-              <div className="space-y-4 text-white/80">
-                <div>📧 info@driveKenya.com</div>
-                <div>📞 +254 700 123 456</div>
-                <div>📍 Nairobi, Kenya</div>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-xl mb-4">Send Message</h3>
-              {contactSubmitMessage && (
-                <div className={`mb-4 p-3 rounded-lg ${contactSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' :
-                    'bg-green-500/20 border border-green-400/30 text-green-300'
-                  }`}>
-                  {contactSubmitMessage}
-                </div>
-              )}
-              <form onSubmit={handleSubmitContact}>
-                <div className="space-y-4">
-                  <input
-                    name="name"
-                    value={contactForm.name}
-                    onChange={handleContactFormChange}
-                    placeholder="Your Name *"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <input
-                    name="email"
-                    value={contactForm.email}
-                    onChange={handleContactFormChange}
-                    placeholder="Your Email *"
-                    type="email"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <input
-                    name="subject"
-                    value={contactForm.subject}
-                    onChange={handleContactFormChange}
-                    placeholder="Subject (optional)"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <textarea
-                    name="message"
-                    value={contactForm.message}
-                    onChange={handleContactFormChange}
-                    placeholder="Your Message *"
-                    rows={4}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  ></textarea>
-                  <button
-                    type="submit"
-                    disabled={isSubmittingContact}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
-                  >
-                    {isSubmittingContact ? 'Sending...' : 'Send Message'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   // Main render function
   return (
     <div className="min-h-screen font-['Poppins'] bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900">
       <Navigation />
+      {selectedCar && currentPage === 'car-detail' && renderCarDetail()}
       {currentPage === 'home' && renderHome()}
       {currentPage === 'cars' && renderCars()}
       {currentPage === 'listcar' && renderListCar()}

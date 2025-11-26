@@ -93,11 +93,41 @@ const createTables = () => {
       reviewer_id INTEGER NOT NULL,
       car_id INTEGER NOT NULL,
       rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+      rating_vehicle INTEGER CHECK(rating_vehicle >= 1 AND rating_vehicle <= 5),
+      rating_cleanliness INTEGER CHECK(rating_cleanliness >= 1 AND rating_cleanliness <= 5),
+      rating_communication INTEGER CHECK(rating_communication >= 1 AND rating_communication <= 5),
+      rating_value INTEGER CHECK(rating_value >= 1 AND rating_value <= 5),
       comment TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (rental_id) REFERENCES rentals(id) ON DELETE CASCADE,
       FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Review photos table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS review_photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      review_id INTEGER NOT NULL,
+      image_url TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Review owner responses table (one official response per review)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS review_responses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      review_id INTEGER NOT NULL UNIQUE,
+      responder_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (review_id) REFERENCES reviews(id) ON DELETE CASCADE,
+      FOREIGN KEY (responder_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
@@ -196,6 +226,19 @@ const createTables = () => {
   if (!hasCol('locked_until')) db.exec("ALTER TABLE users ADD COLUMN locked_until DATETIME");
   if (!hasCol('email_verification_token')) db.exec("ALTER TABLE users ADD COLUMN email_verification_token TEXT");
   if (!hasCol('email_verification_sent_at')) db.exec("ALTER TABLE users ADD COLUMN email_verification_sent_at DATETIME");
+
+  const carCols = db.prepare("PRAGMA table_info(cars)").all();
+  const hasCarCol = (name) => carCols.some(c => c.name === name);
+  if (!hasCarCol('rating')) db.exec("ALTER TABLE cars ADD COLUMN rating DECIMAL(3,2)");
+  if (!hasCarCol('review_count')) db.exec("ALTER TABLE cars ADD COLUMN review_count INTEGER DEFAULT 0");
+
+  const reviewCols = db.prepare("PRAGMA table_info(reviews)").all();
+  const hasReviewCol = (name) => reviewCols.some(c => c.name === name);
+  if (!hasReviewCol('rating_vehicle')) db.exec("ALTER TABLE reviews ADD COLUMN rating_vehicle INTEGER CHECK(rating_vehicle >= 1 AND rating_vehicle <= 5)");
+  if (!hasReviewCol('rating_cleanliness')) db.exec("ALTER TABLE reviews ADD COLUMN rating_cleanliness INTEGER CHECK(rating_cleanliness >= 1 AND rating_cleanliness <= 5)");
+  if (!hasReviewCol('rating_communication')) db.exec("ALTER TABLE reviews ADD COLUMN rating_communication INTEGER CHECK(rating_communication >= 1 AND rating_communication <= 5)");
+  if (!hasReviewCol('rating_value')) db.exec("ALTER TABLE reviews ADD COLUMN rating_value INTEGER CHECK(rating_value >= 1 AND rating_value <= 5)");
+  if (!hasReviewCol('updated_at')) db.exec("ALTER TABLE reviews ADD COLUMN updated_at DATETIME");
 
   console.log('✅ Database tables created successfully');
 };
