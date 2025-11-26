@@ -122,6 +122,48 @@ const createTables = () => {
     )
   `);
 
+  // Chat notifications table for unread message tracking
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      chat_room TEXT NOT NULL,
+      unread_count INTEGER DEFAULT 0,
+      last_message_id INTEGER,
+      last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (last_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL,
+      UNIQUE(user_id, chat_room)
+    )
+  `);
+
+  // Car images table for enhanced image management
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS car_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      car_id INTEGER NOT NULL,
+      image_url TEXT NOT NULL,
+      image_type TEXT DEFAULT 'standard' CHECK(image_type IN ('standard', '360', 'interior', 'exterior')),
+      display_order INTEGER DEFAULT 0,
+      is_primary BOOLEAN DEFAULT FALSE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Car specifications table for structured specs
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS car_specs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      car_id INTEGER NOT NULL,
+      category TEXT NOT NULL CHECK(category IN ('engine', 'dimensions', 'features', 'safety', 'performance', 'comfort')),
+      spec_key TEXT NOT NULL,
+      spec_value TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+    )
+  `);
+
   console.log('✅ Database tables created successfully');
 };
 
@@ -138,10 +180,10 @@ export const query = (sql, params = []) => {
     } else {
       const stmt = db.prepare(sql);
       const result = stmt.run(...params);
-      return { 
-        rows: [], 
+      return {
+        rows: [],
         rowCount: result.changes,
-        insertId: result.lastInsertRowid 
+        insertId: result.lastInsertRowid
       };
     }
   } catch (error) {
