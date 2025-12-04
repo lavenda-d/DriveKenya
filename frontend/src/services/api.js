@@ -39,7 +39,7 @@ const apiRequest = async (endpoint, options = {}) => {
 // Cars API
 export const carsAPI = {
   // Get all cars
-  getAllCars: () => apiRequest('/cars-simple'),
+  getAllCars: () => apiRequest('/cars'),
   
   // Get car by ID
   getCarById: (id) => apiRequest(`/cars/${id}`),
@@ -47,7 +47,7 @@ export const carsAPI = {
   // Search cars
   searchCars: (params) => {
     const query = new URLSearchParams(params).toString();
-    return apiRequest(`/cars-simple?${query}`);
+    return apiRequest(`/cars?${query}`);
   },
 
   // Add new car (requires authentication)

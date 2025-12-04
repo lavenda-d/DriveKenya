@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api.js';
 import ChatModal from './components/ChatModal.jsx';
 import NotificationBadge from './components/NotificationBadge.jsx';
@@ -9,11 +10,21 @@ import PWAStatus from './components/PWAStatus.jsx';
 import BookingFlow from './components/BookingFlow.jsx';
 import CustomerChatSelector from './components/CustomerChatSelector.jsx';
 import GoogleMapEnhanced from './components/GoogleMapEnhanced.jsx';
+import AdminDashboard from './components/AdminDashboard.jsx';
+import OwnerDashboard from './components/OwnerDashboard.jsx';
+import PricingCalculator from './components/PricingCalculator.jsx';
+// Phase 4 Advanced Features
+import LanguageSwitcher from './components/LanguageSwitcher.jsx';
+import Phase4Dashboard from './components/Phase4Dashboard.jsx';
+import EmergencyButton from './components/EmergencyButton.jsx';
+import LiveChatSupport from './components/LiveChatSupport.jsx';
+import PerformanceMonitor from './components/PerformanceMonitor.jsx';
 import { chatService } from './services/chatService.js';
 import { notificationService } from './services/notificationService.js';
 import { pwaService } from './services/pwaService.js';
 
 function App() {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedCar, setSelectedCar] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -596,113 +607,178 @@ function App() {
   });
 
   // Enhanced Navigation Component with Auth
-  const Navigation = () => (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/20">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
-          <div 
-            className="text-2xl font-bold text-white cursor-pointer hover:text-blue-400 transition-colors"
-            onClick={() => setCurrentPage('home')}
-          >
-            Drive<span className="text-blue-400">Kenya</span>
-          </div>
-          
-          <div className="hidden md:flex space-x-4">
-            {[
-              { id: 'home', label: 'Home', icon: '🏠' },
-              { id: 'cars', label: 'Cars', icon: '🚗' },
-              { id: 'listcar', label: 'List Car', icon: '📝' },
-              { id: 'bookings', label: 'Rentals', icon: '📋' },
-              { id: 'mycars', label: 'My Cars', icon: '�' },
-              { id: 'about', label: 'About', icon: 'ℹ️' },
-              { id: 'contact', label: 'Contact', icon: '📞' }
-            ].map(item => (
+  const Navigation = () => {
+    const [showServicesMenu, setShowServicesMenu] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center justify-between h-16">
+            <div 
+              className="flex items-center space-x-3 text-2xl font-bold text-white cursor-pointer hover:text-blue-400 transition-colors"
+              onClick={() => setCurrentPage('home')}
+            >
+              <span>Drive<span className="text-blue-400">Kenya</span></span>
+              <LanguageSwitcher />
+            </div>
+            
+            <div className="hidden md:flex items-center space-x-2">
               <button
-                key={item.id}
-                onClick={() => setCurrentPage(item.id)}
+                onClick={() => setCurrentPage('home')}
                 className={`px-3 py-2 rounded-full transition-all duration-200 text-sm ${
-                  currentPage === item.id 
+                  currentPage === 'home' 
                     ? 'bg-blue-500/20 text-white border border-blue-400/30' 
                     : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <span className="mr-1">{item.icon}</span>
-                {item.label}
+                <span className="mr-1">🏠</span>{t('nav.home')}
               </button>
-            ))}
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="hidden md:block">
-              <span className="text-white/60 text-sm flex items-center">
-                {apiConnected ? (
-                  <>
-                    <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                    Database Connected
-                  </>
-                ) : (
-                  <>
-                    <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
-                    Demo Mode
-                  </>
-                )}
-              </span>
-            </div>
-            
-            {user ? (
-              <div className="flex items-center space-x-3">
-                <NotificationBadge className="mr-2">
-                  <button 
-                    onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-                    className="text-white text-lg hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-white/10"
-                    title="Notifications"
-                  >
-                    🔔
-                  </button>
-                </NotificationBadge>
-                <NotificationBadge className="mr-2">
-                  <button 
-                    onClick={() => setShowMessagesPanel(!showMessagesPanel)}
-                    className="text-white text-lg hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-white/10"
-                    title="Messages"
-                  >
-                    💬
-                  </button>
-                </NotificationBadge>
-                <div className="text-white text-sm">
-                  <div className="font-semibold">
-                    👋 {user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim()}
-                  </div>
-                  <div className="text-white/60 text-xs">
-                    {(() => {
-                      console.log('🔍 User object in navigation:', user);
-                      console.log('🔍 User role:', user.role);
-                      return user.role === 'host' ? '🔑 Car Owner Account' : 
-                             user.role === 'admin' ? '👑 Admin Account' : 
-                             '🚗 Customer Account';
-                    })()} • Role: {user.role || 'undefined'}
-                  </div>
-                </div>
-                <button 
-                  onClick={handleLogout}
-                  className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-white px-4 py-2 rounded-full font-semibold transition-all"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={() => setShowAuthModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg"
+              
+              <button
+                onClick={() => setCurrentPage('cars')}
+                className={`px-3 py-2 rounded-full transition-all duration-200 text-sm ${
+                  currentPage === 'cars' 
+                    ? 'bg-blue-500/20 text-white border border-blue-400/30' 
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
               >
-                Sign In
+                <span className="mr-1">🚗</span>{t('nav.cars')}
               </button>
-            )}
+
+              {/* Services Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowServicesMenu(!showServicesMenu)}
+                  className={`px-3 py-2 rounded-full transition-all duration-200 text-sm flex items-center ${
+                    ['listcar', 'bookings', 'mycars'].includes(currentPage)
+                      ? 'bg-blue-500/20 text-white border border-blue-400/30' 
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <span className="mr-1">⚙️</span>{t('nav.services', 'Services')}
+                  <span className="ml-1">▾</span>
+                </button>
+                
+                {showServicesMenu && (
+                  <div className="absolute top-full mt-2 right-0 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl py-2 min-w-[160px]">
+                    <button
+                      onClick={() => { setCurrentPage('listcar'); setShowServicesMenu(false); }}
+                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                    >
+                      <span className="mr-2">📝</span>List Car
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('bookings'); setShowServicesMenu(false); }}
+                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                    >
+                      <span className="mr-2">📋</span>Rentals
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('mycars'); setShowServicesMenu(false); }}
+                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                    >
+                      <span className="mr-2">🚙</span>My Cars
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage('phase4')}
+                className={`px-3 py-2 rounded-full transition-all duration-200 text-sm ${
+                  currentPage === 'phase4' 
+                    ? 'bg-blue-500/20 text-white border border-blue-400/30' 
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <span className="mr-1">🚀</span>{t('nav.advanced')}
+              </button>
+
+              {/* More Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowMoreMenu(!showMoreMenu)}
+                  className={`px-3 py-2 rounded-full transition-all duration-200 text-sm flex items-center ${
+                    ['about', 'contact'].includes(currentPage)
+                      ? 'bg-blue-500/20 text-white border border-blue-400/30' 
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <span className="mr-1">⋮</span>More
+                </button>
+                
+                {showMoreMenu && (
+                  <div className="absolute top-full mt-2 right-0 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl py-2 min-w-[140px]">
+                    <button
+                      onClick={() => { setCurrentPage('about'); setShowMoreMenu(false); }}
+                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                    >
+                      <span className="mr-2">ℹ️</span>About
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('contact'); setShowMoreMenu(false); }}
+                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                    >
+                      <span className="mr-2">📞</span>Contact
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          
+            <div className="flex items-center space-x-3">
+              {user ? (
+                <div className="flex items-center space-x-2">
+                  <NotificationBadge>
+                    <button 
+                      onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                      className="text-white text-lg hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-white/10"
+                      title="Notifications"
+                    >
+                      🔔
+                    </button>
+                  </NotificationBadge>
+                  <NotificationBadge>
+                    <button 
+                      onClick={() => setShowMessagesPanel(!showMessagesPanel)}
+                      className="text-white text-lg hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-white/10"
+                      title="Messages"
+                    >
+                      💬
+                    </button>
+                  </NotificationBadge>
+                  <div className="text-white text-xs">
+                    <div className="font-semibold">
+                      {user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                    </div>
+                    <div className="text-white/60 text-xs">
+                      {user.role === 'host' ? '🔑 Owner' : 
+                       user.role === 'admin' ? '👑 Admin' : 
+                       '🚗 Customer'}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-white px-3 py-1.5 rounded-full text-sm font-semibold transition-all"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setShowAuthModal(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-5 py-2 rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg text-sm"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
-  );
+      </nav>
+    );
+  };
   
   // Google Sign-Up handler
   const handleGoogleSignUp = async () => {
@@ -1011,6 +1087,12 @@ function App() {
                 {user.role === 'host' ? (
                   <>
                     <button 
+                      onClick={() => setCurrentPage('owner-dashboard')}
+                      className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
+                    >
+                      📊 Owner Dashboard
+                    </button>
+                    <button 
                       onClick={() => setCurrentPage('mycars')}
                       className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
                     >
@@ -1023,6 +1105,21 @@ function App() {
                       ➕ List New Car
                     </button>
                   </>
+                ) : user.role === 'admin' ? (
+                  <>
+                    <button 
+                      onClick={() => setCurrentPage('admin-dashboard')}
+                      className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
+                    >
+                      ⚙️ Admin Dashboard
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage('bookings')}
+                      className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 backdrop-blur-sm"
+                    >
+                      📋 All Bookings
+                    </button>
+                  </>
                 ) : (
                   <button 
                     onClick={() => setCurrentPage('bookings')}
@@ -1031,6 +1128,12 @@ function App() {
                     📋 My Bookings ({userBookings.length})
                   </button>
                 )}
+                <button 
+                  onClick={() => setCurrentPage('pricing')}
+                  className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
+                >
+                  💰 Pricing Calculator
+                </button>
               </>
             ) : (
               <button 
@@ -1763,8 +1866,12 @@ function App() {
       {currentPage === 'listcar' && renderListCar()}
       {currentPage === 'bookings' && renderBookings()}
       {currentPage === 'mycars' && renderMyCars()}
+      {currentPage === 'phase4' && <Phase4Dashboard />}
       {currentPage === 'about' && renderAbout()}
       {currentPage === 'contact' && renderContact()}
+      {currentPage === 'admin-dashboard' && user?.role === 'admin' && <AdminDashboard />}
+      {currentPage === 'owner-dashboard' && user?.role === 'host' && <OwnerDashboard />}
+      {currentPage === 'pricing' && <PricingCalculator />}
       
       <AuthModal />
       {renderBookingFlow()}
@@ -1863,6 +1970,11 @@ function App() {
       {/* PWA Components */}
       <PWAInstallPrompt />
       <PWAStatus />
+      
+      {/* Phase 4 Advanced Features - Always Available */}
+      {user && <EmergencyButton />}
+      <LiveChatSupport />
+      <PerformanceMonitor />
     </div>
   );
 }
