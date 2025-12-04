@@ -21,6 +21,10 @@ const BookingFlow = ({ selectedCar, onBookingComplete, onClose }) => {
       phone: '',
       email: '',
       idNumber: ''
+    },
+    recurrence: {
+      enabled: false,
+      count: 4
     }
   });
   
@@ -388,6 +392,34 @@ By accepting, you agree to these terms and our privacy policy.`);
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
                   />
+                </div>
+
+                {/* Recurrence Options */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium text-gray-900 mb-2">🔁 Recurring Booking</h4>
+                  <label className="flex items-center space-x-3 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={bookingData.recurrence?.enabled}
+                      onChange={(e) => handleInputChange('recurrence', { ...bookingData.recurrence, enabled: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">Repeat weekly</span>
+                  </label>
+                  {bookingData.recurrence?.enabled && (
+                    <div className="flex items-center space-x-3">
+                      <label className="text-sm text-gray-700">Occurrences:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="26"
+                        value={bookingData.recurrence.count}
+                        onChange={(e) => handleInputChange('recurrence', { ...bookingData.recurrence, count: Math.max(1, parseInt(e.target.value) || 1) })}
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      />
+                      <span className="text-xs text-gray-500">Weekly repeats on the pickup day</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

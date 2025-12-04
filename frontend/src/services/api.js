@@ -4,9 +4,11 @@ const API_BASE_URL = 'http://localhost:5000/api';
 // API Helper function with error handling
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
+  const isFormData = options && options.body && typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
   const config = {
     headers: {
-      'Content-Type': 'application/json',
+      ...defaultHeaders,
       ...options.headers,
     },
     ...options,
@@ -66,6 +68,34 @@ export const carsAPI = {
       Authorization: `Bearer ${token}`,
     },
   }),
+
+  // Update per-car scheduling settings (requires authentication)
+  updateScheduling: (carId, { buffer_hours = 0, min_notice_hours = 0 }, token) => apiRequest(`/cars/${carId}/scheduling`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ buffer_hours, min_notice_hours }),
+  }),
+
+  // Create a blackout period for a car (requires authentication)
+  createBlackout: (carId, { start, end, reason }, token) => apiRequest(`/cars/${carId}/blackouts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ start, end, reason }),
+  }),
+
+  // Delete a blackout by id (requires authentication)
+  deleteBlackout: (blackoutId, token) => apiRequest(`/blackouts/${blackoutId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }),
 };
 
 // Auth API
@@ -80,6 +110,12 @@ export const authAPI = {
   register: (userData) => apiRequest('/auth/register', {
     method: 'POST',
     body: JSON.stringify(userData),
+  }),
+  
+  // Resend verification email
+  resendVerification: (email) => apiRequest('/auth/resend-verification', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
   }),
   
   // Get current user
@@ -138,6 +174,25 @@ export const bookingsAPI = {
       Authorization: `Bearer ${token}`,
     },
   }),
+
+  // Availability (public)
+  getAvailability: (carId, start, end) => apiRequest(`/availability/${carId}?start=${start}&end=${end}`),
+
+  // Recurring bookings
+  recurringPreview: (payload) => apiRequest('/bookings/recurring/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }),
+
+  createRecurring: (payload, token) => apiRequest('/bookings/recurring/create', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  }),
 };
 
 // Users API
@@ -156,6 +211,93 @@ export const usersAPI = {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(profileData),
+  }),
+  
+  // Upload profile avatar (FormData)
+  uploadAvatar: (file, token) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    return apiRequest('/users/avatar', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+    });
+  },
+
+  // Upload verification document (FormData)
+  uploadDocument: (file, type, token) => {
+    const form = new FormData();
+    form.append('document', file);
+    form.append('type', type);
+    return apiRequest('/users/documents', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+    });
+  },
+
+  // List user's documents
+  getDocuments: (token) => apiRequest('/users/documents', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }),
+
+  // Admin: update document status
+  updateDocumentStatus: (id, status, notes, token) => apiRequest(`/users/documents/${id}/status`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status, notes }),
+  }),
+};
+
+// Reviews API
+export const reviewsAPI = {
+  // Create a review with optional photos (FormData)
+  createReview: ({ carId, rentalId, rating, ratings = {}, comment, images = [] }, token) => {
+    const form = new FormData();
+    form.append('carId', String(carId));
+    form.append('rentalId', String(rentalId));
+    form.append('rating', String(rating));
+    if (ratings.vehicle) form.append('rating_vehicle', String(ratings.vehicle));
+    if (ratings.cleanliness) form.append('rating_cleanliness', String(ratings.cleanliness));
+    if (ratings.communication) form.append('rating_communication', String(ratings.communication));
+    if (ratings.value) form.append('rating_value', String(ratings.value));
+    if (comment) form.append('comment', comment);
+    images.forEach(file => form.append('images', file));
+    return apiRequest('/reviews', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+  },
+
+  // Get paginated reviews for a car
+  getCarReviews: (carId, { page = 1, limit = 10 } = {}) => {
+    const qs = new URLSearchParams({ page: String(page), limit: String(limit) }).toString();
+    return apiRequest(`/reviews/car/${carId}?${qs}`);
+  },
+
+  // Get ratings summary and category breakdown
+  getCarReviewSummary: (carId) => apiRequest(`/reviews/car/${carId}/summary`),
+
+  // Owner response: create or update
+  upsertOwnerResponse: (reviewId, content, token) => apiRequest(`/reviews/${reviewId}/response`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ content }),
+  }),
+
+  // Owner response: delete
+  deleteOwnerResponse: (reviewId, token) => apiRequest(`/reviews/${reviewId}/response`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
   }),
 };
 
@@ -279,6 +421,7 @@ export default {
   authAPI,
   bookingsAPI,
   usersAPI,
+  reviewsAPI,
   messagesAPI,
   systemAPI,
   checkAPIConnection,

@@ -1,7 +1,7 @@
 ﻿@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
-@tailwind components;  
+@tailwind components;
 @tailwind utilities;
 
 @layer base {
@@ -34,6 +34,7 @@
 }
 
 @layer components {
+
   /* Glass morphism effect */
   .glass {
     backdrop-filter: blur(16px) saturate(180%);
@@ -135,17 +136,19 @@
     border-radius: 12px;
   }
 
-  .gradient-border > div {
+  .gradient-border>div {
     @apply bg-slate-900 rounded-lg;
   }
 }
 
 @layer utilities {
+
   /* Custom animations */
   @keyframes fadeIn {
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -156,6 +159,7 @@
       opacity: 0;
       transform: translateY(20px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -163,9 +167,12 @@
   }
 
   @keyframes float {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0px);
     }
+
     50% {
       transform: translateY(-10px);
     }
@@ -176,6 +183,7 @@
       opacity: 0;
       transform: translateX(-30px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -187,6 +195,7 @@
       opacity: 0;
       transform: translateX(30px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -227,7 +236,7 @@
 
 /* Page-specific styles */
 .hero-section {
-  background: 
+  background:
     radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
     radial-gradient(circle at 40% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
@@ -245,12 +254,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    135deg,
-    transparent 0%,
-    rgba(59, 130, 246, 0.1) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(135deg,
+      transparent 0%,
+      rgba(59, 130, 246, 0.1) 50%,
+      transparent 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -313,11 +320,11 @@
   .hero-section {
     @apply px-4;
   }
-  
+
   .mobile-nav {
     @apply flex flex-col gap-4;
   }
-  
+
   .mobile-card {
     @apply mx-4;
   }
@@ -336,12 +343,10 @@
 }
 
 .loading-shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent);
   animation: shimmer 2s infinite;
 }
 
@@ -349,6 +354,7 @@
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -360,6 +366,7 @@
     transform: translateX(100%);
     opacity: 0;
   }
+
   100% {
     transform: translateX(0);
     opacity: 1;
@@ -372,9 +379,12 @@
 
 /* Notification pulse animation */
 @keyframes notification-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }

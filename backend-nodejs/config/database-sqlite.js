@@ -27,6 +27,14 @@ const createTables = () => {
       phone TEXT,
       role TEXT DEFAULT 'customer' CHECK(role IN ('customer', 'admin', 'host')),
       email_verified BOOLEAN DEFAULT FALSE,
+      avatar_url TEXT,
+      is_verified BOOLEAN DEFAULT FALSE,
+      profile_completed BOOLEAN DEFAULT FALSE,
+      last_login_at DATETIME,
+      failed_login_attempts INTEGER DEFAULT 0,
+      locked_until DATETIME,
+      email_verification_token TEXT,
+      email_verification_sent_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -527,10 +535,10 @@ export const query = (sql, params = []) => {
     } else {
       const stmt = db.prepare(sql);
       const result = stmt.run(...params);
-      return { 
-        rows: [], 
+      return {
+        rows: [],
         rowCount: result.changes,
-        insertId: result.lastInsertRowid 
+        insertId: result.lastInsertRowid
       };
     }
   } catch (error) {

@@ -1,0 +1,11 @@
+export const carsAPI: any;
+export const authAPI: any;
+export const bookingsAPI: any;
+export const usersAPI: any;
+export const messagesAPI: any;
+export const systemAPI: any;
+export const checkAPIConnection: any;
+export const mockCarsData: any;
+export const authStorage: any;
+declare const _default: any;
+export default _default;

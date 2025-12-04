@@ -32,7 +32,7 @@ router.get('/', async (req, res, next) => {
       FROM cars c
       WHERE c.available = true
     `;
-    
+
     const queryParams = [];
     let paramCount = 0;
 
@@ -58,7 +58,7 @@ router.get('/', async (req, res, next) => {
     // Add sorting
     const validSortFields = ['created_at', 'price_per_day', 'make', 'model'];
     const validSortOrders = ['asc', 'desc'];
-    
+
     if (validSortFields.includes(sortBy) && validSortOrders.includes(sortOrder.toLowerCase())) {
       queryText += ` ORDER BY c.${sortBy} ${sortOrder.toUpperCase()}`;
     } else {
@@ -69,7 +69,7 @@ router.get('/', async (req, res, next) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
     queryText += ` LIMIT ?`;
     queryParams.push(parseInt(limit));
-    
+
     queryText += ` OFFSET ?`;
     queryParams.push(offset);
 
@@ -81,7 +81,7 @@ router.get('/', async (req, res, next) => {
       FROM cars c
       WHERE c.available = 1
     `;
-    
+
     const countParams = [];
     let countParamCount = 0;
 
@@ -154,8 +154,38 @@ router.get('/:id', async (req, res, next) => {
       LIMIT 10
     `, [id]);
 
+    // Get car images
+    const imagesResult = query(`
+      SELECT * FROM car_images 
+      WHERE car_id = ? 
+      ORDER BY display_order ASC
+    `, [id]);
+
+    // Get car specs
+    const specsResult = query(`
+      SELECT * FROM car_specs 
+      WHERE car_id = ? 
+      ORDER BY category, spec_key
+    `, [id]);
+
+    // Group specs by category
+    const groupedSpecs = specsResult.rows.reduce((acc, spec) => {
+      if (!acc[spec.category]) {
+        acc[spec.category] = [];
+      }
+      acc[spec.category].push({
+        id: spec.id,
+        key: spec.spec_key,
+        value: spec.spec_value
+      });
+      return acc;
+    }, {});
+
     const car = result.rows[0];
     car.recent_reviews = reviewsResult.rows;
+    car.car_images = imagesResult.rows;
+    car.car_specs = specsResult.rows;
+    car.specs_grouped = groupedSpecs;
 
     res.json({
       success: true,
@@ -174,7 +204,7 @@ router.post('/', authenticateToken, requireVerified, validateCar, async (req, re
     console.log('🔍 Keys in req.body:', Object.keys(req.body));
     console.log('📝 req.body.make:', req.body.make);
     console.log('📝 req.body.model:', req.body.model);
-    
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log('❌ Backend validation errors:', errors.array());
@@ -203,8 +233,8 @@ router.post('/', authenticateToken, requireVerified, validateCar, async (req, re
         images, price_per_day, license_plate
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      req.user.id, make, model, year, color || '', location, description || '', 
-      JSON.stringify(features || []), JSON.stringify(images || []), price_per_day, 
+      req.user.id, make, model, year, color || '', location, description || '',
+      JSON.stringify(features || []), JSON.stringify(images || []), price_per_day,
       `${make}-${model}-${Date.now()}` // Generate license plate
     ]);
 
@@ -359,13 +389,13 @@ router.post('/add', [
     }
 
     const { make, model, year, color, price_per_day, location, description, features } = req.body;
-    
+
     // Generate a random license plate for now
     const generateLicensePlate = () => {
       const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       const numbers = '0123456789';
       const prefix = 'KC' + letters.charAt(Math.floor(Math.random() * letters.length));
-      const suffix = Array.from({length: 3}, () => numbers.charAt(Math.floor(Math.random() * numbers.length))).join('');
+      const suffix = Array.from({ length: 3 }, () => numbers.charAt(Math.floor(Math.random() * numbers.length))).join('');
       const letter = letters.charAt(Math.floor(Math.random() * letters.length));
       return `${prefix} ${suffix}${letter}`;
     };
@@ -466,4 +496,346 @@ router.get('/my-cars', authenticateToken, requireVerified, async (req, res, next
   }
 });
 
+// ============================================
+// ENHANCED IMAGE MANAGEMENT ENDPOINTS
+// ============================================
+
+import { uploadMultipleImages } from '../middleware/upload.js';
+import { getImageUrls, deleteImage, isValidImageType } from '../services/imageService.js';
+
+// Upload multiple images for a car
+router.post('/:id/images', authenticateToken, uploadMultipleImages, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { imageType = 'standard' } = req.body;
+
+    // Verify car exists and user is owner
+    const carResult = query('SELECT host_id FROM cars WHERE id = ?', [id]);
+    if (carResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Car not found' });
+    }
+
+    if (carResult.rows[0].host_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Validate image type
+    if (!isValidImageType(imageType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid image type. Must be: standard, 360, interior, or exterior'
+      });
+    }
+
+    // Get uploaded file URLs
+    const imageUrls = getImageUrls(req.files);
+
+    if (imageUrls.length === 0) {
+      return res.status(400).json({ success: false, message: 'No images uploaded' });
+    }
+
+    // Get current max display order
+    const maxOrderResult = query(
+      'SELECT MAX(display_order) as max_order FROM car_images WHERE car_id = ?',
+      [id]
+    );
+    let nextOrder = (maxOrderResult.rows[0]?.max_order || 0) + 1;
+
+    // Insert images into database
+    const insertedImages = [];
+    for (const imageUrl of imageUrls) {
+      const result = query(`
+        INSERT INTO car_images (car_id, image_url, image_type, display_order, is_primary)
+        VALUES (?, ?, ?, ?, ?)
+      `, [id, imageUrl, imageType, nextOrder, false]);
+
+      insertedImages.push({
+        id: result.insertId,
+        car_id: id,
+        image_url: imageUrl,
+        image_type: imageType,
+        display_order: nextOrder,
+        is_primary: false
+      });
+      nextOrder++;
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `${imageUrls.length} image(s) uploaded successfully`,
+      data: { images: insertedImages }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get all images for a car
+router.get('/:id/images', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const result = query(`
+      SELECT * FROM car_images 
+      WHERE car_id = ? 
+      ORDER BY display_order ASC
+    `, [id]);
+
+    res.json({
+      success: true,
+      data: { images: result.rows }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete a specific image
+router.delete('/:id/images/:imageId', authenticateToken, async (req, res, next) => {
+  try {
+    const { id, imageId } = req.params;
+
+    // Verify car ownership
+    const carResult = query('SELECT host_id FROM cars WHERE id = ?', [id]);
+    if (carResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Car not found' });
+    }
+
+    if (carResult.rows[0].host_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Get image info
+    const imageResult = query('SELECT * FROM car_images WHERE id = ? AND car_id = ?', [imageId, id]);
+    if (imageResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Image not found' });
+    }
+
+    const image = imageResult.rows[0];
+
+    // Delete from filesystem
+    deleteImage(image.image_url);
+
+    // Delete from database
+    query('DELETE FROM car_images WHERE id = ?', [imageId]);
+
+    res.json({
+      success: true,
+      message: 'Image deleted successfully'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Reorder images
+router.put('/:id/images/reorder', authenticateToken, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { imageOrders } = req.body; // Array of { imageId, displayOrder }
+
+    // Verify car ownership
+    const carResult = query('SELECT host_id FROM cars WHERE id = ?', [id]);
+    if (carResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Car not found' });
+    }
+
+    if (carResult.rows[0].host_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    if (!Array.isArray(imageOrders)) {
+      return res.status(400).json({ success: false, message: 'imageOrders must be an array' });
+    }
+
+    // Update display orders
+    for (const { imageId, displayOrder } of imageOrders) {
+      query(
+        'UPDATE car_images SET display_order = ? WHERE id = ? AND car_id = ?',
+        [displayOrder, imageId, id]
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Images reordered successfully'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Set primary image
+router.put('/:id/images/:imageId/primary', authenticateToken, async (req, res, next) => {
+  try {
+    const { id, imageId } = req.params;
+
+    // Verify car ownership
+    const carResult = query('SELECT host_id FROM cars WHERE id = ?', [id]);
+    if (carResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Car not found' });
+    }
+
+    if (carResult.rows[0].host_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Unset all primary images for this car
+    query('UPDATE car_images SET is_primary = 0 WHERE car_id = ?', [id]);
+
+    // Set new primary image
+    query('UPDATE car_images SET is_primary = 1 WHERE id = ? AND car_id = ?', [imageId, id]);
+
+    res.json({
+      success: true,
+      message: 'Primary image updated successfully'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============================================
+// CAR SPECIFICATIONS ENDPOINTS
+// ============================================
+
+import { isValidSpecCategory } from '../services/imageService.js';
+
+// Add or update car specifications
+router.post('/:id/specs', authenticateToken, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { specs } = req.body; // Array of { category, spec_key, spec_value }
+
+    // Verify car ownership
+    const carResult = query('SELECT host_id FROM cars WHERE id = ?', [id]);
+    if (carResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Car not found' });
+    }
+
+    if (carResult.rows[0].host_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    if (!Array.isArray(specs)) {
+      return res.status(400).json({ success: false, message: 'specs must be an array' });
+    }
+
+    // Validate and insert specs
+    const insertedSpecs = [];
+    for (const spec of specs) {
+      const { category, spec_key, spec_value } = spec;
+
+      if (!isValidSpecCategory(category)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid category: ${category}. Must be: engine, dimensions, features, safety, performance, or comfort`
+        });
+      }
+
+      // Check if spec already exists
+      const existingSpec = query(
+        'SELECT id FROM car_specs WHERE car_id = ? AND category = ? AND spec_key = ?',
+        [id, category, spec_key]
+      );
+
+      if (existingSpec.rows.length > 0) {
+        // Update existing spec
+        query(
+          'UPDATE car_specs SET spec_value = ? WHERE id = ?',
+          [spec_value, existingSpec.rows[0].id]
+        );
+        insertedSpecs.push({ id: existingSpec.rows[0].id, category, spec_key, spec_value });
+      } else {
+        // Insert new spec
+        const result = query(
+          'INSERT INTO car_specs (car_id, category, spec_key, spec_value) VALUES (?, ?, ?, ?)',
+          [id, category, spec_key, spec_value]
+        );
+        insertedSpecs.push({ id: result.insertId, category, spec_key, spec_value });
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Specifications saved successfully',
+      data: { specs: insertedSpecs }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get car specifications
+router.get('/:id/specs', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const result = query(`
+      SELECT * FROM car_specs 
+      WHERE car_id = ? 
+      ORDER BY category, spec_key
+    `, [id]);
+
+    // Group specs by category
+    const groupedSpecs = result.rows.reduce((acc, spec) => {
+      if (!acc[spec.category]) {
+        acc[spec.category] = [];
+      }
+      acc[spec.category].push({
+        id: spec.id,
+        key: spec.spec_key,
+        value: spec.spec_value
+      });
+      return acc;
+    }, {});
+
+    res.json({
+      success: true,
+      data: {
+        specs: result.rows,
+        grouped: groupedSpecs
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete a specification
+router.delete('/:id/specs/:specId', authenticateToken, async (req, res, next) => {
+  try {
+    const { id, specId } = req.params;
+
+    // Verify car ownership
+    const carResult = query('SELECT host_id FROM cars WHERE id = ?', [id]);
+    if (carResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Car not found' });
+    }
+
+    if (carResult.rows[0].host_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Delete spec
+    query('DELETE FROM car_specs WHERE id = ? AND car_id = ?', [specId, id]);
+
+    res.json({
+      success: true,
+      message: 'Specification deleted successfully'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
+

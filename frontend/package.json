@@ -20,8 +20,10 @@
     "@simplewebauthn/typescript-types": "^8.3.4",
     "@tanstack/react-query": "^4.36.1",
     "@tanstack/react-router": "^1.0.0",
+    "browser-image-compression": "^2.0.2",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
+    "esbuild": "^0.27.0",
     "framer-motion": "^12.23.24",
     "html2canvas": "^1.4.1",
     "i18next": "^25.6.3",
@@ -57,6 +59,6 @@
     "tailwindcss": "^3.3.6",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "vite": "^7.2.4"
   }
 }
