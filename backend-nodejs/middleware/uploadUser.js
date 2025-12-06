@@ -72,4 +72,5 @@ export const uploadDocument = multer({
   storage: documentStorage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: documentFilter
-}).single('document');
+});
+

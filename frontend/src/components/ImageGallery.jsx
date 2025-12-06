@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import enhancedCarsAPI from '../services/enhancedCarsAPI';
 import { LoadingSpinner, ErrorDisplay, EmptyState } from './UIUtils';
+import Viewer360 from './Viewer360';
 
 const ImageGallery = ({ carId, onImageClick }) => {
     const [images, setImages] = useState([]);
@@ -9,6 +10,7 @@ const ImageGallery = ({ carId, onImageClick }) => {
     const [selectedImage, setSelectedImage] = useState(null);
     const [filter, setFilter] = useState('all');
     const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' or '360'
 
     useEffect(() => {
         loadImages();
@@ -102,8 +104,8 @@ const ImageGallery = ({ carId, onImageClick }) => {
                             key={type}
                             onClick={() => setFilter(type)}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === type
-                                    ? 'bg-blue-500 text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             {imageTypeIcons[type] || '📁'} {type.charAt(0).toUpperCase() + type.slice(1)} ({count})
@@ -112,14 +114,42 @@ const ImageGallery = ({ carId, onImageClick }) => {
                 })}
             </div>
 
-            {/* Image Grid */}
+            {/* View Mode Toggle for 360° images */}
+            {filter === '360' && filteredImages.length > 0 && (
+                <div className="flex justify-end gap-2 mb-4">
+                    <button
+                        onClick={() => setViewMode('grid')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${viewMode === 'grid'
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                    >
+                        📷 Grid View
+                    </button>
+                    <button
+                        onClick={() => setViewMode('360')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-all ${viewMode === '360'
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                    >
+                        🔄 360° Viewer
+                    </button>
+                </div>
+            )}
+
+            {/* Content Area */}
             {filteredImages.length === 0 ? (
                 <EmptyState
                     icon={imageTypeIcons[filter]}
                     title={`No ${filter} images`}
                     message={`Upload ${filter} images to see them here`}
                 />
+            ) : filter === '360' && viewMode === '360' ? (
+                /* 360° Interactive Viewer */
+                <Viewer360 images360={filteredImages} />
             ) : (
+                /* Image Grid */
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {filteredImages.map((img, index) => (
                         <div

@@ -1,7 +1,5 @@
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
-
-import { carsAPI, authAPI, bookingsAPI, messagesAPI, usersAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
-
+import { useState, useEffect } from 'react';
+import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
 import ChatModal from './components/ChatModal';
 import NotificationBadge from './components/NotificationBadge';
 import NotificationCenter from './components/NotificationCenter';
@@ -13,17 +11,13 @@ import CustomerChatSelector from './components/CustomerChatSelector';
 import GoogleMapEnhanced from './components/GoogleMapEnhanced';
 import { chatService } from './services/chatService';
 import { notificationService } from './services/notificationService';
+import CarDetailView from './components/CarDetailView';
+import CarManagement from './pages/CarManagement';
+import PasswordStrength from './components/PasswordStrength';
+import ProfileSettings from './pages/ProfileSettings';
+import { FaCar, FaStar, FaMapMarkerAlt } from 'react-icons/fa';
 import { pwaService } from './services/pwaService';
-import './animations.css';
-import ImageGallery from './components/ImageGallery';
-import Viewer360 from './components/Viewer360';
-import CarSpecs from './components/CarSpecs';
-import enhancedCarsAPI from './services/enhancedCarsAPI';
-import ReviewSummary from './components/reviews/ReviewSummary';
-import ReviewsList from './components/reviews/ReviewsList';
-import ReviewForm from './components/reviews/ReviewForm';
-import AvailabilityCalendar from './components/AvailabilityCalendar';
-import OwnerSchedulingAndBlackouts from './components/OwnerSchedulingAndBlackouts';
+import { Car } from '../types/car';
 
 // Type definitions
 interface Car {
@@ -78,6 +72,7 @@ interface Booking {
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [viewingCar, setViewingCar] = useState<Car | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [priceRange, setPriceRange] = useState([0, 15000]);
@@ -108,34 +103,9 @@ const App: React.FC = () => {
   // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-
-  // Handle user logout
-  const handleLogout = async () => {
-    try {
-      // Clear user data from state
-      setUser(null);
-      setToken(null);
-      
-      // Clear auth data from storage
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      
-      // Reset any other relevant state
-      setShowAuthModal(false);
-      setShowNotificationPanel(false);
-      
-      // Redirect to home page
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
-  };
-
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authLoading, setAuthLoading] = useState(false);
-  const [authMessage, setAuthMessage] = useState('');
-  const [needsVerificationEmail, setNeedsVerificationEmail] = useState<string | null>(null);
 
   // Booking state
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
@@ -143,16 +113,13 @@ const App: React.FC = () => {
 
   // My Cars state
   const [myCars, setMyCars] = useState<Car[]>([]);
+  const [myCarsLoading, setMyCarsLoading] = useState(true);
+  const [managingCarId, setManagingCarId] = useState<string | null>(null);
+  // Profile settings modal
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
 
   // Messages panel state
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
-  const [profileForm, setProfileForm] = useState({ first_name: '', last_name: '', phone: '' });
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const [documents, setDocuments] = useState([]);
-  const [docType, setDocType] = useState('id_card');
-  const [docFile, setDocFile] = useState(null);
-  const [docUploading, setDocUploading] = useState(false);
 
   // Car listing form state
   const [carForm, setCarForm] = useState<{
@@ -185,13 +152,6 @@ const App: React.FC = () => {
     message: ''
   });
 
-  // Enhanced car details state
-  const [showImageUploader, setShowImageUploader] = useState(false);
-  const [showImageManager, setShowImageManager] = useState(false);
-  const [showSpecsEditor, setShowSpecsEditor] = useState(false);
-  const [uploadingCarId, setUploadingCarId] = useState<string | null>(null);
-  const [reviewsKey, setReviewsKey] = useState(0);
-
   // Chat state
   const [showChatModal, setShowChatModal] = useState(false);
   const [showCustomerSelector, setShowCustomerSelector] = useState(false);
@@ -217,7 +177,7 @@ const App: React.FC = () => {
           // Initialize notification service after successful auth
           notificationService.initialize();
         })
-        .catch((error: any) => {
+        .catch((error) => {
           console.warn('🔐 Saved token is invalid, clearing storage...', error);
           authStorage.clearAllAuthData();
           setShowAuthModal(true);
@@ -233,7 +193,7 @@ const App: React.FC = () => {
   }, [user, token]);
 
   // Function to handle JWT signature errors and clear storage
-  const handleJWTError = (error: any) => {
+  const handleJWTError = (error) => {
     if (error.message && (error.message.includes('signature') || error.message.includes('Invalid or expired token'))) {
       console.warn('🔐 JWT authentication error detected, clearing storage...', error);
       authStorage.clearAllAuthData();
@@ -253,8 +213,8 @@ const App: React.FC = () => {
   useEffect(() => {
     const originalFetch = window.fetch;
     window.fetch = function (...args) {
-      return originalFetch(...args)
-        .catch((error: any) => {
+      return originalFetch.apply(this, arguments)
+        .catch(error => {
           if (handleJWTError(error)) {
             throw new Error('Authentication expired, please login again');
           }
@@ -341,8 +301,10 @@ const App: React.FC = () => {
   // Load user's cars when user or cars change
   useEffect(() => {
     const loadMyCars = () => {
+      setMyCarsLoading(true);
       if (!user) {
         setMyCars([]);
+        setMyCarsLoading(false);
         return;
       }
       try {
@@ -351,6 +313,8 @@ const App: React.FC = () => {
         setMyCars(userOwnedCars);
       } catch (error) {
         console.error('Failed to fetch user cars:', error);
+      } finally {
+        setMyCarsLoading(false);
       }
     };
     loadMyCars();
@@ -422,6 +386,90 @@ const App: React.FC = () => {
     }
   };
 
+  // Authentication functions
+  const handleAuth = async (formData) => {
+    setAuthLoading(true);
+    try {
+      let response;
+      if (authMode === 'login') {
+        // For login, include role preference
+        response = await authAPI.login({
+          email: formData.email,
+          password: formData.password,
+          role: formData.role
+        });
+      } else {
+        // Transform the form data for registration to match backend expectations
+        const registerData = {
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone || '',
+          role: formData.role,
+          accountType: formData.role // Also send as accountType for clarity
+        };
+        response = await authAPI.register(registerData);
+      }
+      if (response.success) {
+        const userData = response.data?.user || response.user;
+        const tokenData = response.data?.token || response.token;
+        setUser(userData);
+        setToken(tokenData);
+        authStorage.setUser(userData);
+        authStorage.setToken(tokenData);
+        setShowAuthModal(false);
+        console.log('✅ Authentication successful!', { user: userData, token: tokenData, actualRole: userData.role });
+        if (authMode === 'register') {
+          const roleText = userData.role === 'customer' ? 'car renter' : userData.role === 'host' ? 'car owner' : userData.role;
+          alert(`🎉 Registration successful! Welcome to DriveKenya as a ${roleText}!
+${userData.role === 'host' ? 'You can now list your cars and start earning!' : 'You can now browse and rent amazing cars!'}`);
+        } else {
+          const roleText = userData.role === 'customer' ? 'Customer' : userData.role === 'host' ? 'Car Owner' : userData.role;
+          console.log(`Welcome back! Logged in as: ${roleText} (Role from DB: ${userData.role})`);
+        }
+      } else {
+        alert(response.message || 'Authentication failed');
+      }
+    } catch (error) {
+      alert(error.message || 'Authentication failed');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setToken(null);
+    setUserBookings([]);
+    authStorage.clearAuth();
+  };
+
+  // Booking functions
+  const handleBooking = async (bookingData) => {
+    if (!token) {
+      setShowAuthModal(true);
+      return;
+    }
+    console.log('🚀 Frontend booking data being sent:', bookingData);
+    console.log('🚗 Selected car:', selectedCar);
+    setBookingLoading(true);
+    try {
+      const response = await bookingsAPI.createBooking(bookingData, token);
+      if (response.success) {
+        alert('Booking created successfully!');
+        setShowBookingModal(false);
+        setSelectedCar(null);
+        loadUserBookings();
+      } else {
+        alert(response.message || 'Booking failed');
+      }
+    } catch (error) {
+      alert(error.message || 'Booking failed');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
   // New function to handle booking completion from BookingFlow
   const handleBookingComplete = async (bookingData) => {
     if (!token) {
@@ -444,38 +492,6 @@ const App: React.FC = () => {
         api: apiBookingData
       });
 
-      // If recurrence requested, use recurring endpoint
-      if (bookingData.recurrence?.enabled) {
-        const recurrence = {
-          frequency: 'weekly',
-          interval: 1,
-          count: Math.max(1, Number(bookingData.recurrence.count) || 1),
-          byWeekday: [new Date(bookingData.pickupDate).getDay()],
-        };
-        const payload = {
-          carId: apiBookingData.carId,
-          startDate: apiBookingData.startDate,
-          endDate: apiBookingData.endDate,
-          pickupLocation: apiBookingData.pickupLocation,
-          dropoffLocation: apiBookingData.dropoffLocation,
-          specialRequests: apiBookingData.specialRequests,
-          recurrence,
-          skipConflicts: false,
-        };
-        const resp = await bookingsAPI.createRecurring(payload, token);
-        if (resp.success) {
-          alert(`🎉 Recurring bookings created! Series #${resp.seriesId}\nCreated: ${resp.created.length} out of ${resp.preview.length}`);
-          setShowBookingModal(false);
-          setSelectedCar(null);
-          loadUserBookings();
-          return;
-        } else {
-          alert(resp.message || 'Recurring booking failed');
-          return;
-        }
-      }
-
-      // Single booking
       const response = await bookingsAPI.createBooking(apiBookingData, token);
       if (response.success) {
         alert(`🎉 Booking confirmed successfully!
@@ -495,7 +511,7 @@ You will receive a confirmation email shortly.`);
   };
 
   // Car form handlers
-  const handleCarFormChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleCarFormChange = (e) => {
     const { name, value } = e.target;
     setCarForm(prev => ({
       ...prev,
@@ -503,7 +519,7 @@ You will receive a confirmation email shortly.`);
     }));
   };
 
-  const handleSubmitCar = async (e: FormEvent) => {
+  const handleSubmitCar = async (e) => {
     e.preventDefault();
     if (!user) {
       setShowAuthModal(true);
@@ -547,11 +563,7 @@ You will receive a confirmation email shortly.`);
         description: '',
         features: []
       });
-      const newCarId = response.data.car.id; // Get the new car ID from response
-      setUploadingCarId(newCarId);
-      setShowImageUploader(true);
-      setCarSubmitMessage('🎉 Car listed successfully! Now add some images.');
-    } catch (error: any) {
+    } catch (error) {
       setCarSubmitMessage(`❌ Error: ${error.message}`);
       console.error('Add car error:', error);
     } finally {
@@ -560,7 +572,7 @@ You will receive a confirmation email shortly.`);
   };
 
   // Contact form handlers
-  const handleContactFormChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleContactFormChange = (e) => {
     const { name, value } = e.target;
     setContactForm(prev => ({
       ...prev,
@@ -568,7 +580,7 @@ You will receive a confirmation email shortly.`);
     }));
   };
 
-  const handleSubmitContact = async (e: FormEvent) => {
+  const handleSubmitContact = async (e) => {
     e.preventDefault();
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
       setContactSubmitMessage('Please fill in all required fields');
@@ -585,7 +597,7 @@ You will receive a confirmation email shortly.`);
         subject: '',
         message: ''
       });
-    } catch (error: any) {
+    } catch (error) {
       setContactSubmitMessage(`❌ Error: ${error.message}`);
       console.error('Contact form error:', error);
     } finally {
@@ -594,7 +606,7 @@ You will receive a confirmation email shortly.`);
   };
 
   // Chat handling functions
-  const handleOpenChat = (car: Car) => {
+  const handleOpenChat = (car) => {
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -611,16 +623,15 @@ You will receive a confirmation email shortly.`);
     }
   };
 
-  const handleCustomerSelect = (customer: User) => {
+  const handleCustomerSelect = (customer) => {
     console.log('👤 Selected customer for chat:', customer);
-    if (!selectedCar) return;
     // Add customer info to selected car
     const carWithCustomer = {
       ...selectedCar,
       customerId: customer.id,
       customerName: customer.name
     };
-    setSelectedCar(carWithCustomer as Car);
+    setSelectedCar(carWithCustomer);
     setShowCustomerSelector(false);
     setShowChatModal(true);
   };
@@ -719,7 +730,6 @@ You will receive a confirmation email shortly.`);
               { id: 'listcar', label: 'List Car', icon: '📝' },
               { id: 'bookings', label: 'Rentals', icon: '📋' },
               { id: 'mycars', label: 'My Cars', icon: '🚘' },
-              { id: 'profile', label: 'Profile', icon: '👤' },
               { id: 'about', label: 'About', icon: 'ℹ️' },
               { id: 'contact', label: 'Contact', icon: '📞' }
             ].map(item => (
@@ -786,6 +796,25 @@ You will receive a confirmation email shortly.`);
                     })()} • Role: {user.role || 'undefined'}
                   </div>
                 </div>
+                {user && (
+                  <button
+                    onClick={() => setShowProfileSettings(true)}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-white"
+                  >
+                    {user.profile_photo ? (
+                      <img
+                        src={user.profile_photo}
+                        alt="Profile"
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                        {user.name?.charAt(0) || '?'}
+                      </div>
+                    )}
+                    <span className="text-sm font-medium">Profile & Settings</span>
+                  </button>
+                )}
                 <button
                   onClick={handleLogout}
                   className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-white px-4 py-2 rounded-full font-semibold transition-all"
@@ -796,7 +825,7 @@ You will receive a confirmation email shortly.`);
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-2 rounded-full font-semibold transition-all"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg"
               >
                 Sign In
               </button>
@@ -851,53 +880,14 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       phone: '',
       role: 'customer' // Default role
     });
+    // Registration password state for the PasswordStrength component
+    const [regPassword, setRegPassword] = useState('');
 
     if (!showAuthModal) return null;
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = (e) => {
       e.preventDefault();
       handleAuth(formData);
-    };
-
-    const handleAuth = async (form: { firstName: string; lastName: string; email: string; password: string; phone: string; role: string }) => {
-      try {
-        setAuthLoading(true);
-        if (authMode === 'register') {
-          const payload = {
-            firstName: form.firstName,
-            lastName: form.lastName,
-            email: form.email,
-            password: form.password,
-            phone: form.phone,
-            role: form.role
-          };
-          const response = await authAPI.register(payload);
-          if (response.success) {
-            setAuthMode('login');
-            setAuthMessage('Verification email sent. Please check your inbox to verify your account, then sign in.');
-          }
-        } else {
-          // Handle login logic here
-          const response = await authAPI.login({
-            email: form.email,
-            password: form.password
-          });
-          if (response.success && response.token) {
-            // Handle successful login
-            setToken(response.token);
-            setUser(response.user);
-            setShowAuthModal(false);
-          }
-        }
-      } catch (error: any) {
-        const message = error?.message || 'Authentication failed';
-        setAuthMessage(message);
-        if (authMode === 'login' && message.toLowerCase().includes('verify')) {
-          setNeedsVerificationEmail(form.email);
-        }
-      } finally {
-        setAuthLoading(false);
-      }
     };
 
     return (
@@ -920,32 +910,6 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   : 'Create your account and start your journey'}
               </p>
             </div>
-            {authMessage && (
-              <div className={`mb-4 p-3 rounded-lg ${authMessage.toLowerCase().includes('error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' : 'bg-blue-500/20 border border-blue-400/30 text-blue-200'}`}>
-                <div className="flex items-center justify-between">
-                  <span>{authMessage}</span>
-                  {authMode === 'login' && needsVerificationEmail && (
-                    <button
-                      type="button"
-                      className="ml-3 px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm"
-                      onClick={async () => {
-                        try {
-                          setAuthLoading(true);
-                          await authAPI.resendVerification(needsVerificationEmail);
-                          setAuthMessage('Verification email resent. Please check your inbox.');
-                        } catch (e: any) {
-                          setAuthMessage(e?.message || 'Failed to resend verification email');
-                        } finally {
-                          setAuthLoading(false);
-                        }
-                      }}
-                    >
-                      Resend
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
             {/* Role Selection */}
             <div className="mb-6">
               <p className="text-white/80 text-sm mb-3">
@@ -1045,18 +1009,37 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-              <input
-                type="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
+              {authMode === 'register' ? (
+                <div>
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={regPassword}
+                    onChange={(e) => {
+                      setRegPassword(e.target.value);
+                      setFormData(prev => ({ ...prev, password: e.target.value }));
+                    }}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <div className="mt-2">
+                    <PasswordStrength password={regPassword} />
+                  </div>
+                </div>
+              ) : (
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              )}
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
               >
                 {authLoading ? 'Processing...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
               </button>
@@ -1153,7 +1136,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={() => setCurrentPage('cars')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
             >
               🚗 Browse {cars.length} Cars
             </button>
@@ -1233,9 +1216,8 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                     alt={car.name}
                     className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full flex items-center">
-                    <span className="text-yellow-400">⭐</span>
-                    <span className="text-white">{car.rating?.toFixed(1) || '4.8'}</span>
+                  <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
+                    {car.rating?.toFixed(1) || '4.8'}
                   </div>
                 </div>
                 <div className="p-6">
@@ -1255,7 +1237,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                           setShowAuthModal(true);
                         }
                       }}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-2 rounded-full font-semibold transition-all"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all"
                     >
                       Book Now
                     </button>
@@ -1287,16 +1269,16 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 onClick={() => setViewMode('grid')}
                 className={`px-6 py-2 rounded-full font-medium transition-all ${viewMode === 'grid'
                     ? 'bg-white text-slate-900'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    : 'text-white hover:bg-white/10'
                   }`}
               >
-                📋 Grid View
+                🏷️ Grid View
               </button>
               <button
                 onClick={() => setViewMode('map')}
                 className={`px-6 py-2 rounded-full font-medium transition-all ${viewMode === 'map'
                     ? 'bg-white text-slate-900'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    : 'text-white hover:bg-white/10'
                   }`}
               >
                 🗺️ Map View
@@ -1528,7 +1510,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <p className="text-white/70 mb-6">Try adjusting your filters or search terms</p>
               <button
                 onClick={() => { setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]); }}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-3 rounded-full font-semibold transition-all"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-full font-semibold transition-all"
               >
                 Reset Filters
               </button>
@@ -1546,11 +1528,8 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 cars={filteredCars}
                 onCarSelect={(car) => {
                   setSelectedCar(car);
-                  if (user) {
-                    setShowBookingModal(true);
-                  } else {
-                    setShowAuthModal(true);
-                  }
+                  setViewingCar(car);
+                  window.scrollTo(0, 0);
                 }}
                 showLocationSelector={false}
                 initialCenter={{
@@ -1569,19 +1548,12 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           /* Grid View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredCars.map(car => (
-              <div
-                key={car.id}
-                onClick={() => {
-                  setSelectedCar(car);
-                  setCurrentPage('car-detail');
-                }}
-                className="group bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl"
-              >
+              <div key={car.id} className="group bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl">
                 <div className="relative">
                   <img src={car.image} alt={car.name} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300" />
                   <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full flex items-center">
                     <span className="text-yellow-400">⭐</span>
-                    <span className="text-white">{car.rating?.toFixed(1) || '4.8'}</span>
+                    <span className="text-white text-sm ml-1">{car.rating?.toFixed(1) || '4.8'}</span>
                   </div>
                   {car.available && (
                     <div className="absolute top-4 left-4 bg-green-500/80 text-white px-2 py-1 rounded-full text-xs font-semibold">
@@ -1605,33 +1577,38 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                       ))}
                     </div>
                     <div className="flex justify-between items-center">
-                      <div className="text-2xl font-bold text-white">KSh {car.price?.toLocaleString()}</div>
-                      <div className="text-white/60 text-sm">per day</div>
+                      <div>
+                        <div className="text-2xl font-bold text-white">KSh {car.price?.toLocaleString()}</div>
+                        <div className="text-white/60 text-sm">per day</div>
+                      </div>
+                      <div className="flex space-x-2">
+                        {user && (
+                          <NotificationBadge>
+                            <button
+                              onClick={() => handleOpenChat(car)}
+                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
+                              title={user?.role === 'host' && car.host_id === user.id ? "Chat with customers" : "Chat with owner"}
+                            >
+                              💬
+                            </button>
+                          </NotificationBadge>
+                        )}
+                        <button
+                          onClick={() => {
+                            setSelectedCar(car);
+                            setViewingCar(car);
+                            if (user) {
+                              setShowBookingModal(true);
+                            } else {
+                              setShowAuthModal(true);
+                            }
+                          }}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
+                        >
+                          Book Now
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <button
-                      onClick={() => {
-                        setSelectedCar(car);
-                        if (user) {
-                          setShowBookingModal(true);
-                        } else {
-                          setShowAuthModal(true);
-                        }
-                      }}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-600 text-white px-6 py-2 rounded-full font-semibold transition-all"
-                    >
-                      Book Now
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedCar(car);
-                        setCurrentPage('car-detail');
-                      }}
-                      className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-2 rounded-full font-semibold transition-all"
-                    >
-                      View Details
-                    </button>
                   </div>
                 </div>
               </div>
@@ -1642,91 +1619,443 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
     </div>
   );
 
-  // Car Detail View
-  const renderCarDetail = () => {
-    if (!selectedCar) return null;
+  // Enhanced Bookings Page
+  const renderBookings = () => {
+    if (!user) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
+              <div className="text-6xl mb-4">🔐</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
+              <p className="text-white/70 mb-6">Please sign in to view your bookings</p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (userBookings.length === 0) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
+              <div className="text-6xl mb-4">📆</div>
+              <h3 className="text-2xl font-bold text-white mb-4">No Bookings Yet</h3>
+              <p className="text-white/70 mb-6">You haven't made any bookings yet. Start by browsing our available cars!</p>
+              <button
+                onClick={() => setCurrentPage('cars')}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+              >
+                Browse Cars
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 pt-20 px-4">
-        <div className="max-w-7xl mx-auto py-8">
-          {/* Back Button */}
-          <button
-            onClick={() => { setSelectedCar(null); setCurrentPage('cars'); }}
-            className="mb-6 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-          >
-            ← Back to Cars
-          </button>
-
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{selectedCar.make} {selectedCar.model}</h1>
-            <p className="text-gray-600">{selectedCar.year} • {selectedCar.location}</p>
-            <p className="text-2xl font-bold text-blue-600 mt-4">KSH {selectedCar.price_per_day?.toLocaleString?.() || selectedCar.price?.toLocaleString?.()}</p>
-          </div>
-
-          {/* Gallery */}
-          <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">📸 Photos</h2>
-            <ImageGallery carId={selectedCar.id} />
-          </div>
-
-          {/* 360 Viewer */}
-          {selectedCar.car_images?.filter((img: any) => img.image_type === '360').length > 0 && (
-            <div className="mb-6">
-              <Viewer360 images360={selectedCar.car_images.filter((img: any) => img.image_type === '360')} />
-            </div>
-          )}
-
-          {/* Specs */}
-          <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
-            <CarSpecs carId={selectedCar.id} />
-          </div>
-
-          {/* Reviews */}
-          <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">⭐ Reviews</h2>
-            <div className="space-y-6">
-              <ReviewSummary key={`sum-${reviewsKey}`} carId={selectedCar.id} />
-              <ReviewForm carId={selectedCar.id} onSubmitted={() => setReviewsKey(k => k + 1)} />
-              <ReviewsList key={`list-${reviewsKey}`} carId={selectedCar.id} isHost={!!user && (selectedCar as any).host_id === (user as any)?.id} />
-            </div>
-          </div>
-
-          {/* Availability Calendar */}
-          <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">📅 Availability</h2>
-            <AvailabilityCalendar carId={selectedCar.id} />
-          </div>
-
-          {/* Owner Scheduling & Blackouts (Owners only) */}
-          {user && (selectedCar as any).host_id === (user as any)?.id && (
-            <div className="bg-white rounded-lg shadow-2xl p-6 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">🔧 Owner Scheduling & Blackouts</h2>
-              <OwnerSchedulingAndBlackouts carId={selectedCar.id} token={token} />
-            </div>
-          )}
-
-          {/* Book */}
-          <div className="bg-white rounded-lg shadow-2xl p-6">
-            <button onClick={() => setShowBookingModal(true)} className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:from-blue-700 hover:to-purple-600 transition-all transform hover:scale-105">
-              Book This Car
-            </button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Bookings</h1>
+          <div className="space-y-6">
+            {userBookings.map((booking) => (
+              <div key={booking.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{booking.car?.name || 'Car Rental'}</h3>
+                    <p className="text-white/70">
+                      {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-white/60 text-sm mt-1">
+                      Status: <span className={`font-medium ${booking.status === 'confirmed' ? 'text-green-400' : booking.status === 'pending' ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {booking.status}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-white">KSh {booking.totalPrice?.toLocaleString()}</div>
+                    <p className="text-white/60 text-sm">Total</p>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <div className="flex justify-between items-center">
+                    <div className="text-white/70 text-sm">
+                      Booking ID: {booking.id}
+                    </div>
+                    <div className="flex space-x-2">
+                      {booking.status === 'pending' && (
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to cancel this booking?')) {
+                              bookingsAPI.cancelBooking(booking.id, token);
+                              loadUserBookings();
+                            }
+                          }}
+                          className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-red-300 px-4 py-2 rounded-lg font-semibold transition-all"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
     );
   };
 
+  // My Cars Page - Show cars owned by current user
+  const renderMyCars = () => {
+    // Handle case when user is not logged in
+    if (!user) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
+              <div className="text-6xl mb-4">🔐</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
+              <p className="text-white/70 mb-6">Please sign in to view your cars</p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Handle loading state
+    if (myCarsLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+          <div className="max-w-6xl mx-auto px-6 py-20">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
+              <div className="text-6xl mb-4">⏳</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Loading Your Cars...</h3>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+          {myCars.length === 0 ? (
+            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
+              <div className="text-6xl mb-4">🚗</div>
+              <h3 className="text-2xl font-bold text-white mb-4">No cars listed yet</h3>
+              <p className="text-white/70 mb-6">Start earning by listing your first car!</p>
+              <button
+                onClick={() => setCurrentPage('listcar')}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+              >
+                List Your Car
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {myCars.map((car) => (
+                <div key={car.id} className="bg-black/40 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden group hover:scale-[1.02] transition-all duration-300">
+                  <div className="relative">
+                    <img
+                      src={car.images && car.images.length > 0 ? car.images[0] : '/default-car.jpg'}
+                      alt={`${car.make} ${car.model}`}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="absolute top-4 left-4">
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${car.available ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                        {car.available ? 'Available' : 'Unavailable'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-2xl font-bold text-white">{car.make} {car.model}</h3>
+                    <p className="text-white/60 mb-2">{car.year} • {car.location}</p>
+                    <p className="text-white/70 mb-4 text-sm line-clamp-2">{car.description}</p>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <div className="text-2xl font-bold text-white">KSh {car.price_per_day?.toLocaleString()}</div>
+                        <div className="text-white/60 text-sm">per day</div>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-yellow-400">⭐</span>
+                        <span className="text-white">{car.rating || 4.8}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <button 
+                        onClick={() => setManagingCarId(car.id)}
+                        className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <span className="mr-2">📝</span>
+                        Manage Car
+                      </button>
+                      <button className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white py-2 rounded-lg font-semibold transition-all">
+                        View Messages
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // List Car Form - Enhanced with proper backend integration
+  const renderListCar = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+      <div className="max-w-4xl mx-auto px-6 py-20">
+        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">List Your Car</h1>
+        {!user ? (
+          <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
+            <div className="text-6xl mb-4">🔐</div>
+            <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
+            <p className="text-white/70 mb-6">Please sign in to list your car for rental</p>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
+            >
+              Sign In
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+            <p className="text-white/80 text-lg mb-6">Start earning by renting out your vehicle on DriveKenya!</p>
+            {carSubmitMessage && (
+              <div className={`mb-6 p-4 rounded-lg ${carSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' :
+                  'bg-green-500/20 border border-green-400/30 text-green-300'
+                }`}>
+                {carSubmitMessage}
+              </div>
+            )}
+            <form onSubmit={handleSubmitCar}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <input
+                  name="make"
+                  value={carForm.make}
+                  onChange={handleCarFormChange}
+                  placeholder="Car Make *"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <input
+                  name="model"
+                  value={carForm.model}
+                  onChange={handleCarFormChange}
+                  placeholder="Car Model *"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <input
+                  name="year"
+                  value={carForm.year}
+                  onChange={handleCarFormChange}
+                  placeholder="Year *"
+                  type="number"
+                  min="1990"
+                  max={new Date().getFullYear() + 1}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <input
+                  name="price_per_day"
+                  value={carForm.price_per_day}
+                  onChange={handleCarFormChange}
+                  placeholder="Price per day (KSh) *"
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <input
+                  name="color"
+                  value={carForm.color}
+                  onChange={handleCarFormChange}
+                  placeholder="Color"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  name="location"
+                  value={carForm.location}
+                  onChange={handleCarFormChange}
+                  placeholder="Location (e.g., Nairobi CBD)"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <textarea
+                name="description"
+                value={carForm.description}
+                onChange={handleCarFormChange}
+                placeholder="Description (optional)"
+                rows={3}
+                className="w-full mt-6 px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              ></textarea>
+              <button
+                type="submit"
+                disabled={isSubmittingCar}
+                className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
+              >
+                {isSubmittingCar ? 'Listing Car...' : 'List My Car'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderAbout = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+      <div className="max-w-6xl mx-auto px-6 py-20">
+        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">About DriveKenya</h1>
+        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+          <p className="text-white/80 text-lg mb-6">
+            DriveKenya is Kenya's premier car rental platform, connecting travelers with quality vehicles across the country.
+            From budget-friendly economy cars to luxury vehicles, we offer the perfect ride for every journey.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div className="text-center">
+              <div className="text-4xl mb-4"></div>
+              <h3 className="text-white font-semibold mb-2">Wide Selection</h3>
+              <p className="text-white/70">Economy to luxury vehicles</p>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl mb-4"></div>
+              <h3 className="text-white font-semibold mb-2">Trusted & Safe</h3>
+              <p className="text-white/70">All vehicles verified and insured</p>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl mb-4"></div>
+              <h3 className="text-white font-semibold mb-2">Best Prices</h3>
+              <p className="text-white/70">Competitive rates nationwide</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderContact = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+      <div className="max-w-4xl mx-auto px-6 py-20">
+        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">Contact Us</h1>
+        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="text-white font-semibold text-xl mb-4">Get in Touch</h3>
+              <div className="space-y-4 text-white/80">
+                <div>📧 info@driveKenya.com</div>
+                <div>📞 +254 700 123 456</div>
+                <div>📍 Nairobi, Kenya</div>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold text-xl mb-4">Send Message</h3>
+              {contactSubmitMessage && (
+                <div className={`mb-4 p-3 rounded-lg ${contactSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' :
+                    'bg-green-500/20 border border-green-400/30 text-green-300'
+                  }`}>
+                  {contactSubmitMessage}
+                </div>
+              )}
+              <form onSubmit={handleSubmitContact}>
+                <div className="space-y-4">
+                  <input
+                    name="name"
+                    value={contactForm.name}
+                    onChange={handleContactFormChange}
+                    placeholder="Your Name *"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input
+                    name="email"
+                    value={contactForm.email}
+                    onChange={handleContactFormChange}
+                    placeholder="Your Email *"
+                    type="email"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input
+                    name="subject"
+                    value={contactForm.subject}
+                    onChange={handleContactFormChange}
+                    placeholder="Subject (optional)"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <textarea
+                    name="message"
+                    value={contactForm.message}
+                    onChange={handleContactFormChange}
+                    placeholder="Your Message *"
+                    rows={4}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  ></textarea>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingContact}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
+                  >
+                    {isSubmittingContact ? 'Sending...' : 'Send Message'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   // Main render function
+  const handleCarSelect = (car: Car) => {
+    setSelectedCar(car);
+    setViewingCar(car);
+    window.scrollTo(0, 0);
+  };
+
+  const handleBackToList = () => {
+    setViewingCar(null);
+  };
+
+  if (viewingCar) {
+    return <CarDetailView car={viewingCar} onBack={handleBackToList} />;
+  }
+
   return (
     <div className="min-h-screen font-['Poppins'] bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900">
       <Navigation />
-      {selectedCar && currentPage === 'car-detail' && renderCarDetail()}
       {currentPage === 'home' && renderHome()}
       {currentPage === 'cars' && renderCars()}
       {currentPage === 'listcar' && renderListCar()}
       {currentPage === 'bookings' && renderBookings()}
       {currentPage === 'mycars' && renderMyCars()}
-      {currentPage === 'profile' && renderProfile()}
       {currentPage === 'about' && renderAbout()}
       {currentPage === 'contact' && renderContact()}
       <AuthModal />
@@ -1821,6 +2150,28 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       {/* PWA Components */}
       <PWAInstallPrompt />
       <PWAStatus />
+      
+      {/* Car Management Interface */}
+      {managingCarId && (
+        <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
+          <CarManagement 
+            carId={managingCarId}
+            onClose={() => setManagingCarId(null)}
+          />
+        </div>
+      )}
+      {/* Profile Settings Modal */}
+      {showProfileSettings && user && token && (
+        <ProfileSettings
+          user={user}
+          token={token}
+          onClose={() => setShowProfileSettings(false)}
+          onUserUpdated={(updatedUser) => {
+            setUser(updatedUser);
+            authStorage.setUser(updatedUser);
+          }}
+        />
+      )}
     </div>
   );
 }

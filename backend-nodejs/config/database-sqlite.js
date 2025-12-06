@@ -15,7 +15,7 @@ db.pragma('foreign_keys = ON');
 console.log(`🗄️  Connected to SQLite database at: ${dbPath}`);
 
 // Create tables if they don't exist
-const createTables = () => {
+const createTables = (db) => {
   // Users table
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -295,7 +295,9 @@ const createTables = () => {
 };
 
 // Initialize tables
-createTables();
+createTables(db);
+
+export { createTables };
 
 // Helper function to run queries with parameters
 export const query = (sql, params = []) => {

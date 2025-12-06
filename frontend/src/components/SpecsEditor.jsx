@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import enhancedCarsAPI from '../services/enhancedCarsAPI';
+import { LoadingSpinner } from './UIUtils';
 
 const SpecsEditor = ({ carId, token, onUpdate }) => {
     const [specs, setSpecs] = useState({});
@@ -116,11 +117,7 @@ const SpecsEditor = ({ carId, token, onUpdate }) => {
     };
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            </div>
-        );
+        return <LoadingSpinner size="lg" message="Loading specifications..." />;
     }
 
     return (
@@ -137,8 +134,8 @@ const SpecsEditor = ({ carId, token, onUpdate }) => {
                     <button
                         onClick={() => setEditMode(!editMode)}
                         className={`px-4 py-2 rounded-lg font-semibold transition-colors ${editMode
-                                ? 'bg-gray-500 text-white hover:bg-gray-600'
-                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            ? 'bg-gray-500 text-white hover:bg-gray-600'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
                             }`}
                     >
                         {editMode ? '✓ Done' : '✏️ Edit Mode'}

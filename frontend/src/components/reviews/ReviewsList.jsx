@@ -15,6 +15,8 @@ const ReviewsList = ({ carId, isHost = false, pageSize = 10 }) => {
   const [data, setData] = useState({ reviews: [], pagination: { currentPage: 1, totalPages: 1, totalItems: 0, itemsPerPage: pageSize } });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const { showToast, ToastContainer } = useToast();
 
   const load = async (p = page) => {
@@ -64,7 +66,17 @@ const ReviewsList = ({ carId, isHost = false, pageSize = 10 }) => {
           {rev.photos && rev.photos.length > 0 && (
             <div className="mt-3 grid grid-cols-3 md:grid-cols-5 gap-2">
               {rev.photos.map(p => (
-                <img key={p.id} src={p.image_url} alt="review" className="w-full h-24 object-cover rounded" loading="lazy" />
+                <img
+                  key={p.id}
+                  src={p.image_url}
+                  alt="review"
+                  className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                  loading="lazy"
+                  onClick={() => {
+                    setLightboxImage(p.image_url);
+                    setLightboxOpen(true);
+                  }}
+                />
               ))}
             </div>
           )}
@@ -78,6 +90,27 @@ const ReviewsList = ({ carId, isHost = false, pageSize = 10 }) => {
           <button disabled={page >= data.pagination.totalPages} onClick={() => { const p = page + 1; setPage(p); load(p); }} className={`px-3 py-1.5 rounded text-sm ${page >= data.pagination.totalPages ? 'bg-gray-200 text-gray-400' : 'bg-gray-100 hover:bg-gray-200'}`}>Next</button>
         </div>
       </div>
+
+      {/* Photo Lightbox */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 transition-colors"
+          >
+            ×
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Review photo"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };
