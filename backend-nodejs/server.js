@@ -18,6 +18,9 @@ import messageRoutes from './routes/messages.js';
 import contactRoutes from './routes/contact.js';
 import paymentRoutes from './routes/payments.js';
 import notificationRoutes from './routes/notifications.js';
+import adminRoutes from './routes/admin.js';
+import ownerRoutes from './routes/owner.js';
+import pricingRoutes from './routes/pricing.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -717,6 +720,32 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/messages', authenticateToken, messageRoutes);
 app.use('/api/payments', authenticateToken, paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+// Phase 3 Business Features
+app.use('/api/admin', adminRoutes);
+app.use('/api/owner', ownerRoutes);
+app.use('/api/pricing', pricingRoutes);
+
+// Phase 4 Advanced Features
+try {
+  const recommendationRoutes = await import('./routes/recommendations.js');
+  const trackingRoutes = await import('./routes/tracking.js');
+  const emergencyRoutes = await import('./routes/emergency.js');
+  const performanceRoutes = await import('./routes/performance.js');
+  const fraudRoutes = await import('./routes/fraud.js');
+  const supportRoutes = await import('./routes/support.js');
+  
+  app.use('/api/recommendations', authenticateToken, recommendationRoutes.default);
+  app.use('/api/tracking', authenticateToken, trackingRoutes.default);
+  app.use('/api/emergency', authenticateToken, emergencyRoutes.default);
+  app.use('/api/performance', performanceRoutes.default);
+  app.use('/api/fraud', authenticateToken, fraudRoutes.default);
+  app.use('/api/support', supportRoutes.default);
+  
+  console.log('✅ Phase 4 advanced feature routes loaded');
+} catch (error) {
+  console.warn('⚠️ Some Phase 4 routes not available:', error.message);
+}
 
 // Test booking endpoint (public, no auth for testing)
 app.get('/api/bookings/test', (req, res) => {

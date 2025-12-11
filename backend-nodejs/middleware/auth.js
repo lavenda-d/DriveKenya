@@ -54,6 +54,16 @@ export const requireAdmin = (req, res, next) => {
   next();
 };
 
+export const requireAdminOrOwner = (req, res, next) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'host') {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Admin or car owner access required' 
+    });
+  }
+  next();
+};
+
 export const requireVerified = (req, res, next) => {
   const enforce = (process.env.ENFORCE_EMAIL_VERIFICATION || '').toLowerCase() === 'true' || process.env.NODE_ENV === 'production';
   if (!enforce) {

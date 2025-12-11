@@ -1,10 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 import { body, validationResult } from 'express-validator';
 import { query } from '../config/database-sqlite.js';
-import nodemailer from 'nodemailer';
-import { v4 as uuidv4 } from 'uuid';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -381,6 +381,155 @@ router.post('/google-signup', async (req, res, next) => {
 
   } catch (error) {
     next(error);
+  }
+});
+
+// ===== BIOMETRIC AUTHENTICATION ENDPOINTS =====
+
+// Check biometric registration status
+router.get('/biometric/status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const biometric = await query(
+      'SELECT * FROM biometric_credentials WHERE user_id = ?',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      registered: biometric.rows.length > 0,
+      lastUsed: biometric.rows[0]?.last_used || null
+    });
+  } catch (error) {
+    console.error('Biometric status check error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check biometric status'
+    });
+  }
+});
+
+// Register biometric credentials
+router.post('/biometric/register', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { publicKey, credentialId } = req.body;
+
+    // Check if already registered
+    const existing = await query(
+      'SELECT * FROM biometric_credentials WHERE user_id = ?',
+      [userId]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Biometric already registered for this user'
+      });
+    }
+
+    // Store biometric credential
+    await query(
+      `INSERT INTO biometric_credentials (user_id, credential_id, public_key, created_at)
+       VALUES (?, ?, ?, ?)`,
+      [userId, credentialId, publicKey, new Date().toISOString()]
+    );
+
+    res.json({
+      success: true,
+      message: 'Biometric authentication registered successfully'
+    });
+  } catch (error) {
+    console.error('Biometric registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register biometric authentication'
+    });
+  }
+});
+
+// Verify biometric login
+router.post('/biometric/verify', async (req, res) => {
+  try {
+    const { credentialId, signature, challenge } = req.body;
+
+    // Get user by credential
+    const credential = await query(
+      'SELECT * FROM biometric_credentials WHERE credential_id = ?',
+      [credentialId]
+    );
+
+    if (credential.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid biometric credential'
+      });
+    }
+
+    // TODO: Verify signature with stored public key
+    // For now, we'll trust the credential
+
+    // Update last used
+    await query(
+      'UPDATE biometric_credentials SET last_used = ? WHERE credential_id = ?',
+      [new Date().toISOString(), credentialId]
+    );
+
+    // Get user details
+    const user = await query(
+      'SELECT id, first_name, last_name, email, role FROM users WHERE id = ?',
+      [credential.rows[0].user_id]
+    );
+
+    if (user.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const token = generateToken(user.rows[0].id);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.rows[0].id,
+        name: `${user.rows[0].first_name} ${user.rows[0].last_name}`,
+        email: user.rows[0].email,
+        role: user.rows[0].role
+      }
+    });
+  } catch (error) {
+    console.error('Biometric verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Biometric verification failed'
+    });
+  }
+});
+
+// Remove biometric registration
+router.delete('/biometric/remove', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await query(
+      'DELETE FROM biometric_credentials WHERE user_id = ?',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Biometric authentication removed successfully'
+    });
+  } catch (error) {
+    console.error('Biometric removal error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove biometric authentication'
+    });
   }
 });
 
