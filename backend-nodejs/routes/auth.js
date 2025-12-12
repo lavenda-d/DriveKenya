@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 import { body, validationResult } from 'express-validator';
 import { query } from '../config/database-sqlite.js';
 import { authenticateToken } from '../middleware/auth.js';
