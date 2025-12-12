@@ -837,5 +837,138 @@ router.delete('/:id/specs/:specId', authenticateToken, async (req, res, next) =>
   }
 });
 
+// ============================================
+// BLACKOUT DATE MANAGEMENT
+// ============================================
+
+// Get blackout dates for a car
+router.get('/:id/blackout', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const blackouts = await query(`
+      SELECT id, car_id, start_date, end_date, reason, created_by, created_at
+      FROM car_blackout_dates
+      WHERE car_id = ?
+      ORDER BY start_date ASC
+    `, [id]);
+
+    res.json({
+      success: true,
+      blackouts: blackouts
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Create blackout period
+router.post('/:id/blackout', authenticateToken, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { startDate, endDate, reason } = req.body;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date and end date are required'
+      });
+    }
+
+    // Verify user owns the car
+    const carCheck = await query(`
+      SELECT owner_id FROM cars WHERE id = ?
+    `, [id]);
+
+    if (carCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Car not found'
+      });
+    }
+
+    if (carCheck[0].owner_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to manage this car'
+      });
+    }
+
+    // Validate dates
+    if (new Date(startDate) > new Date(endDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date must be after start date'
+      });
+    }
+
+    // Insert blackout period
+    const result = await query(`
+      INSERT INTO car_blackout_dates 
+      (car_id, start_date, end_date, reason, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `, [id, startDate, endDate, reason || null, req.user.id]);
+
+    // Get the created blackout
+    const blackout = await query(`
+      SELECT id, car_id, start_date, end_date, reason, created_by, created_at
+      FROM car_blackout_dates
+      WHERE id = last_insert_rowid()
+    `);
+
+    res.json({
+      success: true,
+      message: 'Blackout period created successfully',
+      blackout: blackout[0]
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete blackout period
+router.delete('/:id/blackout/:blackoutId', authenticateToken, async (req, res, next) => {
+  try {
+    const { id, blackoutId } = req.params;
+
+    // Verify blackout exists and user owns the car
+    const blackoutCheck = await query(`
+      SELECT cbd.id, c.owner_id
+      FROM car_blackout_dates cbd
+      JOIN cars c ON cbd.car_id = c.id
+      WHERE cbd.id = ? AND cbd.car_id = ?
+    `, [blackoutId, id]);
+
+    if (blackoutCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blackout period not found'
+      });
+    }
+
+    if (blackoutCheck[0].owner_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to delete this blackout period'
+      });
+    }
+
+    // Delete blackout
+    await query(`
+      DELETE FROM car_blackout_dates WHERE id = ?
+    `, [blackoutId]);
+
+    res.json({
+      success: true,
+      message: 'Blackout period deleted successfully'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
 
