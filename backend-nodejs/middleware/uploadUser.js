@@ -66,7 +66,10 @@ export const uploadAvatar = multer({
   storage: avatarStorage,
   limits: { fileSize: 3 * 1024 * 1024 }, // 3MB
   fileFilter: imageFilter
-}).single('avatar');
+}).fields([
+  { name: 'avatar', maxCount: 1 },
+  { name: 'photo', maxCount: 1 }
+]);
 
 export const uploadDocument = multer({
   storage: documentStorage,

@@ -1,6 +1,43 @@
 import { useState } from 'react';
 
 /**
+ * Standalone Toast Notification Function
+ * Creates and shows a toast notification without React hooks
+ */
+export const showToast = (message, type = 'success', duration = 3000) => {
+    // Remove any existing toasts
+    const existingToast = document.getElementById('standalone-toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.id = 'standalone-toast';
+    toast.className = 'fixed top-4 right-4 text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center space-x-3 max-w-md transition-all';
+    
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    
+    toast.className += ` ${bgColor}`;
+    toast.innerHTML = `
+        <span class="text-2xl">${icon}</span>
+        <p class="flex-1 font-medium">${message}</p>
+        <button class="text-white hover:text-gray-200 text-2xl font-bold ml-4" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, duration);
+};
+
+/**
  * Toast Notification Component
  * Displays temporary success/error messages
  */

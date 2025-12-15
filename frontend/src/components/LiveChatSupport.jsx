@@ -20,7 +20,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
     }
   ]);
   const [newMessage, setNewMessage] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [agent, setAgent] = useState(null);
   const [socket, setSocket] = useState(null);
@@ -114,21 +114,39 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
   };
 
   const getAutoReply = (message) => {
-    const lowerMessage = message.toLowerCase();
-    
-    if (lowerMessage.includes('book') || lowerMessage.includes('rent')) {
-      return 'To book a car, browse our Cars page, select your dates, and click "Book Now". Need help with a specific car?';
-    } else if (lowerMessage.includes('price') || lowerMessage.includes('cost')) {
-      return 'Our prices range from KES 2,000 - 15,000 per day depending on the vehicle. Use our Pricing Calculator for exact quotes!';
-    } else if (lowerMessage.includes('payment')) {
-      return 'We accept M-Pesa, Visa, Mastercard, and bank transfers. All payments are secure. Which method would you prefer?';
-    } else if (lowerMessage.includes('cancel')) {
-      return 'You can cancel bookings from My Bookings page. Free cancellation up to 24 hours before pickup!';
-    } else if (lowerMessage.includes('location')) {
-      return 'We offer pickup/delivery across Nairobi. Where would you like your car delivered?';
-    } else {
-      return 'Thank you for your message! A support agent will assist you shortly. You can also check our FAQ section.';
+    const m = message.toLowerCase();
+
+    if (m.includes('book') || m.includes('rent')) {
+      return 'To book a car: open Cars, choose dates, and tap “Book Now”. Need help with a specific car?';
     }
+    if (m.includes('price') || m.includes('cost') || m.includes('quote')) {
+      return 'Prices vary by model and dates. Use the Pricing Calculator for an exact quote. Typical range: KES 2,000–15,000 per day.';
+    }
+    if (m.includes('payment') || m.includes('mpesa') || m.includes('visa') || m.includes('mastercard')) {
+      return 'We accept M-Pesa, Visa/Mastercard, and bank transfer. All payments are secure. Which method suits you?';
+    }
+    if (m.includes('cancel') || m.includes('refund')) {
+      return 'You can cancel in My Bookings. Free cancellation up to 24 hours before pickup. Refunds follow your payment method.';
+    }
+    if (m.includes('location') || m.includes('pickup') || m.includes('delivery')) {
+      return 'Pickup/delivery is available across Nairobi. Share your preferred pickup spot and time.';
+    }
+    if (m.includes('account') || m.includes('profile') || m.includes('photo')) {
+      return 'Update your profile and photo under Profile & Settings. Changes apply instantly.';
+    }
+    if (m.includes('verify') || m.includes('documents') || m.includes('id')) {
+      return 'Submit verification documents under Profile & Settings → Verification. Status updates appear as soon as we review.';
+    }
+    if (m.includes('available') || m.includes('availability') || m.includes('calendar')) {
+      return 'Availability appears on each car’s calendar. Owners can mark Available, Booked, or Maintenance from Manage Car.';
+    }
+    if (m.includes('message') || m.includes('chat') || m.includes('support')) {
+      return 'This is automated support with instant replies. For live help, use View Messages on the car or Contact Support.';
+    }
+    if (m.includes('help') || m.includes('faq')) {
+      return 'Common topics: booking, pricing, payment, cancellations, verification, availability. Ask anything — we’ll guide you!';
+    }
+    return 'Thanks! This support is automated and does not require a live connection. Ask about booking, pricing, payments, cancellations, verification, or availability.';
   };
 
   const handleFileUpload = (e) => {
@@ -207,11 +225,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
             </div>
             <div>
               <h3 className="font-semibold">DriveKenya Support</h3>
-              <div className="text-xs text-white/80">
-                {isConnected ? (
-                  agent ? `Chat with ${agent.name}` : 'Usually replies instantly'
-                ) : 'Usually replies instantly'}
-              </div>
+              <div className="text-xs text-white/80">Automated Support • Instant helpful replies</div>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -234,14 +248,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
           </div>
         </div>
 
-        {/* Connection Status */}
-        {!isConnected && (
-          <div className="bg-yellow-50 border-b border-yellow-200 p-3">
-            <div className="text-sm text-yellow-800">
-              Connecting to support agent...
-            </div>
-          </div>
-        )}
+        {/* Connection status removed to avoid confusion */}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">

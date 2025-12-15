@@ -581,7 +581,16 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
   try {
     const { query } = await import('./config/database-sqlite.js');
-    const { first_name, last_name, phone } = req.body;
+    let { first_name, last_name, name, phone } = req.body;
+    // Accept either combined name or separate fields
+    if (!first_name && !last_name && name) {
+      const parts = String(name).trim().split(/\s+/);
+      first_name = parts[0] || name;
+      last_name = parts.slice(1).join(' ') || '';
+    }
+    // Ensure non-null to satisfy NOT NULL constraints
+    first_name = (first_name ?? '').toString();
+    last_name = (last_name ?? '').toString();
     
     const result = query(`
       UPDATE users SET 

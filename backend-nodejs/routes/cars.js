@@ -2,6 +2,7 @@ import express from 'express';
 import { body, query as expressQuery, validationResult } from 'express-validator';
 import { query } from '../config/database-sqlite.js';
 import { authenticateToken, requireVerified } from '../middleware/auth.js';
+import { uploadCarImages } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -21,6 +22,10 @@ router.get('/', async (req, res, next) => {
       location,
       minPrice,
       maxPrice,
+      transmission,
+      fuelType,
+      category,
+      availability,
       page = 1,
       limit = 12,
       sortBy = 'created_at',
@@ -30,7 +35,7 @@ router.get('/', async (req, res, next) => {
     let queryText = `
       SELECT c.*
       FROM cars c
-      WHERE c.available = true
+      WHERE c.available = 1
     `;
 
     const queryParams = [];
@@ -53,6 +58,33 @@ router.get('/', async (req, res, next) => {
       paramCount++;
       queryText += ` AND c.price_per_day <= ?`;
       queryParams.push(parseFloat(maxPrice));
+    }
+
+    if (transmission && transmission !== 'all') {
+      paramCount++;
+      queryText += ` AND LOWER(c.transmission) = LOWER(?)`;
+      queryParams.push(transmission);
+    }
+
+    if (fuelType && fuelType !== 'all') {
+      paramCount++;
+      queryText += ` AND LOWER(c.fuel_type) = LOWER(?)`;
+      queryParams.push(fuelType);
+    }
+
+    if (category && category !== 'all') {
+      paramCount++;
+      queryText += ` AND LOWER(c.category) = LOWER(?)`;
+      queryParams.push(category);
+    }
+
+    if (availability && availability !== 'any') {
+      const valid = ['available','booked','maintenance'];
+      if (valid.includes(String(availability).toLowerCase())) {
+        paramCount++;
+        queryText += ` AND LOWER(c.availability_status) = LOWER(?)`;
+        queryParams.push(availability);
+      }
     }
 
     // Add sorting
@@ -102,6 +134,33 @@ router.get('/', async (req, res, next) => {
       countParamCount++;
       countQuery += ` AND c.price_per_day <= ?`;
       countParams.push(parseFloat(maxPrice));
+    }
+
+    if (transmission && transmission !== 'all') {
+      countParamCount++;
+      countQuery += ` AND LOWER(c.transmission) = LOWER(?)`;
+      countParams.push(transmission);
+    }
+
+    if (fuelType && fuelType !== 'all') {
+      countParamCount++;
+      countQuery += ` AND LOWER(c.fuel_type) = LOWER(?)`;
+      countParams.push(fuelType);
+    }
+
+    if (category && category !== 'all') {
+      countParamCount++;
+      countQuery += ` AND LOWER(c.category) = LOWER(?)`;
+      countParams.push(category);
+    }
+
+    if (availability && availability !== 'any') {
+      const valid = ['available','booked','maintenance'];
+      if (valid.includes(String(availability).toLowerCase())) {
+        countParamCount++;
+        countQuery += ` AND LOWER(c.availability_status) = LOWER(?)`;
+        countParams.push(availability);
+      }
     }
 
     const countResult = query(countQuery, countParams);
@@ -198,6 +257,105 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // Create new car (authenticated users only)
+// Update car availability status (owner-only)
+router.put('/:id/status', authenticateToken, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const valid = ['available', 'booked', 'maintenance'];
+    if (!valid.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    // Ensure user owns the car
+    const own = query('SELECT id FROM cars WHERE id = ? AND host_id = ?', [id, req.user.id]);
+    if (own.rows.length === 0) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this car' });
+    }
+
+    query('UPDATE cars SET availability_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [status, id]);
+    res.json({ success: true, message: 'Status updated', status });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Availability calendar: list blocks
+router.get('/:id/availability', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const blocks = query('SELECT * FROM car_availability WHERE car_id = ? ORDER BY start_date', [id]);
+    res.json({ success: true, blocks: blocks.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Availability calendar: add block (owner-only)
+router.post('/:id/availability', authenticateToken, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { start_date, end_date, status, note } = req.body;
+    const valid = ['available', 'booked', 'maintenance'];
+    if (!start_date || !end_date || !valid.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid availability block' });
+    }
+    const own = query('SELECT id FROM cars WHERE id = ? AND host_id = ?', [id, req.user.id]);
+    if (own.rows.length === 0) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this car' });
+    }
+    query(
+      'INSERT INTO car_availability (car_id, start_date, end_date, status, note) VALUES (?, ?, ?, ?, ?)',
+      [id, start_date, end_date, status, note || '']
+    );
+    res.json({ success: true, message: 'Availability block added' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Availability calendar: delete block (owner-only)
+router.delete('/:id/availability/:blockId', authenticateToken, async (req, res, next) => {
+  try {
+    const { id, blockId } = req.params;
+    const own = query('SELECT id FROM cars WHERE id = ? AND host_id = ?', [id, req.user.id]);
+    if (own.rows.length === 0) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this car' });
+    }
+    const blk = query('SELECT id FROM car_availability WHERE id = ? AND car_id = ?', [blockId, id]);
+    if (blk.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Block not found' });
+    }
+    query('DELETE FROM car_availability WHERE id = ?', [blockId]);
+    res.json({ success: true, message: 'Availability block deleted' });
+  } catch (error) {
+    next(error);
+  }
+});
+// Upload car images
+router.post('/upload-images', authenticateToken, uploadCarImages.array('images', 20), async (req, res, next) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No images uploaded'
+      });
+    }
+
+    // Return URLs for uploaded images
+    const imageUrls = req.files.map(file => `/uploads/cars/${file.filename}`);
+
+    res.json({
+      success: true,
+      message: `${imageUrls.length} image(s) uploaded successfully`,
+      data: { imageUrls }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/', authenticateToken, requireVerified, validateCar, async (req, res, next) => {
   try {
     console.log('🚗 Backend received car data:', req.body);
@@ -223,19 +381,45 @@ router.post('/', authenticateToken, requireVerified, validateCar, async (req, re
       description,
       features = [],
       images = [],
+      main_image_url,
+      gallery_json,
+      video_url,
+      fuel_type,
+      transmission,
+      category,
+      availability_status = 'available',
       price_per_day,
       color
     } = req.body;
 
+    // Build gallery array: prioritize uploaded images, fallback to URLs
+    let galleryImages = [];
+    if (gallery_json) {
+      try {
+        galleryImages = JSON.parse(gallery_json);
+      } catch (e) {
+        galleryImages = [];
+      }
+    }
+    if (images && images.length > 0) {
+      galleryImages = [...galleryImages, ...images];
+    }
+
+    // Use main_image_url if provided, otherwise use first gallery image
+    const mainImage = main_image_url || (galleryImages.length > 0 ? galleryImages[0] : '');
+
     const result = query(`
       INSERT INTO cars (
         host_id, make, model, year, color, location, description, features, 
-        images, price_per_day, license_plate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        images, main_image_url, gallery_json, video_url, fuel_type, transmission,
+        category, availability_status, price_per_day, license_plate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       req.user.id, make, model, year, color || '', location, description || '',
-      JSON.stringify(features || []), JSON.stringify(images || []), price_per_day,
-      `${make}-${model}-${Date.now()}` // Generate license plate
+      JSON.stringify(features || []), JSON.stringify(galleryImages), mainImage,
+      JSON.stringify(galleryImages), video_url || '', fuel_type || 'petrol',
+      transmission || 'manual', category || 'economy', availability_status,
+      price_per_day, `${make}-${model}-${Date.now()}` // Generate license plate
     ]);
 
     res.status(201).json({

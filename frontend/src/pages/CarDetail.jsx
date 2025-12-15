@@ -5,13 +5,14 @@ import { FaArrowLeft, FaCar, FaGasPump, FaCog, FaStar, FaMapMarkerAlt, FaPhone, 
 import { MdAirlineSeatReclineNormal, MdDirectionsCar } from 'react-icons/md';
 import { BsCalendarDate, BsSpeedometer2 } from 'react-icons/bs';
 import { GiGearStickPattern } from 'react-icons/gi';
-import { toast } from 'react-toastify';
+import { useToast } from '../components/UIUtils';
 import ImageGallery from '../components/ImageGallery';
 import CarSpecs from '../components/CarSpecs';
 
 const CarDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast, ToastContainer } = useToast();
   const [car, setCar] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -24,12 +25,12 @@ const CarDetail = () => {
         if (response.success) {
           setCar(response.data);
         } else {
-          toast.error('Failed to load car details');
+          showToast('Failed to load car details', 'error');
           navigate('/');
         }
       } catch (error) {
         console.error('Error fetching car details:', error);
-        toast.error('Error loading car details');
+        showToast('Error loading car details', 'error');
         navigate('/');
       } finally {
         setLoading(false);
@@ -304,6 +305,7 @@ const CarDetail = () => {
             </div>
           </div>
       </main>
+      <ToastContainer />
     </div>
   );
 };

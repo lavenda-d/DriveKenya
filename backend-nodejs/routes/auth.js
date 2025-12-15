@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import { v4 as uuidv4 } from 'uuid';
 import { body, validationResult } from 'express-validator';
 import { query } from '../config/database-sqlite.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -273,12 +274,20 @@ router.post('/login', validateLogin, async (req, res, next) => {
         message: attempts >= 5 ? 'Too many failed attempts. Account locked for 15 minutes.' : 'Invalid email or password'
       });
     }
-    if (!user.email_verified) {
+    // In development, bypass email verification check
+    if (!user.email_verified && process.env.NODE_ENV !== 'development') {
       return res.status(403).json({
         success: false,
         message: 'Email not verified. Please check your inbox for the verification email or resend a new one.',
         needs_verification: true
       });
+    }
+    
+    // Auto-verify users in development
+    if (process.env.NODE_ENV === 'development' && !user.email_verified) {
+      console.log('🔧 Development mode: Auto-verifying user');
+      query('UPDATE users SET email_verified = 1 WHERE id = ?', [user.id]);
+      user.email_verified = 1;
     }
 
     const token = generateToken(user.id);
@@ -530,6 +539,82 @@ router.delete('/biometric/remove', authenticateToken, async (req, res) => {
       success: false,
       message: 'Failed to remove biometric authentication'
     });
+  }
+});
+
+// Change password endpoint
+router.post('/change-password', authenticateToken, [
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('Current password is required'),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('New password must be at least 6 characters long'),
+], async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    // Get current user's password hash
+    const result = query(
+      'SELECT password FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Check if new password is different
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+
+    // Hash new password
+    const saltRounds = 12;
+    const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password in database
+    query(
+      'UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [newPasswordHash, userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Password change error:', error);
+    next(error);
   }
 });
 

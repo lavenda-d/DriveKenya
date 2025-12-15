@@ -143,7 +143,7 @@ export const uploadProfilePhoto = async (file, token) => {
     }
 
     const formData = new FormData();
-    formData.append('photo', file);
+    formData.append('avatar', file); // Backend expects 'avatar' field name
 
     return apiRequest('/users/profile/photo', {
         method: 'POST',

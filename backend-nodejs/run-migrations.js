@@ -37,9 +37,9 @@ try {
             db.exec(sql);
             console.log(`   ✅ Success\n`);
         } catch (error) {
-            // Check if it's just a "table already exists" error
-            if (error.message.includes('already exists')) {
-                console.log(`   ⚠️  Table already exists (skipping)\n`);
+            // Check if it's just a "table/column already exists" error
+            if (error.message.includes('already exists') || error.message.includes('duplicate column')) {
+                console.log(`   ⚠️  Already exists (skipping)\n`);
             } else {
                 console.error(`   ❌ Error: ${error.message}\n`);
             }

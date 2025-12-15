@@ -85,6 +85,61 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+// Get all customers who have inquired about a specific car (for car owners)
+router.get('/car-inquiries/:carId', async (req, res, next) => {
+  try {
+    const { carId } = req.params;
+
+    // Verify user is the car owner
+    const carResult = query('SELECT host_id FROM cars WHERE id = ?', [carId]);
+    if (carResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Car not found'
+      });
+    }
+
+    if (carResult.rows[0].host_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view inquiries for this car'
+      });
+    }
+
+    // Get all unique customers who have sent messages about this car
+    // We'll look for messages mentioning the car in bookings/rentals or messages table
+    const inquiriesResult = query(`
+      SELECT DISTINCT
+        u.id as customer_id,
+        u.name as customer_name,
+        u.email as customer_email,
+        u.avatar_url,
+        MAX(m.created_at) as last_message_date,
+        COUNT(m.id) as message_count,
+        SUM(CASE WHEN m.read_status = 0 AND m.recipient_id = ? THEN 1 ELSE 0 END) as unread_count
+      FROM messages m
+      JOIN users u ON (m.sender_id = u.id AND m.recipient_id = ?)
+      WHERE m.sender_id != ?
+        AND (
+          m.content LIKE ? 
+          OR m.rental_id IN (
+            SELECT r.id FROM rentals r WHERE r.car_id = ?
+          )
+        )
+      GROUP BY u.id, u.name, u.email, u.avatar_url
+      ORDER BY last_message_date DESC
+    `, [req.user.id, req.user.id, req.user.id, `%car%${carId}%`, carId]);
+
+    res.json({
+      success: true,
+      data: { inquiries: inquiriesResult.rows || [] }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 
 export default router;

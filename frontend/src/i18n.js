@@ -8,15 +8,18 @@ const resources = {
     translation: {
       // Navigation
       'nav.home': 'Home',
-      'nav.cars': 'Cars',
-      'nav.listcar': 'List Car',
-      'nav.rentals': 'Rentals',
+      'nav.cars': 'Browse Cars',
+      'nav.services': 'Services',
+      'nav.listcar': 'List Your Car',
+      'nav.rentals': 'My Rentals',
       'nav.mycars': 'My Cars',
       'nav.advanced': 'Advanced Features',
-      'nav.about': 'About',
-      'nav.contact': 'Contact',
+      'nav.about': 'About Us',
+      'nav.contact': 'Contact Support',
+      'nav.more': 'More',
       'nav.signin': 'Sign In',
       'nav.signout': 'Sign Out',
+      'nav.settings': 'Settings',
       
       // Home Page
       'home.title': 'DriveKenya',

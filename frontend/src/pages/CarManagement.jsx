@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { carsAPI } from '../services/api';
-import { toast } from 'react-toastify';
 import { FaArrowLeft, FaCar } from 'react-icons/fa';
 import ImageUploader from '../components/ImageUploader';
 import ImageManager from '../components/ImageManager';
 import SpecsEditor from '../components/SpecsEditor';
 import ImageGallery from '../components/ImageGallery';
 import BlackoutManager from '../components/BlackoutManager';
-import { LoadingSpinner } from '../components/UIUtils';
+import { LoadingSpinner, useToast } from '../components/UIUtils';
 
 const CarManagement = ({ carId: propCarId, onClose }) => {
     const { id: routeId } = useParams();
     const navigate = useNavigate();
+    const { showToast, ToastContainer } = useToast();
     const [car, setCar] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('upload');
@@ -24,7 +24,7 @@ const CarManagement = ({ carId: propCarId, onClose }) => {
         // Get token from localStorage
         const userToken = localStorage.getItem('token');
         if (!userToken) {
-            toast.error('Please login to manage your cars');
+            showToast('Please login to manage your cars', 'error');
             // If opened as a modal (onClose provided), close instead of navigating
             if (onClose) {
                 onClose();
@@ -44,12 +44,12 @@ const CarManagement = ({ carId: propCarId, onClose }) => {
             if (response.success) {
                 setCar(response.data);
             } else {
-                toast.error('Failed to load car details');
+                showToast('Failed to load car details', 'error');
                 navigate('/my-cars');
             }
         } catch (error) {
             console.error('Error fetching car details:', error);
-            toast.error('Error loading car details');
+            showToast('Error loading car details', 'error');
             navigate('/my-cars');
         } finally {
             setLoading(false);
@@ -302,6 +302,7 @@ const CarManagement = ({ carId: propCarId, onClose }) => {
                     )}
                 </div>
             </main>
+            <ToastContainer />
         </div>
     );
 };
