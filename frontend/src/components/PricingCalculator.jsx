@@ -12,7 +12,7 @@ import {
   Car
 } from 'lucide-react';
 
-const PricingCalculator = ({ carId, onPriceCalculated }) => {
+const PricingCalculator = ({ carId, onPriceCalculated, onBookCar }) => {
   const [selectedCarId, setSelectedCarId] = useState(carId || '');
   const [availableCars, setAvailableCars] = useState([]);
   const [startDate, setStartDate] = useState('');
@@ -41,10 +41,12 @@ const PricingCalculator = ({ carId, onPriceCalculated }) => {
 
   const fetchCars = async () => {
     try {
-      const response = await fetch('/api/cars');
+      const response = await fetch('http://localhost:5000/api/cars');
       const data = await response.json();
       if (data.success) {
-        setAvailableCars(data.cars || []);
+        setAvailableCars(data.data?.cars || []);
+      } else {
+        console.error('Failed to fetch cars:', data);
       }
     } catch (error) {
       console.error('Failed to fetch cars:', error);
@@ -63,7 +65,7 @@ const PricingCalculator = ({ carId, onPriceCalculated }) => {
       setLoading(true);
       setError('');
 
-      const response = await fetch('/api/pricing/preview', {
+      const response = await fetch('http://localhost:5000/api/pricing/preview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -94,6 +96,31 @@ const PricingCalculator = ({ carId, onPriceCalculated }) => {
       setPricing(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBookNow = () => {
+    if (!selectedCarId || !startDate || !endDate) {
+      alert('Please select a car and dates to book');
+      return;
+    }
+
+    const selectedCar = availableCars.find(car => car.id === parseInt(selectedCarId));
+    if (!selectedCar) {
+      alert('Selected car not found');
+      return;
+    }
+
+    // Pass booking data to parent component (App.tsx)
+    if (onBookCar) {
+      onBookCar({
+        car: selectedCar,
+        startDate,
+        endDate,
+        pickupLocation,
+        dropoffLocation,
+        pricing
+      });
     }
   };
 
@@ -410,7 +437,10 @@ const PricingCalculator = ({ carId, onPriceCalculated }) => {
 
               {/* Call to Action */}
               <div className="mt-6 pt-4 border-t border-gray-200">
-                <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-semibold">
+                <button 
+                  onClick={handleBookNow}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-semibold"
+                >
                   Book Now for ${pricing.totalPrice}
                 </button>
                 <p className="text-xs text-gray-500 text-center mt-2">

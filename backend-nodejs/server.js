@@ -10,6 +10,7 @@ import { createServer } from 'http';
 
 // Import routes
 import authRoutes from './routes/auth.js';
+import passwordResetRoutes from './routes/passwordReset.js';
 import userRoutes from './routes/users.js';
 import carRoutes from './routes/cars.js';
 import rentalRoutes from './routes/rentals.js';
@@ -32,6 +33,12 @@ import { initializeSocket } from './services/socketService.js';
 
 // Load environment variables
 dotenv.config();
+
+// Set JWT_SECRET with fallback if not in .env
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'driveKenya-secret-2024';
+  console.log('⚠️ Using default JWT_SECRET. Set JWT_SECRET in .env for production!');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -330,20 +337,6 @@ app.post('/api/bookings/create', async (req, res) => {
       return res.status(409).json({
         success: false,
         message: 'Car is already booked for the selected dates'
-      });
-    }
-
-    // Check blackouts
-    const blackoutConflict = query(`
-      SELECT COUNT(*) as count FROM car_blackouts
-      WHERE car_id = ?
-      AND NOT (date(end_datetime) <= date(?) OR date(start_datetime) >= date(?))
-    `, [carId, startDate, endDate]);
-
-    if ((blackoutConflict.rows?.[0]?.count || 0) > 0) {
-      return res.status(409).json({
-        success: false,
-        message: 'Selected dates fall within a blackout period for this car'
       });
     }
 
@@ -719,6 +712,7 @@ app.get('/api/chat/notifications', authenticateToken, async (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', passwordResetRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/cars', carRoutes);
 app.use('/api/rentals', authenticateToken, rentalRoutes);
@@ -749,7 +743,7 @@ try {
   app.use('/api/emergency', authenticateToken, emergencyRoutes.default);
   app.use('/api/performance', performanceRoutes.default);
   app.use('/api/fraud', authenticateToken, fraudRoutes.default);
-  app.use('/api/support', supportRoutes.default);
+  app.use('/api/support', authenticateToken, supportRoutes.default);
   
   console.log('✅ Phase 4 advanced feature routes loaded');
 } catch (error) {

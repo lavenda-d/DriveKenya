@@ -595,8 +595,11 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                             <h4 className="font-semibold text-gray-800">🌐 Language Preference</h4>
                                             <p className="text-sm text-gray-600">Choose your preferred language</p>
                                         </div>
+                                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                                            Coming Soon
+                                        </span>
                                     </div>
-                                    <div className="flex gap-3 mt-3">
+                                    <div className="flex gap-3 mt-3 opacity-50 pointer-events-none">
                                         <button className="flex-1 px-4 py-2 border-2 border-blue-600 bg-blue-50 text-blue-600 rounded-lg font-medium">
                                             English
                                         </button>

@@ -138,6 +138,23 @@ router.post('/register', validateRegistration, async (req, res, next) => {
 
     const token = generateToken(result.insertId);
 
+    // Create welcome notifications for new user
+    try {
+      query(`
+        INSERT INTO notifications (user_id, type, title, message, is_read)
+        VALUES (?, ?, ?, ?, ?)
+      `, [result.insertId, 'system', 'Welcome to DriveKenya!', 'Thank you for joining DriveKenya. Start exploring available cars and book your first ride!', 0]);
+      
+      query(`
+        INSERT INTO notifications (user_id, type, title, message, is_read)
+        VALUES (?, ?, ?, ?, ?)
+      `, [result.insertId, 'system', 'Enhanced Features Available', 'New features: Real-time notifications, payment options, and improved booking flow are now live!', 0]);
+      
+      console.log('✅ Created welcome notifications for user:', result.insertId);
+    } catch (notifError) {
+      console.error('Failed to create welcome notifications:', notifError.message);
+    }
+
     res.status(201).json({
       success: true,
       message: `${finalRole === 'host' ? 'Car owner' : 'Customer'} registered successfully`,
@@ -226,7 +243,7 @@ router.post('/login', validateLogin, async (req, res, next) => {
 
     // Find user
     const result = query(
-      'SELECT id, first_name, last_name, email, password, phone, role, email_verified, failed_login_attempts, locked_until, avatar_url, is_verified FROM users WHERE email = ?',
+      'SELECT id, first_name, last_name, email, password, phone, role, email_verified, failed_login_attempts, locked_until, avatar_url, profile_photo, is_verified FROM users WHERE email = ?',
       [email]
     );
 
@@ -306,6 +323,7 @@ router.post('/login', validateLogin, async (req, res, next) => {
           role: user.role,
           isVerified: user.email_verified,
           avatar_url: user.avatar_url,
+          profile_photo: user.profile_photo,
           is_profile_verified: user.is_verified
         },
         token

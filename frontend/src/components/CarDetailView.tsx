@@ -131,12 +131,14 @@ const CarDetailView: React.FC<CarDetailViewProps> = ({ car, onBack }) => {
                 <div className="mb-8">
                   <h3 className="text-xl font-semibold text-white mb-4">Features</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {car.features?.map((feature: string, index: number) => (
-                      <div key={index} className="flex items-center">
-                        <span className="text-green-400 mr-2">✓</span>
-                        <span className="text-white/80">{feature}</span>
-                      </div>
-                    )) || (
+                    {(() => {
+                      const features = typeof car.features === 'string' ? JSON.parse(car.features || '[]') : (car.features || []);
+                      return features.length > 0 ? features.map((feature: string, index: number) => (
+                        <div key={index} className="flex items-center">
+                          <span className="text-green-400 mr-2">✓</span>
+                          <span className="text-white/80">{feature}</span>
+                        </div>
+                      )) : (
                       <>
                         <div className="flex items-center">
                           <span className="text-green-400 mr-2">✓</span>
@@ -155,7 +157,8 @@ const CarDetailView: React.FC<CarDetailViewProps> = ({ car, onBack }) => {
                           <span className="text-white/80">USB Ports</span>
                         </div>
                       </>
-                    )}
+                    );
+                    })()}
                   </div>
                 </div>
               </div>

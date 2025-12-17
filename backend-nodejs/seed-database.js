@@ -176,59 +176,128 @@ const insertUsers = async (users) => {
   return query('SELECT id, email, role FROM users');
 };
 
-// Generate cars
-const generateCars = (hosts, count) => {
-  console.log(`🚗 Generating ${count} cars...`);
+// Generate diverse vehicles (cars, motorcycles, bicycles, vans, trucks, SUVs, buses)
+const generateCars = (hosts) => {
+  console.log(`🚗 Generating diverse vehicles...`);
   const cars = [];
   
-  for (let i = 1; i <= count; i++) {
-    const host = hosts[Math.floor(Math.random() * hosts.length)];
-    const make = carMakes[Math.floor(Math.random() * carMakes.length)];
-    const model = carModels[make][Math.floor(Math.random() * carModels[make].length)];
-    const year = getRandomInt(2015, 2023);
-    const pricePerDay = [3000, 3500, 4000, 4500, 5000, 6000, 7000, 8000, 10000, 15000][Math.floor(Math.random() * 10)];
-    const location = locations[Math.floor(Math.random() * locations.length)];
-    const licensePlate = `K${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))} ${String(Math.floor(100 + Math.random() * 900))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
-    
-    const car = {
-      host_id: host.id,
-      owner_name: `${host.first_name} ${host.last_name}`,
-      owner_email: host.email,
-      owner_phone: host.phone,
-      make,
-      model,
-      year,
-      color: ['Black', 'White', 'Silver', 'Gray', 'Blue', 'Red', 'Green'][Math.floor(Math.random() * 7)],
-      license_plate: licensePlate,
-      price_per_day: pricePerDay,
-      location,
-      description: `Well-maintained ${year} ${make} ${model} available for rent. Great condition with all features working perfectly.`,
-      features: JSON.stringify(features.slice(0, getRandomInt(3, features.length))),
-      images: JSON.stringify([`https://source.unsplash.com/800x600/?${make}+${model}+${year}`]),
-      available: 1,
-      created_at: getRandomDate(new Date(2023, 0, 1), new Date()).toISOString()
-    };
-    
-    cars.push(car);
-  }
+  // Vehicle data organized by type
+  const vehicleData = {
+    car: [
+      { make: 'Toyota', model: 'Corolla', year: 2022, price: 4500, color: 'Silver', category: 'economy', fuel: 'Petrol', transmission: 'Automatic' },
+      { make: 'Honda', model: 'Civic', year: 2023, price: 5000, color: 'White', category: 'economy', fuel: 'Petrol', transmission: 'Automatic' },
+      { make: 'Mazda', model: 'CX-5', year: 2021, price: 6000, color: 'Red', category: 'suv', fuel: 'Petrol', transmission: 'Automatic' },
+      { make: 'Mercedes', model: 'C-Class', year: 2023, price: 12000, color: 'Black', category: 'luxury', fuel: 'Petrol', transmission: 'Automatic' },
+      { make: 'BMW', model: '3 Series', year: 2022, price: 11000, color: 'Blue', category: 'luxury', fuel: 'Diesel', transmission: 'Automatic' }
+    ],
+    motorcycle: [
+      { make: 'Yamaha', model: 'YZF-R15', year: 2023, price: 1500, color: 'Blue', category: 'sport', fuel: 'Petrol', transmission: 'Manual' },
+      { make: 'Honda', model: 'CB500X', year: 2022, price: 2000, color: 'Red', category: 'adventure', fuel: 'Petrol', transmission: 'Manual' },
+      { make: 'Kawasaki', model: 'Ninja 400', year: 2023, price: 1800, color: 'Green', category: 'sport', fuel: 'Petrol', transmission: 'Manual' },
+      { make: 'Suzuki', model: 'V-Strom 650', year: 2021, price: 2200, color: 'White', category: 'adventure', fuel: 'Petrol', transmission: 'Manual' },
+      { make: 'BMW', model: 'R 1250 GS', year: 2023, price: 4000, color: 'Black', category: 'touring', fuel: 'Petrol', transmission: 'Manual' }
+    ],
+    bicycle: [
+      { make: 'Trek', model: 'FX 3 Disc', year: 2023, price: 500, color: 'Blue', category: 'hybrid', fuel: 'None', transmission: 'Gears' },
+      { make: 'Giant', model: 'Escape 3', year: 2023, price: 400, color: 'Black', category: 'fitness', fuel: 'None', transmission: 'Gears' },
+      { make: 'Specialized', model: 'Sirrus X 2.0', year: 2022, price: 600, color: 'Red', category: 'urban', fuel: 'None', transmission: 'Gears' },
+      { make: 'Cannondale', model: 'Quick CX 3', year: 2023, price: 550, color: 'Silver', category: 'commuter', fuel: 'None', transmission: 'Gears' },
+      { make: 'Scott', model: 'Sub Sport 20', year: 2022, price: 450, color: 'Orange', category: 'hybrid', fuel: 'None', transmission: 'Gears' }
+    ],
+    van: [
+      { make: 'Toyota', model: 'HiAce', year: 2022, price: 7000, color: 'White', category: 'passenger', fuel: 'Diesel', transmission: 'Manual' },
+      { make: 'Nissan', model: 'NV350 Urvan', year: 2023, price: 6500, color: 'Silver', category: 'passenger', fuel: 'Diesel', transmission: 'Manual' },
+      { make: 'Mercedes', model: 'Sprinter', year: 2023, price: 10000, color: 'White', category: 'cargo', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Ford', model: 'Transit', year: 2021, price: 8000, color: 'Blue', category: 'passenger', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Volkswagen', model: 'Transporter', year: 2022, price: 8500, color: 'Gray', category: 'cargo', fuel: 'Diesel', transmission: 'Manual' }
+    ],
+    truck: [
+      { make: 'Isuzu', model: 'D-Max', year: 2023, price: 9000, color: 'White', category: 'pickup', fuel: 'Diesel', transmission: 'Manual' },
+      { make: 'Toyota', model: 'Hilux', year: 2023, price: 9500, color: 'Silver', category: 'pickup', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Mitsubishi', model: 'L200', year: 2022, price: 8500, color: 'Black', category: 'pickup', fuel: 'Diesel', transmission: 'Manual' },
+      { make: 'Ford', model: 'Ranger', year: 2023, price: 10000, color: 'Blue', category: 'pickup', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Nissan', model: 'Navara', year: 2022, price: 8800, color: 'Red', category: 'pickup', fuel: 'Diesel', transmission: 'Manual' }
+    ],
+    suv: [
+      { make: 'Toyota', model: 'Land Cruiser Prado', year: 2023, price: 15000, color: 'Black', category: 'luxury', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Nissan', model: 'Patrol', year: 2022, price: 14000, color: 'White', category: 'luxury', fuel: 'Petrol', transmission: 'Automatic' },
+      { make: 'Mitsubishi', model: 'Pajero', year: 2023, price: 12000, color: 'Silver', category: 'adventure', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Land Rover', model: 'Discovery', year: 2022, price: 18000, color: 'Gray', category: 'luxury', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Toyota', model: 'Fortuner', year: 2023, price: 11000, color: 'Brown', category: 'family', fuel: 'Diesel', transmission: 'Automatic' }
+    ],
+    bus: [
+      { make: 'Toyota', model: 'Coaster', year: 2022, price: 12000, color: 'White', category: 'minibus', fuel: 'Diesel', transmission: 'Manual' },
+      { make: 'Nissan', model: 'Civilian', year: 2023, price: 13000, color: 'Silver', category: 'minibus', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Mercedes', model: 'Sprinter Bus', year: 2023, price: 15000, color: 'White', category: 'shuttle', fuel: 'Diesel', transmission: 'Automatic' },
+      { make: 'Isuzu', model: 'NQR', year: 2021, price: 11000, color: 'Blue', category: 'shuttle', fuel: 'Diesel', transmission: 'Manual' },
+      { make: 'Fuso', model: 'Rosa', year: 2022, price: 12500, color: 'White', category: 'minibus', fuel: 'Diesel', transmission: 'Manual' }
+    ]
+  };
+
+  // Generate vehicles for each type
+  Object.entries(vehicleData).forEach(([vehicleType, vehicles]) => {
+    vehicles.forEach((vehicle, index) => {
+      const host = hosts[Math.floor(Math.random() * hosts.length)];
+      const location = locations[Math.floor(Math.random() * locations.length)];
+      const licensePlate = `K${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))} ${String(Math.floor(100 + Math.random() * 900))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`;
+      
+      // Vehicle-specific features
+      let vehicleFeatures = [];
+      if (vehicleType === 'bicycle') {
+        vehicleFeatures = ['gps'];
+      } else if (vehicleType === 'motorcycle') {
+        vehicleFeatures = ['bluetooth', 'gps', 'usb'];
+      } else if (vehicleType === 'truck' || vehicleType === 'bus') {
+        vehicleFeatures = ['ac', 'bluetooth', 'gps', 'usb', 'parkingSensors', 'camera'];
+      } else {
+        vehicleFeatures = ['ac', 'bluetooth', 'gps', 'usb', 'sunroof', 'parkingSensors', 'camera', 'leatherSeats'].slice(0, getRandomInt(4, 8));
+      }
+
+      const car = {
+        host_id: host.id,
+        owner_name: `${host.first_name} ${host.last_name}`,
+        owner_email: host.email,
+        owner_phone: host.phone,
+        make: vehicle.make,
+        model: vehicle.model,
+        year: vehicle.year,
+        color: vehicle.color,
+        license_plate: licensePlate,
+        price_per_day: vehicle.price,
+        location,
+        category: vehicle.category,
+        vehicle_type: vehicleType,
+        fuel_type: vehicle.fuel,
+        transmission: vehicle.transmission,
+        description: `${vehicle.year} ${vehicle.make} ${vehicle.model} - ${vehicleType === 'bicycle' ? 'Perfect for city commuting and exercise' : vehicleType === 'motorcycle' ? 'Thrilling ride with excellent fuel efficiency' : vehicleType === 'bus' ? 'Spacious and comfortable for group travel' : vehicleType === 'truck' ? 'Powerful and reliable for heavy-duty tasks' : vehicleType === 'van' ? 'Ideal for group trips and cargo transport' : vehicleType === 'suv' ? 'Luxurious and spacious for family adventures' : 'Well-maintained and ready for your journey'}. Available for rent in ${location}.`,
+        features: JSON.stringify(vehicleFeatures),
+        images: JSON.stringify([`https://source.unsplash.com/800x600/?${vehicle.make}+${vehicle.model}+${vehicleType}`]),
+        available: 1,
+        created_at: getRandomDate(new Date(2023, 0, 1), new Date()).toISOString()
+      };
+      
+      cars.push(car);
+    });
+  });
   
+  console.log(`✅ Generated ${cars.length} diverse vehicles (${Object.keys(vehicleData).map(type => `${vehicleData[type].length} ${type}s`).join(', ')})`);
   return cars;
 };
 
 // Insert cars into database
 const insertCars = (cars) => {
-  console.log(`💾 Inserting ${cars.length} cars...`);
+  console.log(`💾 Inserting ${cars.length} vehicles...`);
   const stmt = db.prepare(`
     INSERT INTO cars (
       host_id, owner_name, owner_email, owner_phone, make, model, year, 
       color, license_plate, price_per_day, location, description, 
-      features, images, available, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      features, images, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   
   const insert = db.transaction((cars) => {
     for (const car of cars) {
-      stmt.run(
+      const result = stmt.run(
         car.host_id,
         car.owner_name,
         car.owner_email,
@@ -243,9 +312,21 @@ const insertCars = (cars) => {
         car.description,
         car.features,
         car.images,
-        car.available,
         car.created_at
       );
+      
+      // Update the newly inserted car with additional fields if they exist
+      const carId = result.lastInsertRowid;
+      try {
+        db.prepare(`
+          UPDATE cars 
+          SET fuel_type = ?, transmission = ?, category = ?, vehicle_type = ?
+          WHERE id = ?
+        `).run(car.fuel_type, car.transmission, car.category, car.vehicle_type, carId);
+      } catch (e) {
+        // Columns might not exist, that's ok
+        console.log(`Note: Could not set extended fields for car ${carId}: ${e.message}`);
+      }
     }
   });
   
@@ -418,7 +499,7 @@ const seedDatabase = async () => {
     const customerUsers = allUsers.filter(u => u.role === 'customer');
     
     // Generate and insert cars (3-5 per host)
-    const cars = generateCars(hostUsers, getRandomInt(30, 50));
+    const cars = generateCars(hostUsers);
     await insertCars(cars);
     
     // Get all cars from database

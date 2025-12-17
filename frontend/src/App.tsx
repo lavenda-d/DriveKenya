@@ -10,7 +10,6 @@ import PWAStatus from './components/PWAStatus';
 import BookingFlow from './components/BookingFlow';
 import CustomerChatSelector from './components/CustomerChatSelector';
 import GoogleMapEnhanced from './components/GoogleMapEnhanced';
-import AdminDashboard from './components/AdminDashboard';
 import OwnerDashboard from './components/OwnerDashboard';
 import PricingCalculator from './components/PricingCalculator';
 import LanguageSwitcher from './components/LanguageSwitcher';
@@ -28,6 +27,27 @@ import ProfileSettings from './pages/ProfileSettings';
 import ManageCar from './pages/ManageCar';
 import { FaCar, FaStar, FaMapMarkerAlt } from 'react-icons/fa';
 import { Car } from '../types/car';
+
+// Helper function to get vehicle type labels
+const getVehicleTypeLabel = (category: string, plural = false, titleCase = false): string => {
+  const labels: Record<string, { singular: string; plural: string; title: string; titlePlural: string }> = {
+    all: { singular: 'vehicle', plural: 'vehicles', title: 'Vehicle', titlePlural: 'Vehicles' },
+    car: { singular: 'car', plural: 'cars', title: 'Car', titlePlural: 'Cars' },
+    motorcycle: { singular: 'motorcycle', plural: 'motorcycles', title: 'Motorcycle', titlePlural: 'Motorcycles' },
+    bicycle: { singular: 'bicycle', plural: 'bicycles', title: 'Bicycle', titlePlural: 'Bicycles' },
+    van: { singular: 'van', plural: 'vans', title: 'Van', titlePlural: 'Vans' },
+    truck: { singular: 'truck', plural: 'trucks', title: 'Truck', titlePlural: 'Trucks' },
+    suv: { singular: 'SUV', plural: 'SUVs', title: 'SUV', titlePlural: 'SUVs' },
+    bus: { singular: 'bus', plural: 'buses', title: 'Bus', titlePlural: 'Buses' }
+  };
+
+  const label = labels[category] || labels.all;
+  
+  if (titleCase) {
+    return plural ? label.titlePlural : label.title;
+  }
+  return plural ? label.plural : label.singular;
+};
 
 // keep the TypeScript App signature; useTranslation will be used inside the component
 const App: React.FC = () => {
@@ -68,6 +88,13 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authLoading, setAuthLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Booking state
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
@@ -102,6 +129,8 @@ const App: React.FC = () => {
     transmission: string;
     category: string;
     availability_status: string;
+    license_plate: string;
+    vehicle_type: string;
   }>({
     make: '',
     model: '',
@@ -116,7 +145,9 @@ const App: React.FC = () => {
     fuel_type: '',
     transmission: '',
     category: '',
-    availability_status: 'available'
+    availability_status: 'available',
+    license_plate: '',
+    vehicle_type: ''
   });
   const [isSubmittingCar, setIsSubmittingCar] = useState(false);
   const [carSubmitMessage, setCarSubmitMessage] = useState('');
@@ -212,6 +243,16 @@ const App: React.FC = () => {
       console.log('✅ DriveKenya authentication data cleared. Please refresh and login again.');
     };
 
+    // Check for password reset token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('resetToken');
+    if (token) {
+      setResetToken(token);
+      setShowResetPassword(true);
+      // Clean URL without reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     return () => {
       window.fetch = originalFetch;
       delete window.clearDriveKenyaAuth;
@@ -231,7 +272,7 @@ const App: React.FC = () => {
           const params = {};
           if (transmission !== 'all') params.transmission = transmission;
           if (fuelType !== 'all') params.fuelType = fuelType;
-          if (selectedCategory !== 'all') params.category = selectedCategory;
+          if (selectedCategory !== 'all') params.vehicleType = selectedCategory;
           if (priceRange[0] > 0) params.minPrice = priceRange[0];
           if (priceRange[1] < 15000) params.maxPrice = priceRange[1];
           
@@ -267,6 +308,7 @@ const App: React.FC = () => {
               id: car.id,
               name: `${car.make} ${car.model}`,
               category: car.category || (car.price_per_day > 8000 ? 'luxury' : car.price_per_day > 5000 ? 'suv' : 'economy'),
+              vehicle_type: car.vehicle_type || 'car',
               price: car.price_per_day,
               image: getCarImage(),
               features: car.features || [],
@@ -440,7 +482,7 @@ const App: React.FC = () => {
         if (authMode === 'register') {
           const roleText = userData.role === 'customer' ? 'car renter' : userData.role === 'host' ? 'car owner' : userData.role;
           alert(`🎉 Registration successful! Welcome to DriveKenya as a ${roleText}!
-${userData.role === 'host' ? 'You can now list your cars and start earning!' : 'You can now browse and rent amazing cars!'}`);
+${userData.role === 'host' ? 'You can now list your vehicles and start earning!' : 'You can now browse and rent amazing vehicles!'}`);
         } else {
           const roleText = userData.role === 'customer' ? 'Customer' : userData.role === 'host' ? 'Car Owner' : userData.role;
           console.log(`Welcome back! Logged in as: ${roleText} (Role from DB: ${userData.role})`);
@@ -812,8 +854,15 @@ You will receive a confirmation email shortly.`);
       car.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       car.location?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Category filter
-    const matchesCategory = selectedCategory === 'all' || car.category === selectedCategory;
+    // Vehicle type filter - check vehicle_type field for vehicle type filtering
+    const vehicleTypes = ['car', 'motorcycle', 'bicycle', 'van', 'truck', 'suv', 'bus'];
+    const isVehicleTypeFilter = vehicleTypes.includes(selectedCategory);
+    
+    const matchesCategory = selectedCategory === 'all' || 
+      (isVehicleTypeFilter 
+        ? (car.vehicle_type?.toLowerCase() === selectedCategory.toLowerCase() || 
+           (!car.vehicle_type && selectedCategory === 'car')) // Default to car if vehicle_type not set
+        : car.category === selectedCategory);
 
     // Price range filter - handle both price and price_per_day properties
     const carPrice = car.price || car.price_per_day || 0;
@@ -849,6 +898,24 @@ You will receive a confirmation email shortly.`);
   const Navigation = () => {
     const [showServicesMenu, setShowServicesMenu] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [showVehiclesMenu, setShowVehiclesMenu] = useState(false);
+
+    const vehicleTypes = [
+      { value: 'all', label: 'All Vehicles', icon: '🚗' },
+      { value: 'car', label: 'Cars', icon: '🚗' },
+      { value: 'motorcycle', label: 'Motorcycles', icon: '🏍️' },
+      { value: 'bicycle', label: 'Bicycles', icon: '🚴' },
+      { value: 'van', label: 'Vans', icon: '🚐' },
+      { value: 'truck', label: 'Trucks', icon: '🚛' },
+      { value: 'suv', label: 'SUVs', icon: '🚙' },
+      { value: 'bus', label: 'Buses', icon: '🚌' }
+    ];
+
+    const handleVehicleTypeClick = (type: string) => {
+      setSelectedCategory(type);
+      setCurrentPage('cars');
+      setShowVehiclesMenu(false);
+    };
 
     return (
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/20">
@@ -873,16 +940,33 @@ You will receive a confirmation email shortly.`);
                 <span className="mr-1">🏠</span>Home
               </button>
 
-              <button
-                onClick={() => setCurrentPage('cars')}
-                className={`px-3 py-2 rounded-full transition-all duration-200 text-sm ${
-                  currentPage === 'cars'
-                    ? 'bg-blue-500/20 text-white border border-blue-400/30'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                <span className="mr-1">🚗</span>Cars
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowVehiclesMenu(!showVehiclesMenu)}
+                  className={`px-3 py-2 rounded-full transition-all duration-200 text-sm flex items-center ${
+                    currentPage === 'cars'
+                      ? 'bg-blue-500/20 text-white border border-blue-400/30'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <span className="mr-1">🚗</span>Vehicles
+                  <span className="ml-1">▾</span>
+                </button>
+
+                {showVehiclesMenu && (
+                  <div className="absolute top-full mt-2 right-0 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl py-2 min-w-[180px]">
+                    {vehicleTypes.map((type) => (
+                      <button
+                        key={type.value}
+                        onClick={() => handleVehicleTypeClick(type.value)}
+                        className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                      >
+                        <span className="mr-2">{type.icon}</span>{type.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="relative">
                 <button
@@ -903,7 +987,7 @@ You will receive a confirmation email shortly.`);
                       onClick={() => { setCurrentPage('listcar'); setShowServicesMenu(false); }}
                       className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
                     >
-                      <span className="mr-2">📝</span>List Car
+                      <span className="mr-2">📝</span>List Your Vehicle
                     </button>
                     <button
                       onClick={() => { setCurrentPage('bookings'); setShowServicesMenu(false); }}
@@ -915,7 +999,7 @@ You will receive a confirmation email shortly.`);
                       onClick={() => { setCurrentPage('mycars'); setShowServicesMenu(false); }}
                       className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
                     >
-                      <span className="mr-2">🚙</span>My Cars
+                      <span className="mr-2">🚙</span>My Vehicles
                     </button>
                   </div>
                 )}
@@ -1232,6 +1316,16 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 {authLoading ? 'Processing...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
               </button>
             </form>
+            {authMode === 'login' && (
+              <div className="mt-3 text-center">
+                <button
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
             <div className="mt-6 text-center">
               <button
                 onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
@@ -1253,6 +1347,190 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
     );
   };
 
+  // Forgot Password Modal
+  const ForgotPasswordModal = () => {
+    if (!showForgotPassword) return null;
+
+    const handleResetRequest = async (e) => {
+      e.preventDefault();
+      setAuthLoading(true);
+      setResetMessage('');
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resetEmail })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setResetMessage('✅ Password reset link sent to your email! Check your inbox.');
+        } else {
+          setResetMessage('❌ ' + (data.message || 'Failed to send reset link'));
+        }
+      } catch (error) {
+        setResetMessage('❌ Error: ' + error.message);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl max-w-md w-full p-8 relative">
+          <button
+            onClick={() => {
+              setShowForgotPassword(false);
+              setResetEmail('');
+              setResetMessage('');
+            }}
+            className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold"
+          >
+            ×
+          </button>
+          <h2 className="text-3xl font-bold text-white mb-2">Reset Password</h2>
+          <p className="text-white/70 mb-6">Enter your email and we'll send you a reset link</p>
+          
+          {resetMessage && (
+            <div className={`mb-4 p-3 rounded-lg ${resetMessage.includes('✅') ? 'bg-green-500/20 border border-green-400/30 text-green-300' : 'bg-red-500/20 border border-red-400/30 text-red-300'}`}>
+              {resetMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleResetRequest} className="space-y-4">
+            <input
+              type="email"
+              placeholder="Your Email Address"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
+            >
+              {authLoading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+          </form>
+          
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => {
+                setShowForgotPassword(false);
+                setShowAuthModal(true);
+              }}
+              className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Reset Password Modal
+  const ResetPasswordModal = () => {
+    if (!showResetPassword) return null;
+
+    const handlePasswordReset = async (e) => {
+      e.preventDefault();
+      if (newPassword !== confirmPassword) {
+        setResetMessage('❌ Passwords do not match');
+        return;
+      }
+      if (newPassword.length < 6) {
+        setResetMessage('❌ Password must be at least 6 characters long');
+        return;
+      }
+
+      setAuthLoading(true);
+      setResetMessage('');
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: resetToken, newPassword })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setResetMessage('✅ ' + data.message);
+          setTimeout(() => {
+            setShowResetPassword(false);
+            setShowAuthModal(true);
+            setNewPassword('');
+            setConfirmPassword('');
+            setResetToken('');
+          }, 2000);
+        } else {
+          setResetMessage('❌ ' + (data.message || 'Failed to reset password'));
+        }
+      } catch (error) {
+        setResetMessage('❌ Error: ' + error.message);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl max-w-md w-full p-8 relative">
+          <button
+            onClick={() => {
+              setShowResetPassword(false);
+              setNewPassword('');
+              setConfirmPassword('');
+              setResetMessage('');
+            }}
+            className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold"
+          >
+            ×
+          </button>
+          <h2 className="text-3xl font-bold text-white mb-2">Set New Password</h2>
+          <p className="text-white/70 mb-6">Enter your new password below</p>
+          
+          {resetMessage && (
+            <div className={`mb-4 p-3 rounded-lg ${resetMessage.includes('✅') ? 'bg-green-500/20 border border-green-400/30 text-green-300' : 'bg-red-500/20 border border-red-400/30 text-red-300'}`}>
+              {resetMessage}
+            </div>
+          )}
+
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                placeholder="New Password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <div className="mt-2">
+                <PasswordStrength password={newPassword} />
+              </div>
+            </div>
+            <input
+              type="password"
+              placeholder="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
+            >
+              {authLoading ? 'Resetting...' : 'Reset Password'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   // Enhanced Booking Flow
   const renderBookingFlow = () => {
     if (!showBookingModal || !selectedCar) return null;
@@ -1260,7 +1538,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       <BookingFlow
         selectedCar={{
           ...selectedCar,
-          pricePerDay: selectedCar.price // Map price to pricePerDay for consistency
+          pricePerDay: selectedCar.price_per_day || selectedCar.price || selectedCar.pricePerDay || 3000 // Map price to pricePerDay for consistency
         }}
         onBookingComplete={handleBookingComplete}
         onClose={() => {
@@ -1281,7 +1559,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-6">
               <span className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></span>
               <span className="text-white/80 text-sm">
-                {apiConnected ? 'Live Database Connected' : 'Demo Mode'}  {cars.length} Cars Available
+                {apiConnected ? 'Live Database Connected' : 'Demo Mode'}  {cars.length} Vehicles Available
               </span>
             </div>
           </div>
@@ -1289,7 +1567,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             Drive<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Kenya</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/80 mb-8 leading-relaxed">
-            Premium car rentals across Kenya with real-time booking and authentic reviews.
+            Premium vehicle rentals across Kenya - Cars, Motorcycles, Bicycles, Vans, Trucks & more with real-time booking.
           </p>
           {/* Role-based Welcome Message */}
           {user && (
@@ -1326,7 +1604,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               onClick={() => setCurrentPage('cars')}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
             >
-              🚗 Browse {cars.length} Cars
+              🚗 Browse {cars.length} Vehicles
             </button>
             {user ? (
               <>
@@ -1342,7 +1620,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                       onClick={() => setCurrentPage('mycars')}
                       className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
                     >
-                      🔑 My Cars ({myCars.length})
+                      🔑 My Vehicles ({myCars.length})
                     </button>
                     <button
                       onClick={() => setCurrentPage('listcar')}
@@ -1484,9 +1762,11 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">Available Cars</h1>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+              Available {getVehicleTypeLabel(selectedCategory, true, true)}
+            </h1>
             <p className="text-xl text-white/70">
-              {apiConnected ? 'Real-time data from our database' : 'Demo data'}  {filteredCars?.length || 0} of {cars?.length || 0} cars shown
+              {apiConnected ? 'Real-time data from our database' : 'Demo data'}  {filteredCars?.length || 0} of {cars?.length || 0} {getVehicleTypeLabel(selectedCategory, true)} shown
             </p>
           </div>
         {/* View Toggle */}
@@ -1621,56 +1901,80 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           {/* Advanced Filters */}
           <div className="border-t border-white/10 pt-4">
             <div className="flex flex-wrap items-center gap-6">
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">⚙️ Transmission</label>
-                <div className="flex space-x-2">
-                  {['All', 'Automatic', 'Manual'].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setTransmission(type === 'All' ? 'all' : type.toLowerCase())}
-                      className={`px-3 py-1 rounded-full text-sm ${transmission === type.toLowerCase() || (type === 'All' && transmission === 'all')
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                        }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+              {/* Show Transmission only for motorized vehicles */}
+              {selectedCategory !== 'bicycle' && (
+                <div>
+                  <label className="block text-white/70 text-sm font-medium mb-2">⚙️ Transmission</label>
+                  <div className="flex space-x-2">
+                    {['All', 'Automatic', 'Manual'].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setTransmission(type === 'All' ? 'all' : type.toLowerCase())}
+                        className={`px-3 py-1 rounded-full text-sm ${transmission === type.toLowerCase() || (type === 'All' && transmission === 'all')
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                          }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">⛽ Fuel Type</label>
-                <div className="flex space-x-2">
-                  {['All', 'Petrol', 'Diesel', 'Hybrid', 'Electric'].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setFuelType(type === 'All' ? 'all' : type.toLowerCase())}
-                      className={`px-3 py-1 rounded-full text-sm ${fuelType === type.toLowerCase() || (type === 'All' && fuelType === 'all')
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                        }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+              )}
+              {/* Show Fuel Type only for motorized vehicles */}
+              {selectedCategory !== 'bicycle' && (
+                <div>
+                  <label className="block text-white/70 text-sm font-medium mb-2">⛽ Fuel Type</label>
+                  <div className="flex space-x-2">
+                    {['All', 'Petrol', 'Diesel', 'Hybrid', 'Electric'].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setFuelType(type === 'All' ? 'all' : type.toLowerCase())}
+                        className={`px-3 py-1 rounded-full text-sm ${fuelType === type.toLowerCase() || (type === 'All' && fuelType === 'all')
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                          }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex-1">
                 <label className="block text-white/70 text-sm font-medium mb-2">🔧 Features</label>
                 <div className="flex flex-wrap gap-2">
-                  {Object.keys(features).map((feature) => (
-                    <button
-                      key={feature}
-                      onClick={() => setFeatures(prev => ({ ...prev, [feature]: !prev[feature] }))}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center space-x-1 ${features[feature]
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                        }`}
-                    >
-                      <span>{features[feature] ? '✓' : '+'}</span>
-                      <span>{feature.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    </button>
-                  ))}
+                  {Object.keys(features)
+                    .filter((feature) => {
+                      // Filter features based on vehicle type
+                      if (selectedCategory === 'bicycle') {
+                        // Bicycles only have basic features
+                        return ['gps'].includes(feature);
+                      }
+                      if (selectedCategory === 'motorcycle') {
+                        // Motorcycles don't have sunroof, leather seats, parking sensors
+                        return !['sunroof', 'leatherSeats', 'parkingSensors'].includes(feature);
+                      }
+                      if (selectedCategory === 'truck' || selectedCategory === 'bus') {
+                        // Trucks/buses don't have sunroof typically
+                        return !['sunroof'].includes(feature);
+                      }
+                      // Cars, SUVs, Vans show all features
+                      return true;
+                    })
+                    .map((feature) => (
+                      <button
+                        key={feature}
+                        onClick={() => setFeatures(prev => ({ ...prev, [feature]: !prev[feature] }))}
+                        className={`px-3 py-1 rounded-full text-sm flex items-center space-x-1 ${features[feature]
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                          }`}
+                      >
+                        <span>{features[feature] ? '✓' : '+'}</span>
+                        <span>{feature.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      </button>
+                    ))}
                 </div>
               </div>
               <div className="flex items-end">
@@ -1730,11 +2034,13 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           </div>
         </div>
         {/* Conditional Content Based on View Mode and Car Count */}
-        {filteredCars.length === 0 && !loading ? ( // Render the "No cars found" message if no cars match filters
+        {filteredCars.length === 0 && !loading ? ( // Render the "No vehicles found" message if no vehicles match filters
           <div className="text-center py-20">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12 max-w-lg mx-auto">
               <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-bold text-white mb-4">No cars found</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                No {getVehicleTypeLabel(selectedCategory, true)} found
+              </h3>
               <p className="text-white/70 mb-6">Try adjusting your filters or search terms</p>
               <button
                 onClick={() => { setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]); }}
@@ -1879,7 +2185,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">📆</div>
               <h3 className="text-2xl font-bold text-white mb-4">No Bookings Yet</h3>
-              <p className="text-white/70 mb-6">You haven't made any bookings yet. Start by browsing our available cars!</p>
+              <p className="text-white/70 mb-6">You haven't made any bookings yet. Start by browsing our available vehicles!</p>
               <button
                 onClick={() => setCurrentPage('cars')}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
@@ -1946,18 +2252,18 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
     );
   };
 
-  // My Cars Page - Show cars owned by current user
+  // My Vehicles Page - Show vehicles owned by current user
   const renderMyCars = () => {
     // Handle case when user is not logged in
     if (!user) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
           <div className="max-w-6xl mx-auto px-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Vehicles</h1>
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">🔐</div>
               <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
-              <p className="text-white/70 mb-6">Please sign in to view your cars</p>
+              <p className="text-white/70 mb-6">Please sign in to view your vehicles</p>
               <button
                 onClick={() => setShowAuthModal(true)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
@@ -1975,10 +2281,10 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       return (
         <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
           <div className="max-w-6xl mx-auto px-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Vehicles</h1>
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">⏳</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Loading Your Cars...</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">Loading Your Vehicles...</h3>
             </div>
           </div>
         </div>
@@ -1988,17 +2294,17 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
         <div className="max-w-6xl mx-auto px-6 py-20">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Vehicles</h1>
           {myCars.length === 0 ? (
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">🚗</div>
-              <h3 className="text-2xl font-bold text-white mb-4">No cars listed yet</h3>
-              <p className="text-white/70 mb-6">Start earning by listing your first car!</p>
+              <h3 className="text-2xl font-bold text-white mb-4">No vehicles listed yet</h3>
+              <p className="text-white/70 mb-6">Start earning by listing your first vehicle!</p>
               <button
                 onClick={() => setCurrentPage('listcar')}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
               >
-                List Your Car
+                List Your Vehicle
               </button>
             </div>
           ) : (
@@ -2064,12 +2370,12 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
   const renderListCar = () => (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
       <div className="max-w-4xl mx-auto px-6 py-20">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">List Your Car</h1>
+        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">List Your Vehicle</h1>
         {!user ? (
           <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
             <div className="text-6xl mb-4">🔐</div>
             <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
-            <p className="text-white/70 mb-6">Please sign in to list your car for rental</p>
+            <p className="text-white/70 mb-6">Please sign in to list your vehicle for rental</p>
             <button
               onClick={() => setShowAuthModal(true)}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
@@ -2093,7 +2399,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   name="make"
                   value={carForm.make}
                   onChange={handleCarFormChange}
-                  placeholder="Car Make *"
+                  placeholder="Vehicle Make (e.g., Toyota, Yamaha) *"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -2101,7 +2407,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   name="model"
                   value={carForm.model}
                   onChange={handleCarFormChange}
-                  placeholder="Car Model *"
+                  placeholder="Vehicle Model *"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -2117,6 +2423,14 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   required
                 />
                 <input
+                  name="license_plate"
+                  value={carForm.license_plate}
+                  onChange={handleCarFormChange}
+                  placeholder="License Plate (e.g., KAA 123X) *"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <input
                   name="price_per_day"
                   value={carForm.price_per_day}
                   onChange={handleCarFormChange}
@@ -2127,6 +2441,23 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
+                <select
+                  name="vehicle_type"
+                  value={carForm.vehicle_type}
+                  onChange={handleCarFormChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="" className="bg-gray-900">Vehicle Type *</option>
+                  <option value="car" className="bg-gray-900">🚗 Car</option>
+                  <option value="suv" className="bg-gray-900">🚙 SUV</option>
+                  <option value="van" className="bg-gray-900">🚐 Van</option>
+                  <option value="truck" className="bg-gray-900">🚚 Truck/Lorry</option>
+                  <option value="motorcycle" className="bg-gray-900">🏍️ Motorcycle/Bike</option>
+                  <option value="bicycle" className="bg-gray-900">🚲 Bicycle</option>
+                  <option value="bus" className="bg-gray-900">🚌 Bus</option>
+                  <option value="trailer" className="bg-gray-900">🚛 Trailer</option>
+                </select>
                 <select
                   name="fuel_type"
                   value={carForm.fuel_type}
@@ -2139,6 +2470,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   <option value="diesel" className="bg-gray-900">Diesel</option>
                   <option value="hybrid" className="bg-gray-900">Hybrid</option>
                   <option value="electric" className="bg-gray-900">Electric</option>
+                  <option value="none" className="bg-gray-900">None (Bicycle/Manual)</option>
                 </select>
                 <select
                   name="transmission"
@@ -2326,7 +2658,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               
               <div className="mt-4 p-4 bg-blue-500/10 border border-blue-400/30 rounded-lg">
                 <p className="text-white/80 text-sm">
-                  <strong>Note:</strong> After listing, you can manage availability status and set calendar blocks from "My Cars" → "Manage Car"
+                  <strong>Note:</strong> After listing, you can manage availability status and set calendar blocks from "My Vehicles" → "Manage Vehicle"
                 </p>
               </div>
 
@@ -2335,7 +2667,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 disabled={isSubmittingCar}
                 className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
               >
-                {isSubmittingCar ? 'Listing Car...' : 'List My Car'}
+                {isSubmittingCar ? 'Listing Vehicle...' : 'List My Vehicle'}
               </button>
             </form>
           </div>
@@ -2356,10 +2688,10 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <span className="mr-3">🚗</span> What is DriveKenya?
           </h2>
           <p className="text-white/80 text-lg leading-relaxed mb-4">
-            DriveKenya is Kenya's premier peer-to-peer car rental platform that connects car owners with people who need reliable, affordable transportation. We're transforming how Kenyans access vehicles by creating a trusted marketplace where anyone can list their car or find the perfect ride for their journey.
+            DriveKenya is Kenya's premier peer-to-peer vehicle rental platform that connects vehicle owners with people who need reliable, affordable transportation. We're transforming how Kenyans access vehicles by creating a trusted marketplace where anyone can list their car, motorcycle, bicycle, van, truck, SUV, or bus - or find the perfect ride for their journey.
           </p>
           <p className="text-white/80 text-lg leading-relaxed">
-            From budget-friendly economy cars to luxury SUVs, we offer a diverse fleet spanning across Nairobi and major cities in Kenya, ensuring you always have access to quality transportation when you need it.
+            From bicycles for city commutes to motorcycles for quick errands, budget-friendly economy cars to luxury SUVs, cargo vans to moving trucks, and even buses for group travel - we offer Kenya's most diverse vehicle fleet spanning across Nairobi and major cities, ensuring you always have access to quality transportation when you need it.
           </p>
         </div>
 
@@ -2391,9 +2723,9 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white/5 rounded-xl p-6 border border-white/10">
               <div className="text-5xl mb-4 text-center">🚙</div>
-              <h3 className="text-white font-bold text-xl mb-3 text-center">Car Owners</h3>
+              <h3 className="text-white font-bold text-xl mb-3 text-center">Vehicle Owners</h3>
               <p className="text-white/70 leading-relaxed">
-                Turn your idle car into a revenue stream. List your vehicle, set your price, and earn money while helping others access reliable transportation. Perfect for anyone looking to offset car maintenance costs or generate passive income.
+                Turn your idle vehicle into a revenue stream. List your car, motorcycle, bicycle, van, truck, SUV, or bus - set your price, and earn money while helping others access reliable transportation. Perfect for anyone looking to offset vehicle maintenance costs or generate passive income.
               </p>
             </div>
             <div className="bg-white/5 rounded-xl p-6 border border-white/10">
@@ -2503,8 +2835,8 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <div>
               <h3 className="text-white font-semibold text-xl mb-4">Get in Touch</h3>
               <div className="space-y-4 text-white/80">
-                <div>📧 info@driveKenya.com</div>
-                <div>📞 +254 700 123 456</div>
+                <div>📧 drivekenyaorg@gmail.com</div>
+                <div>📞 +254 717 052 939</div>
                 <div>📍 Nairobi, Kenya</div>
               </div>
             </div>
@@ -2595,9 +2927,14 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       {currentPage === 'about' && renderAbout()}
       {currentPage === 'contact' && renderContact()}
       {currentPage === 'owner-dashboard' && user?.role === 'host' && <OwnerDashboard />}
-      {currentPage === 'pricing' && <PricingCalculator />}
+      {currentPage === 'pricing' && <PricingCalculator onBookCar={(bookingData) => {
+        setSelectedCar(bookingData.car);
+        setShowBookingModal(true);
+      }} />}
       
       <AuthModal />
+      <ForgotPasswordModal />
+      <ResetPasswordModal />
       {renderBookingFlow()}
       <ChatModal
         isOpen={showChatModal}

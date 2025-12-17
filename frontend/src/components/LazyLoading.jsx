@@ -8,7 +8,6 @@ const LoadingSpinner = () => (
 );
 
 // Lazy loaded components
-export const LazyAdminDashboard = lazy(() => import('./AdminDashboard'));
 export const LazyOwnerDashboard = lazy(() => import('./OwnerDashboard'));
 export const LazyBookingFlow = lazy(() => import('./BookingFlow'));
 export const LazyGPSLiveTracking = lazy(() => import('./GPSLiveTracking'));

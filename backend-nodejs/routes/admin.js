@@ -23,6 +23,10 @@ router.get('/dashboard', authenticateToken, requireAdmin, async (req, res, next)
     const totalCars = query('SELECT COUNT(*) as total FROM cars');
     const availableCars = query('SELECT COUNT(*) as total FROM cars WHERE available = 1');
     
+    // Get support ticket counts
+    const openTickets = query("SELECT COUNT(*) as count FROM support_tickets WHERE status = 'open'");
+    const pendingSupportCount = openTickets.rows[0]?.count || 0;
+    
     // Try to get bookings data safely
     let bookingStats = { total: 0, active: 0, completed: 0, cancelled: 0 };
     let revenueStats = { revenue: 0, bookings: 0 };
@@ -119,7 +123,7 @@ router.get('/dashboard', authenticateToken, requireAdmin, async (req, res, next)
         totalRevenue: revenueStats.revenue || 0,
         pendingCars: 5, // Sample data
         pendingUsers: 3,
-        pendingSupport: 2,
+        pendingSupport: pendingSupportCount,
         userGrowth: 12.5,
         carGrowth: 8.3,
         bookingGrowth: 15.2,

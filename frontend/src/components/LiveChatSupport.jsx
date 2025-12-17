@@ -26,6 +26,8 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
   const [socket, setSocket] = useState(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showTicketForm, setShowTicketForm] = useState(false);
+  const [ticketData, setTicketData] = useState({ subject: '', description: '', category: 'general', priority: 'medium' });
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -180,16 +182,89 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const requestVideoCall = () => {
-    if (socket) {
-      socket.emit('request-video-call');
-    }
-  };
+  // Video call feature removed
 
   const createTicket = () => {
-    // Navigate to ticket creation
-    onClose();
-    // Implement ticket creation navigation
+    setShowTicketForm(true);
+  };
+
+  const submitTicket = async () => {
+    if (!ticketData.subject || !ticketData.description) {
+      alert('Please fill in both subject and description');
+      return;
+    }
+
+    // Get token
+    const token = localStorage.getItem('driveKenya_token');
+
+    try {
+      const response = await fetch('http://localhost:5000/api/support/tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(ticketData)
+      });
+
+      const data = await response.json();
+      
+      if (response.status === 401) {
+        // Token is invalid or expired - need to log in
+        const errorMessage = {
+          text: '❌ Your session has expired. Please refresh the page and log in again.',
+          sender: 'agent',
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        setShowTicketForm(false);
+        // Suggest page refresh
+        setTimeout(() => {
+          if (confirm('Your session has expired. Would you like to refresh the page?')) {
+            window.location.reload();
+          }
+        }, 1000);
+        return;
+      }
+      
+      if (response.status === 403) {
+        // Token invalid - suggest logout/login
+        const errorMessage = {
+          text: '❌ Authentication failed. Please sign out and sign in again to refresh your session.',
+          sender: 'agent',
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        setShowTicketForm(false);
+        return;
+      }
+      
+      if (data.success) {
+        const confirmMessage = {
+          text: `✅ Support ticket #${data.ticketId} created successfully! We'll respond within 24 hours. Check your email for updates.`,
+          sender: 'agent',
+          timestamp: new Date(),
+          id: Date.now()
+        };
+        setMessages(prev => [...prev, confirmMessage]);
+        setShowTicketForm(false);
+        setTicketData({ subject: '', description: '', category: 'general', priority: 'medium' });
+      } else {
+        throw new Error(data.message || 'Failed to create ticket');
+      }
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      const errorMessage = {
+        text: `❌ Failed to create support ticket: ${error.message}. Please try again or contact us at support@drivekenya.com`,
+        sender: 'agent',
+        timestamp: new Date(),
+        id: Date.now()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      setShowTicketForm(false);
+    }
   };
 
   if (!isOpen && !standalone) return null;
@@ -248,7 +323,76 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
           </div>
         </div>
 
-        {/* Connection status removed to avoid confusion */}
+        {/* Ticket Form Modal */}
+        {showTicketForm && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 rounded-lg">
+            <div className="bg-white rounded-lg p-6 w-80 max-w-full m-4 shadow-xl">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Support Ticket</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    value={ticketData.subject}
+                    onChange={(e) => setTicketData({...ticketData, subject: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    placeholder="Brief summary of your issue"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={ticketData.description}
+                    onChange={(e) => setTicketData({...ticketData, description: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 min-h-[100px]"
+                    placeholder="Describe your issue in detail..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    value={ticketData.category}
+                    onChange={(e) => setTicketData({...ticketData, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  >
+                    <option value="general">General</option>
+                    <option value="booking">Booking Issue</option>
+                    <option value="payment">Payment</option>
+                    <option value="technical">Technical</option>
+                    <option value="account">Account</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={ticketData.priority}
+                    onChange={(e) => setTicketData({...ticketData, priority: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div className="flex space-x-2 pt-2">
+                  <button
+                    onClick={submitTicket}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Submit Ticket
+                  </button>
+                  <button
+                    onClick={() => setShowTicketForm(false)}
+                    className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -308,14 +452,6 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
         {isConnected && (
           <div className="border-t border-gray-200 p-2">
             <div className="flex justify-center space-x-2">
-              <button
-                onClick={requestVideoCall}
-                className="flex items-center space-x-1 px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full hover:bg-green-200"
-              >
-                <Video size={14} />
-                <span>Video Call</span>
-              </button>
-              
               <button
                 onClick={createTicket}
                 className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200"
