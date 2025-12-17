@@ -1,6 +1,6 @@
-# 🚗 DriveKenya - Premium Car Rental Platform
+# 🚗 DriveKenya - Premium Vehicle Rental Platform
 
-> **A comprehensive, full-stack peer-to-peer Vehicle rental platform connecting Vehicle owners with renters in Nairobi, featuring real-time communication, advanced booking management, email notifications, password recovery, progressive web app capabilities, and enterprise-grade features.**
+> **A comprehensive, full-stack peer-to-peer vehicle rental platform connecting vehicle owners with renters in Nairobi, featuring real-time communication, advanced booking management, email notifications, password recovery, progressive web app capabilities, and enterprise-grade features.**
 
 **Built with:** React 18 + TypeScript • Node.js + Express • SQLite • Socket.io • Google Maps API • Nodemailer
 
@@ -30,7 +30,7 @@
 
 ## � **What's New in Version 1.0**
 
-### **Latest Updates (December 2024)**
+### **Latest Updates (December 2025)**
 
 #### **✨ Password Recovery System**
 - Full forgot password feature with email-based reset
@@ -87,26 +87,26 @@
 ## 🏢 **What is DriveKenya?**
 
 ### **The Problem We Solve**
-In Nairobi, car rental services are often expensive, inflexible, and controlled by large corporations. Individual car owners have vehicles sitting idle, while potential renters struggle to find affordable, convenient options.
+In Nairobi, vehicle rental services are often expensive, inflexible, and controlled by large corporations. Individual vehicle owners have cars, motorcycles, bicycles, and other vehicles sitting idle, while potential renters struggle to find affordable, convenient options.
 
 ### **Our Solution**
 DriveKenya creates a trusted marketplace where:
-- **Car Owners** can monetize their idle vehicles with full control over pricing and availability
-- **Renters** access a wide variety of vehicles at competitive prices with transparent terms
+- **Vehicle Owners** can monetize their idle vehicles (cars, SUVs, trucks, vans, motorcycles, bicycles, electric vehicles) with full control over pricing and availability
+- **Renters** access a wide variety of transportation options at competitive prices with transparent terms
 - **Both parties** communicate directly, build trust, and complete transactions securely
 
 ### **Who It Serves**
-1. **Car Owners/Hosts**: Individuals looking to earn passive income from their vehicles
+1. **Vehicle Owners/Hosts**: Individuals looking to earn passive income from their vehicles
 2. **Renters/Customers**: Locals, tourists, and businesses needing temporary transportation
 3. **Administrators**: Platform managers ensuring quality, safety, and user satisfaction
 
 ### **Mission & Vision**
-**Mission**: Democratize car rental in Nairobi by connecting car owners directly with renters through technology.
+**Mission**: Democratize vehicle rental in Nairobi by connecting vehicle owners directly with renters through technology.
 
 **Vision**: Become East Africa's leading peer-to-peer vehicle sharing platform, fostering economic opportunity and sustainable transportation.
 
 ### **Impact**
-- 💼 **Economic Empowerment**: Help car owners generate income
+- 💼 **Economic Empowerment**: Help vehicle owners generate income
 - 🌍 **Environmental**: Maximize vehicle utilization, reduce need for new cars
 - 🤝 **Community**: Build trust through transparent ratings and reviews
 - 📈 **Accessibility**: Make quality vehicles affordable for everyone
@@ -234,17 +234,17 @@ DriveKenya creates a trusted marketplace where:
 - **Notification Preferences**: Control what alerts you receive
 - **Language Selection**: English / Kiswahili (i18n ready)
 
-### **🏠 "My Cars" Section (For Car Owners)**
-- **Car Dashboard**: View all your listed vehicles
+### **🏠 "My Vehicles" Section (For Vehicle Owners)**
+- **Vehicle Dashboard**: View all your listed vehicles
 - **Performance Metrics**: Bookings, revenue, ratings
-- **Image Display**: All car images properly shown
+- **Image Display**: All vehicle images properly shown
 - **Quick Actions**:
-  - **Manage Car**: Edit details, pricing, availability
-  - **View Messages**: All conversations about specific car
+  - **Manage Vehicle**: Edit details, pricing, availability
+  - **View Messages**: All conversations about specific vehicle
   - **Update Availability**: Toggle available/unavailable
-  - **View Bookings**: See all bookings for each car
-- **Add New Car**: List additional vehicles
-- **Delete/Archive**: Remove cars from listings
+  - **View Bookings**: See all bookings for each vehicle
+- **Add New Vehicle**: List additional vehicles
+- **Delete/Archive**: Remove vehicles from listings
 
 ### **🛠️ Settings & Preferences**
 - **Profile Settings**: Edit all personal information
@@ -332,43 +332,43 @@ DriveKenya creates a trusted marketplace where:
 **Primary Goal**: Find and book vehicles for personal or business use
 
 **Capabilities**:
-- Browse and search available cars
-- Filter by price, location, features, ratings
-- View detailed car information with images/videos
+- Browse and search available vehicles (cars, motorcycles, bicycles, etc.)
+- Filter by price, location, features, ratings, vehicle type
+- View detailed vehicle information with images/videos
 - Select pickup/drop-off locations on map
-- Book cars with date selection
+- Book vehicles with date selection
 - Choose payment method
-- Chat with car owners
+- Chat with vehicle owners
 - Receive booking notifications
-- Rate and review cars after rental
+- Rate and review vehicles after rental
 - Manage booking history
 - Update personal profile
 - Install PWA for easy access
 
 **Typical User Journey**:
-1. Sign up/Login → 2. Search Cars → 3. Select Vehicle → 4. Choose Dates & Location → 5. Select Payment → 6. Confirm Booking → 7. Chat with Owner → 8. Pick Up Car → 9. Return Car → 10. Leave Review
+1. Sign up/Login → 2. Search Vehicles → 3. Select Vehicle → 4. Choose Dates & Location → 5. Select Payment → 6. Confirm Booking → 7. Chat with Owner → 8. Pick Up Vehicle → 9. Return Vehicle → 10. Leave Review
 
-### **2. Host/Car Owner**
+### **2. Host/Vehicle Owner**
 **Primary Goal**: List vehicles and earn rental income
 
 **Capabilities**:
-- List multiple cars with comprehensive details
-- Upload car images and videos
+- List multiple vehicles (cars, SUVs, motorcycles, bicycles, etc.) with comprehensive details
+- Upload vehicle images and videos
 - Set pricing (daily rates)
 - Manage availability calendar (blackout dates)
-- Set car location and service area
+- Set vehicle location and service area
 - Receive booking requests with notifications
 - Accept or decline bookings
 - Chat with multiple renters
 - View performance metrics (bookings, revenue)
 - Manage booking status (confirm, cancel, complete)
 - Respond to customer reviews
-- Update car details anytime
+- Update vehicle details anytime
 - View earnings and payment history
 - Manage profile and contact information
 
 **Typical User Journey**:
-1. Sign up as Host → 2. List First Car (photos, details, pricing) → 3. Set Availability → 4. Receive Booking Request → 5. Review Renter Profile → 6. Chat to Confirm Details → 7. Accept Booking → 8. Arrange Pickup → 9. Hand Over Car → 10. Receive Car Back → 11. Confirm Return → 12. Receive Payment
+1. Sign up as Host → 2. List First Vehicle (photos, details, pricing) → 3. Set Availability → 4. Receive Booking Request → 5. Review Renter Profile → 6. Chat to Confirm Details → 7. Accept Booking → 8. Arrange Pickup → 9. Hand Over Vehicle → 10. Receive Vehicle Back → 11. Confirm Return → 12. Receive Payment
 
 ### **3. Administrator**
 **Primary Goal**: Manage platform, ensure quality, resolve disputes
@@ -377,7 +377,7 @@ DriveKenya creates a trusted marketplace where:
 - Access comprehensive admin dashboard (`db-browser.js`)
 - View and edit all users (customers, hosts, admins)
 - Approve/suspend user accounts
-- Review and approve car listings
+- Review and approve vehicle listings
 - Monitor all bookings and transactions
 - Access full chat histories
 - Handle support tickets
@@ -391,7 +391,7 @@ DriveKenya creates a trusted marketplace where:
 - Manage content (About Us, FAQs)
 
 **Typical User Journey**:
-1. Login to Admin → 2. Review Dashboard Stats → 3. Check New Car Listings (Approve/Reject) → 4. Monitor Active Bookings → 5. Review Support Tickets → 6. Investigate User Reports → 7. Update Platform Content → 8. Generate Reports
+1. Login to Admin → 2. Review Dashboard Stats → 3. Check New Vehicle Listings (Approve/Reject) → 4. Monitor Active Bookings → 5. Review Support Tickets → 6. Investigate User Reports → 7. Update Platform Content → 8. Generate Reports
 
 ---
 
@@ -713,7 +713,7 @@ Middleware Verification → Protected Resources
 
 **2. Booking Flow:**
 ```
-Browse Cars → Select Car → Choose Dates → Pick Location (Google Maps) → 
+Browse Vehicles → Select Vehicle → Choose Dates → Pick Location (Google Maps) → 
 Select Payment → Create Booking (POST /api/bookings) → 
 Notification to Owner (WebSocket) → Owner Accepts → 
 Notification to Renter → Booking Confirmed
@@ -2118,15 +2118,15 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 <div align="center">
 
 ## 🚗 **DriveKenya**
-### *Premium Car Rental Platform for Nairobi*
+### *Premium Vehicle Rental Platform for Nairobi*
 
 **Where Technology Meets Transportation**
 
-Built with ❤️ in Nairobi • Powered by React, Node.js & WebSockets
+Built with ❤️ • Powered by React, Node.js & WebSockets
 
 ---
 
-**Ready to Drive the Future of Car Rental?**
+**Ready to Drive the Future of Vehicle Rental?**
 
 [⭐ Star on GitHub](https://github.com/your-repo) • [📖 Read Docs](README.md) • [🚀 Get Started](#getting-started) • [💬 Get Support](#support--contributing)
 

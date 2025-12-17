@@ -11,12 +11,12 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 // Email transporter configuration for Gmail
 const mailTransporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.EMAIL_PORT) || 587,
   secure: false,
   auth: {
-    user: 'drivekenyaorg@gmail.com',
-    pass: 'meojjbbemxbfyedb',
+    user: process.env.EMAIL_USER || 'drivekenyaorg@gmail.com',
+    pass: process.env.EMAIL_PASSWORD,  // MUST be set in .env file
   },
   tls: {
     rejectUnauthorized: false
