@@ -2,17 +2,18 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import nodemailer from 'nodemailer';
 import { query } from '../config/database-sqlite.js';
+import { emailUser, emailPassword, emailHost, emailPort } from '../config/env.js';
 
 const router = express.Router();
 
 // Email transporter configuration for Gmail
 const mailTransporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT) || 587,
+  host: emailHost,
+  port: emailPort,
   secure: false,
   auth: {
-    user: process.env.EMAIL_USER || 'drivekenyaorg@gmail.com',
-    pass: process.env.EMAIL_PASSWORD,  // MUST be set in .env file
+    user: emailUser,
+    pass: emailPassword,
   },
   tls: {
     rejectUnauthorized: false

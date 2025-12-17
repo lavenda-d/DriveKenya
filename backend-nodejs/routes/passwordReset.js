@@ -3,20 +3,33 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import nodemailer from 'nodemailer';
 import { query } from '../config/database-sqlite.js';
+import { emailUser, emailPassword, emailHost, emailPort } from '../config/env.js';
 
 const router = express.Router();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
+// Debug: Check if EMAIL_PASSWORD is loaded
+console.log('📧 Email Configuration:', {
+  EMAIL_USER: emailUser || '❌ Missing',
+  EMAIL_PASSWORD: emailPassword ? `✅ Loaded (${emailPassword.length} chars)` : '❌ Missing',
+  EMAIL_HOST: emailHost
+});
+
+if (!emailPassword || !emailUser) {
+  console.error('❌ EMAIL_USER or EMAIL_PASSWORD not found in environment variables!');
+  console.error('⚠️  Password reset emails will NOT work until you set both in .env');
+}
+
 // Email transporter configuration for Gmail
 const mailTransporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT) || 587,
+  host: emailHost,
+  port: emailPort,
   secure: false,
   auth: {
-    user: process.env.EMAIL_USER || 'drivekenyaorg@gmail.com',
-    pass: process.env.EMAIL_PASSWORD,  // MUST be set in .env file
+    user: emailUser,
+    pass: emailPassword,
   },
   tls: {
     rejectUnauthorized: false

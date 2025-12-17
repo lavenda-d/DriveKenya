@@ -2,24 +2,21 @@
 import express from 'express';
 import Database from 'better-sqlite3';
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-// Load environment variables
-dotenv.config();
+import { emailUser, emailPassword, emailHost, emailPort } from './config/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Email configuration
 const mailTransporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
+  host: emailHost,
+  port: emailPort,
   secure: false,
-  auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+  auth: emailUser && emailPassword ? {
+    user: emailUser,
+    pass: emailPassword,
   } : undefined,
 });
 

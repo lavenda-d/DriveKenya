@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { body, validationResult } from 'express-validator';
 import { query } from '../config/database-sqlite.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { emailUser, emailPassword, emailHost, emailPort } from '../config/env.js';
 
 const router = express.Router();
 
@@ -13,17 +14,21 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 const mailTransporter = (() => {
-  if (process.env.SMTP_HOST) {
+  if (emailUser && emailPassword) {
     return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: (process.env.SMTP_SECURE || 'false').toLowerCase() === 'true',
-      auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      } : undefined,
+      host: emailHost,
+      port: emailPort,
+      secure: false,
+      auth: {
+        user: emailUser,
+        pass: emailPassword,
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
     });
   }
+  console.warn('⚠️  Email credentials not configured, using JSON transport (emails will not be sent)');
   return nodemailer.createTransport({ jsonTransport: true });
 })();
 

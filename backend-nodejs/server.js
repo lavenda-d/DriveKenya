@@ -3,12 +3,17 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { createServer } from 'http';
 
-// Import routes
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// CRITICAL: Import env config FIRST to load environment variables before any routes
+import './config/env.js';
+
+// Import routes AFTER env config is loaded
 import authRoutes from './routes/auth.js';
 import passwordResetRoutes from './routes/passwordReset.js';
 import userRoutes from './routes/users.js';
@@ -30,18 +35,6 @@ import { uploadAvatar, uploadDocument } from './middleware/uploadUser.js';
 
 // Import WebSocket service
 import { initializeSocket } from './services/socketService.js';
-
-// Load environment variables
-dotenv.config();
-
-// Set JWT_SECRET with fallback if not in .env
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = 'driveKenya-secret-2024';
-  console.log('⚠️ Using default JWT_SECRET. Set JWT_SECRET in .env for production!');
-}
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
 
