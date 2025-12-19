@@ -20,17 +20,49 @@ router.get('/dashboard', authenticateToken, requireHost, async (req, res, next) 
   try {
     const hostId = req.user.id;
 
-    // Get owner's cars summary
-    const carsSummary = query(`
-      SELECT 
-        COUNT(*) as total_cars,
-        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_cars,
-        SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) as maintenance_cars
-      FROM cars 
-      WHERE host_id = ?
-    `, [hostId]);
+    // Get owner's cars summary (support multiple schema variants)
+    console.log('Owner dashboard: fetching cars summary for hostId=', hostId);
+    const tableInfo = query("PRAGMA table_info(cars)");
+    const colNames = (tableInfo.rows || []).map(c => c.name);
+    let carsSummary;
+
+    if (colNames.includes('status')) {
+      carsSummary = query(`
+        SELECT 
+          COUNT(*) as total_cars,
+          SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_cars,
+          SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) as maintenance_cars
+        FROM cars 
+        WHERE host_id = ?
+      `, [hostId]);
+    } else if (colNames.includes('available')) {
+      // older schema: `available` is an integer flag
+      carsSummary = query(`
+        SELECT
+          COUNT(*) as total_cars,
+          SUM(CASE WHEN available = 1 THEN 1 ELSE 0 END) as active_cars,
+          SUM(CASE WHEN available = 0 THEN 1 ELSE 0 END) as maintenance_cars
+        FROM cars
+        WHERE host_id = ?
+      `, [hostId]);
+    } else if (colNames.includes('availability_status')) {
+      // migrations that added `availability_status` string
+      carsSummary = query(`
+        SELECT
+          COUNT(*) as total_cars,
+          SUM(CASE WHEN availability_status = 'available' THEN 1 ELSE 0 END) as active_cars,
+          SUM(CASE WHEN availability_status = 'maintenance' THEN 1 ELSE 0 END) as maintenance_cars
+        FROM cars
+        WHERE host_id = ?
+      `, [hostId]);
+    } else {
+      // Fallback: return counts without activity breakdown
+      const simple = query(`SELECT COUNT(*) as total_cars FROM cars WHERE host_id = ?`, [hostId]);
+      carsSummary = { rows: [{ total_cars: simple.rows[0]?.total_cars || 0, active_cars: 0, maintenance_cars: 0 }] };
+    }
 
     // Get earnings summary
+    console.log('Owner dashboard: fetching earnings summary for hostId=', hostId);
     const earningsSummary = query(`
       SELECT 
         SUM(b.total_price) as total_earnings,
@@ -43,6 +75,7 @@ router.get('/dashboard', authenticateToken, requireHost, async (req, res, next) 
     `, [hostId]);
 
     // Get current active bookings
+    console.log('Owner dashboard: fetching active bookings for hostId=', hostId);
     const activeBookings = query(`
       SELECT 
         b.*,
@@ -59,6 +92,7 @@ router.get('/dashboard', authenticateToken, requireHost, async (req, res, next) 
     `, [hostId]);
 
     // Get upcoming bookings
+    console.log('Owner dashboard: fetching upcoming bookings for hostId=', hostId);
     const upcomingBookings = query(`
       SELECT 
         b.*,
@@ -76,6 +110,7 @@ router.get('/dashboard', authenticateToken, requireHost, async (req, res, next) 
     `, [hostId]);
 
     // Performance metrics for last 30 days
+    console.log('Owner dashboard: fetching performance metrics for hostId=', hostId);
     const performanceMetrics = query(`
       SELECT 
         c.id,
@@ -111,7 +146,7 @@ router.get('/dashboard', authenticateToken, requireHost, async (req, res, next) 
         totalBookings: earningsSummary.rows[0]?.total_bookings || 0,
         monthlyBookings: earningsSummary.rows[0]?.monthly_bookings || 0,
         utilizationRate: 75,
-        topPerformingCars: performanceMetrics.rows.slice(0, 3).map(car => ({
+        topPerformingCars: (Array.isArray(performanceMetrics.rows) ? performanceMetrics.rows.slice(0, 3) : []).map(car => ({
           ...car,
           earnings: car.revenue,
           bookingCount: car.bookings,

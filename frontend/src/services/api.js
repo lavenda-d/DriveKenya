@@ -428,3 +428,12 @@ export default {
   mockCarsData,
   authStorage
 };
+
+// Lightweight adapter that mimics an axios-like `api` object used elsewhere
+export const api = {
+  get: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'GET' }),
+  post: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'POST' }),
+  put: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PUT' }),
+  patch: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PATCH' }),
+  delete: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
+};

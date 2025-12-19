@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Car } from '../App';
 import { Car } from '../types/car';
 import { FaCar, FaEdit, FaTrash, FaPlus, FaBell, FaEnvelope, FaChartLine, FaMoneyBillWave, FaStar } from 'react-icons/fa';
 
