@@ -10,11 +10,11 @@ import PWAStatus from './components/PWAStatus';
 import BookingFlow from './components/BookingFlow';
 import CustomerChatSelector from './components/CustomerChatSelector';
 import GoogleMapEnhanced from './components/GoogleMapEnhanced';
-import AdminDashboard from './components/AdminDashboard';
 import OwnerDashboard from './components/OwnerDashboardEnhanced';
 import PricingCalculator from './components/PricingCalculator';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import Phase4Dashboard from './components/Phase4Dashboard';
+// EmergencyButton removed - now in Profile & Settings
 import LiveChatSupport from './components/LiveChatSupport';
 import PerformanceMonitor from './components/PerformanceMonitor';
 import { chatService } from './services/chatService';
@@ -24,8 +24,30 @@ import CarDetailView from './components/CarDetailView';
 import CarManagement from './pages/CarManagement';
 import PasswordStrength from './components/PasswordStrength';
 import ProfileSettings from './pages/ProfileSettings';
+import ManageCar from './pages/ManageCar';
 import { FaCar, FaStar, FaMapMarkerAlt } from 'react-icons/fa';
 import { Car } from '../types/car';
+
+// Helper function to get vehicle type labels
+const getVehicleTypeLabel = (category: string, plural = false, titleCase = false): string => {
+  const labels: Record<string, { singular: string; plural: string; title: string; titlePlural: string }> = {
+    all: { singular: 'vehicle', plural: 'vehicles', title: 'Vehicle', titlePlural: 'Vehicles' },
+    car: { singular: 'car', plural: 'cars', title: 'Car', titlePlural: 'Cars' },
+    motorcycle: { singular: 'motorcycle', plural: 'motorcycles', title: 'Motorcycle', titlePlural: 'Motorcycles' },
+    bicycle: { singular: 'bicycle', plural: 'bicycles', title: 'Bicycle', titlePlural: 'Bicycles' },
+    van: { singular: 'van', plural: 'vans', title: 'Van', titlePlural: 'Vans' },
+    truck: { singular: 'truck', plural: 'trucks', title: 'Truck', titlePlural: 'Trucks' },
+    suv: { singular: 'SUV', plural: 'SUVs', title: 'SUV', titlePlural: 'SUVs' },
+    bus: { singular: 'bus', plural: 'buses', title: 'Bus', titlePlural: 'Buses' }
+  };
+
+  const label = labels[category] || labels.all;
+  
+  if (titleCase) {
+    return plural ? label.titlePlural : label.title;
+  }
+  return plural ? label.plural : label.singular;
+};
 
 // keep the TypeScript App signature; useTranslation will be used inside the component
 const App: React.FC = () => {
@@ -35,7 +57,7 @@ const App: React.FC = () => {
   const [viewingCar, setViewingCar] = useState<Car | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 15000]);
+  const [priceRange, setPriceRange] = useState([0, 50000]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'map'
   // Advanced filters state
   const [transmission, setTransmission] = useState('all');
@@ -66,6 +88,13 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [authLoading, setAuthLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Booking state
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
@@ -75,6 +104,9 @@ const App: React.FC = () => {
   const [myCars, setMyCars] = useState<Car[]>([]);
   const [myCarsLoading, setMyCarsLoading] = useState(true);
   const [managingCarId, setManagingCarId] = useState<string | null>(null);
+  const [viewingInquiriesCarId, setViewingInquiriesCarId] = useState<string | null>(null);
+  const [carInquiries, setCarInquiries] = useState<any[]>([]);
+  const [loadingInquiries, setLoadingInquiries] = useState(false);
   // Profile settings modal
   const [showProfileSettings, setShowProfileSettings] = useState(false);
 
@@ -91,6 +123,14 @@ const App: React.FC = () => {
     location: string;
     description: string;
     features: string[];
+    main_image_url: string;
+    video_url: string;
+    fuel_type: string;
+    transmission: string;
+    category: string;
+    availability_status: string;
+    license_plate: string;
+    vehicle_type: string;
   }>({
     make: '',
     model: '',
@@ -99,10 +139,21 @@ const App: React.FC = () => {
     price_per_day: '',
     location: '',
     description: '',
-    features: []
+    features: [],
+    main_image_url: '',
+    video_url: '',
+    fuel_type: '',
+    transmission: '',
+    category: '',
+    availability_status: 'available',
+    license_plate: '',
+    vehicle_type: ''
   });
   const [isSubmittingCar, setIsSubmittingCar] = useState(false);
   const [carSubmitMessage, setCarSubmitMessage] = useState('');
+  const [uploadedCarImages, setUploadedCarImages] = useState<string[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [selectedCarImages, setSelectedCarImages] = useState<File[]>([]);
 
   // Contact form state
   const [contactForm, setContactForm] = useState({
@@ -115,6 +166,8 @@ const App: React.FC = () => {
   // Chat state
   const [showChatModal, setShowChatModal] = useState(false);
   const [showCustomerSelector, setShowCustomerSelector] = useState(false);
+  const [showCarInquiries, setShowCarInquiries] = useState(false);
+  const [selectedInquiryCar, setSelectedInquiryCar] = useState(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSubmittingContact, setIsSubmittingContact] = useState(false);
@@ -190,13 +243,23 @@ const App: React.FC = () => {
       console.log('✅ DriveKenya authentication data cleared. Please refresh and login again.');
     };
 
+    // Check for password reset token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('resetToken');
+    if (token) {
+      setResetToken(token);
+      setShowResetPassword(true);
+      // Clean URL without reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     return () => {
       window.fetch = originalFetch;
       delete window.clearDriveKenyaAuth;
     };
   }, []);
 
-  // Load cars from API on component mount
+  // Load cars from API with filters
   useEffect(() => {
     const loadCars = async () => {
       try {
@@ -205,18 +268,53 @@ const App: React.FC = () => {
         const connectionStatus = await checkAPIConnection();
         setApiConnected(connectionStatus.connected);
         if (connectionStatus.connected) {
-          const response = await carsAPI.getAllCars();
-          if (response.success && response.cars) {
-            const transformedCars = response.cars.map((car) => ({
+          // Build filter params
+          const params = {};
+          if (transmission !== 'all') params.transmission = transmission;
+          if (fuelType !== 'all') params.fuelType = fuelType;
+          if (selectedCategory !== 'all') params.vehicleType = selectedCategory;
+          if (priceRange[0] > 0) params.minPrice = priceRange[0];
+          if (priceRange[1] < 15000) params.maxPrice = priceRange[1];
+          
+          const response = Object.keys(params).length > 0 
+            ? await carsAPI.searchCars(params)
+            : await carsAPI.getAllCars();
+          const carsData = response.data?.cars || response.cars || [];
+          if (response.success && carsData.length > 0) {
+            const transformedCars = carsData.map((car) => {
+            // Parse images from JSON string if needed
+            let carImages = [];
+            if (car.images) {
+              try {
+                carImages = typeof car.images === 'string' ? JSON.parse(car.images) : car.images;
+              } catch (e) {
+                carImages = [];
+              }
+            }
+
+            // Get the first image or use main_image_url
+            const getCarImage = () => {
+              if (car.main_image_url && car.main_image_url.trim() !== '') {
+                return car.main_image_url;
+              }
+              if (Array.isArray(carImages) && carImages.length > 0 && carImages[0]) {
+                return carImages[0];
+              }
+              // Fallback - use a generic car image
+              return 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop';
+            };
+
+            return {
               id: car.id,
               name: `${car.make} ${car.model}`,
-              category: car.price_per_day > 8000 ? 'luxury' : car.price_per_day > 5000 ? 'suv' : 'economy',
+              category: car.category || (car.price_per_day > 8000 ? 'luxury' : car.price_per_day > 5000 ? 'suv' : 'economy'),
+              vehicle_type: car.vehicle_type || 'car',
               price: car.price_per_day,
-              image: car.images && car.images.length > 0 ? car.images[0] : 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop&crop=center',
+              image: getCarImage(),
               features: car.features || [],
               seats: 5,
-              transmission: 'Automatic',
-              fuel: 'Petrol',
+              transmission: car.transmission || 'Automatic',
+              fuel: car.fuel_type || 'Petrol',
               location: car.location,
               rating: 4.5 + Math.random() * 0.5,
               reviews: Math.floor(Math.random() * 200) + 50,
@@ -224,10 +322,12 @@ const App: React.FC = () => {
               color: car.color,
               description: car.description,
               available: car.available,
-              host_id: car.host_id, // Add host_id for chat functionality
-              owner_name: car.owner_name, // Add owner name
-              owner_phone: car.owner_phone // Add owner phone
-            }));
+              availability_status: car.availability_status || 'available',
+              host_id: car.host_id,
+              owner_name: car.owner_name,
+              owner_phone: car.owner_phone
+            };
+          });
             setCars(transformedCars);
             console.log('✅ Loaded cars from API:', transformedCars.length);
           }
@@ -244,7 +344,7 @@ const App: React.FC = () => {
       }
     };
     loadCars();
-  }, []);
+  }, [transmission, fuelType, selectedCategory, priceRange]);
 
   // Load user bookings when user logs in
   useEffect(() => {
@@ -382,7 +482,7 @@ const App: React.FC = () => {
         if (authMode === 'register') {
           const roleText = userData.role === 'customer' ? 'car renter' : userData.role === 'host' ? 'car owner' : userData.role;
           alert(`🎉 Registration successful! Welcome to DriveKenya as a ${roleText}!
-${userData.role === 'host' ? 'You can now list your cars and start earning!' : 'You can now browse and rent amazing cars!'}`);
+${userData.role === 'host' ? 'You can now list your vehicles and start earning!' : 'You can now browse and rent amazing vehicles!'}`);
         } else {
           const roleText = userData.role === 'customer' ? 'Customer' : userData.role === 'host' ? 'Car Owner' : userData.role;
           console.log(`Welcome back! Logged in as: ${roleText} (Role from DB: ${userData.role})`);
@@ -479,33 +579,134 @@ You will receive a confirmation email shortly.`);
     }));
   };
 
+  // Handle car image file selection
+  const handleCarImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedCarImages(Array.from(files));
+    }
+  };
+
+  // Upload car images to server
+  const handleUploadCarImages = async () => {
+    if (selectedCarImages.length === 0) {
+      alert('Please select images to upload');
+      return;
+    }
+    
+    setIsUploadingImages(true);
+    try {
+      const formData = new FormData();
+      selectedCarImages.forEach(file => {
+        formData.append('images', file);
+      });
+
+      const response = await fetch('http://localhost:5000/api/cars/upload-images', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        const newImageUrls = data.data.imageUrls.map(url => `http://localhost:5000${url}`);
+        setUploadedCarImages(prev => [...prev, ...newImageUrls]);
+        setSelectedCarImages([]);
+        alert(`${newImageUrls.length} image(s) uploaded successfully!`);
+      } else {
+        alert(data.message || 'Failed to upload images');
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      alert('Failed to upload images');
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
+
+  // Remove uploaded image
+  const handleRemoveCarImage = (index: number) => {
+    setUploadedCarImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Fetch car inquiries from customers
+  const fetchCarInquiries = async (carId: string) => {
+    setLoadingInquiries(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/messages/car-inquiries/${carId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCarInquiries(data.data.inquiries || []);
+      } else {
+        console.error('Failed to fetch inquiries:', data.message);
+        setCarInquiries([]);
+      }
+    } catch (error) {
+      console.error('Error fetching inquiries:', error);
+      setCarInquiries([]);
+    } finally {
+      setLoadingInquiries(false);
+    }
+  };
+
+  // Open car inquiries modal
+  const handleViewCarInquiries = (carId: string) => {
+    setViewingInquiriesCarId(carId);
+    fetchCarInquiries(carId);
+  };
+
   const handleSubmitCar = async (e) => {
     e.preventDefault();
     if (!user) {
       setShowAuthModal(true);
       return;
     }
-    if (!carForm.make || !carForm.model || !carForm.year || !carForm.price_per_day) {
-      setCarSubmitMessage('Please fill in all required fields');
+    // Check if at least one image is provided (uploaded or URL)
+    if (!carForm.main_image_url && uploadedCarImages.length === 0) {
+      setCarSubmitMessage('Please provide at least one image (upload or URL)');
+      return;
+    }
+    // Validate required fields
+    if (!carForm.make || !carForm.model || !carForm.year || !carForm.price_per_day || !carForm.fuel_type || !carForm.transmission || !carForm.category) {
+      setCarSubmitMessage('Please fill in all required fields (fuel type, transmission, and category)');
       return;
     }
     setIsSubmittingCar(true);
     setCarSubmitMessage('');
     try {
       const dailyRate = parseFloat(carForm.price_per_day);
+      
+      // Combine uploaded images with URL if provided
+      let allImages = [...uploadedCarImages];
+      if (carForm.main_image_url && !allImages.includes(carForm.main_image_url)) {
+        allImages.push(carForm.main_image_url);
+      }
+      
       const carData = {
         make: carForm.make,
         model: carForm.model,
         year: parseInt(carForm.year),
         location: carForm.location,
-        price_per_day: dailyRate, // Backend expects 'price_per_day' not 'dailyRate'
-        category: 'economy', // Default category
-        fuelType: 'petrol', // Default fuel type
-        transmission: 'manual', // Default transmission
-        seats: 5, // Default seats
+        price_per_day: dailyRate,
+        category: carForm.category,
+        fuelType: carForm.fuel_type,
+        transmission: carForm.transmission,
+        main_image_url: allImages[0], // Use first image as main
+        gallery_json: JSON.stringify(allImages),
+        images: allImages,
+        video_url: carForm.video_url || '',
+        availability_status: carForm.availability_status || 'available',
+        seats: 5,
         description: carForm.description || '',
         color: carForm.color || '',
-        features: ['Air Conditioning', 'Bluetooth']
+        features: carForm.features || ['Air Conditioning', 'Bluetooth']
       };
 
       console.log('🚗 Sending car data:', carData);
@@ -513,6 +714,7 @@ You will receive a confirmation email shortly.`);
 
       await carsAPI.addCar(carData, token);
       setCarSubmitMessage('🎉 Car listed successfully! It will appear in our catalog shortly.');
+      // Reset form to initial state with all new fields
       setCarForm({
         make: '',
         model: '',
@@ -521,8 +723,15 @@ You will receive a confirmation email shortly.`);
         price_per_day: '',
         location: '',
         description: '',
-        features: []
+        features: [],
+        main_image_url: '',
+        video_url: '',
+        fuel_type: '',
+        transmission: '',
+        category: '',
+        availability_status: 'available'
       });
+      setUploadedCarImages([]);
     } catch (error) {
       setCarSubmitMessage(`❌ Error: ${error.message}`);
       console.error('Add car error:', error);
@@ -645,27 +854,40 @@ You will receive a confirmation email shortly.`);
       car.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       car.location?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Category filter
-    const matchesCategory = selectedCategory === 'all' || car.category === selectedCategory;
+    // Vehicle type filter - check vehicle_type field for vehicle type filtering
+    const vehicleTypes = ['car', 'motorcycle', 'bicycle', 'van', 'truck', 'suv', 'bus'];
+    const isVehicleTypeFilter = vehicleTypes.includes(selectedCategory);
+    
+    const matchesCategory = selectedCategory === 'all' || 
+      (isVehicleTypeFilter 
+        ? (car.vehicle_type?.toLowerCase() === selectedCategory.toLowerCase() || 
+           (!car.vehicle_type && selectedCategory === 'car')) // Default to car if vehicle_type not set
+        : car.category === selectedCategory);
 
-    // Price range filter
-    const matchesPrice = car.price_per_day >= priceRange[0] && car.price_per_day <= priceRange[1];
+    // Price range filter - handle both price and price_per_day properties
+    const carPrice = car.price || car.price_per_day || 0;
+    const matchesPrice = carPrice >= priceRange[0] && carPrice <= priceRange[1];
 
-    // Transmission filter
+    // Transmission filter - check both specs object and direct property
+    const carTransmission = car.specs?.transmission || car.transmission || 'Automatic';
     const matchesTransmission = transmission === 'all' ||
-      (car.specs?.transmission?.toLowerCase() === transmission.toLowerCase());
+      (carTransmission.toLowerCase() === transmission.toLowerCase());
 
-    // Fuel type filter
+    // Fuel type filter - check both specs object and direct property
+    const carFuelType = car.specs?.fuelType || car.fuel || 'Petrol';
     const matchesFuelType = fuelType === 'all' ||
-      (car.specs?.fuelType?.toLowerCase() === fuelType.toLowerCase());
+      (carFuelType.toLowerCase() === fuelType.toLowerCase());
 
-    // Rating filter
-    const matchesRating = car.rating >= minRating;
+    // Rating filter - handle undefined ratings
+    const carRating = car.rating || 0;
+    const matchesRating = carRating >= minRating;
 
     // Features filter (all selected features must match)
     const matchesFeatures = Object.entries(features).every(([feature, isSelected]) => {
       if (!isSelected) return true; // Skip unselected features
-      return car.features?.includes(feature) || car.amenities?.includes(feature);
+      const carFeatures = Array.isArray(car.features) ? car.features : 
+                          (typeof car.features === 'string' ? JSON.parse(car.features || '[]') : []);
+      return carFeatures.includes(feature) || car.amenities?.includes(feature);
     });
 
     return matchesSearch && matchesCategory && matchesPrice &&
@@ -676,6 +898,24 @@ You will receive a confirmation email shortly.`);
   const Navigation = () => {
     const [showServicesMenu, setShowServicesMenu] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [showVehiclesMenu, setShowVehiclesMenu] = useState(false);
+
+    const vehicleTypes = [
+      { value: 'all', label: 'All Vehicles', icon: '🚗' },
+      { value: 'car', label: 'Cars', icon: '🚗' },
+      { value: 'motorcycle', label: 'Motorcycles', icon: '🏍️' },
+      { value: 'bicycle', label: 'Bicycles', icon: '🚴' },
+      { value: 'van', label: 'Vans', icon: '🚐' },
+      { value: 'truck', label: 'Trucks', icon: '🚛' },
+      { value: 'suv', label: 'SUVs', icon: '🚙' },
+      { value: 'bus', label: 'Buses', icon: '🚌' }
+    ];
+
+    const handleVehicleTypeClick = (type: string) => {
+      setSelectedCategory(type);
+      setCurrentPage('cars');
+      setShowVehiclesMenu(false);
+    };
 
     return (
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/20">
@@ -686,7 +926,6 @@ You will receive a confirmation email shortly.`);
               onClick={() => setCurrentPage('home')}
             >
               <span>Drive<span className="text-blue-400">Kenya</span></span>
-              <LanguageSwitcher />
             </div>
 
             <div className="hidden md:flex items-center space-x-2">
@@ -698,19 +937,36 @@ You will receive a confirmation email shortly.`);
                     : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <span className="mr-1">🏠</span>{t('nav.home')}
+                <span className="mr-1">🏠</span>Home
               </button>
 
-              <button
-                onClick={() => setCurrentPage('cars')}
-                className={`px-3 py-2 rounded-full transition-all duration-200 text-sm ${
-                  currentPage === 'cars'
-                    ? 'bg-blue-500/20 text-white border border-blue-400/30'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                <span className="mr-1">🚗</span>{t('nav.cars')}
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowVehiclesMenu(!showVehiclesMenu)}
+                  className={`px-3 py-2 rounded-full transition-all duration-200 text-sm flex items-center ${
+                    currentPage === 'cars'
+                      ? 'bg-blue-500/20 text-white border border-blue-400/30'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <span className="mr-1">🚗</span>Vehicles
+                  <span className="ml-1">▾</span>
+                </button>
+
+                {showVehiclesMenu && (
+                  <div className="absolute top-full mt-2 right-0 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl py-2 min-w-[180px]">
+                    {vehicleTypes.map((type) => (
+                      <button
+                        key={type.value}
+                        onClick={() => handleVehicleTypeClick(type.value)}
+                        className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                      >
+                        <span className="mr-2">{type.icon}</span>{type.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="relative">
                 <button
@@ -731,7 +987,7 @@ You will receive a confirmation email shortly.`);
                       onClick={() => { setCurrentPage('listcar'); setShowServicesMenu(false); }}
                       className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
                     >
-                      <span className="mr-2">📝</span>List Car
+                      <span className="mr-2">📝</span>List Your Vehicle
                     </button>
                     <button
                       onClick={() => { setCurrentPage('bookings'); setShowServicesMenu(false); }}
@@ -743,22 +999,11 @@ You will receive a confirmation email shortly.`);
                       onClick={() => { setCurrentPage('mycars'); setShowServicesMenu(false); }}
                       className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
                     >
-                      <span className="mr-2">🚙</span>My Cars
+                      <span className="mr-2">🚙</span>My Vehicles
                     </button>
                   </div>
                 )}
               </div>
-
-              <button
-                onClick={() => setCurrentPage('phase4')}
-                className={`px-3 py-2 rounded-full transition-all duration-200 text-sm ${
-                  currentPage === 'phase4'
-                    ? 'bg-blue-500/20 text-white border border-blue-400/30'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                <span className="mr-1">🚀</span>{t('nav.advanced')}
-              </button>
 
               <div className="relative">
                 <button
@@ -769,7 +1014,8 @@ You will receive a confirmation email shortly.`);
                       : 'text-white/70 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  <span className="mr-1">⋮</span>More
+                  <span className="mr-1">ℹ️</span>{t('nav.more', 'More')}
+                  <span className="ml-1">▾</span>
                 </button>
 
                 {showMoreMenu && (
@@ -817,15 +1063,6 @@ You will receive a confirmation email shortly.`);
                       title="Notifications"
                     >
                       🔔
-                    </button>
-                  </NotificationBadge>
-                  <NotificationBadge>
-                    <button
-                      onClick={() => setShowMessagesPanel(!showMessagesPanel)}
-                      className="text-white text-lg hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-white/10"
-                      title="Messages"
-                    >
-                      💬
                     </button>
                   </NotificationBadge>
                   <div className="text-white text-xs">
@@ -1079,6 +1316,16 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 {authLoading ? 'Processing...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
               </button>
             </form>
+            {authMode === 'login' && (
+              <div className="mt-3 text-center">
+                <button
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
             <div className="mt-6 text-center">
               <button
                 onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
@@ -1100,6 +1347,190 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
     );
   };
 
+  // Forgot Password Modal
+  const ForgotPasswordModal = () => {
+    if (!showForgotPassword) return null;
+
+    const handleResetRequest = async (e) => {
+      e.preventDefault();
+      setAuthLoading(true);
+      setResetMessage('');
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: resetEmail })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setResetMessage('✅ Password reset link sent to your email! Check your inbox.');
+        } else {
+          setResetMessage('❌ ' + (data.message || 'Failed to send reset link'));
+        }
+      } catch (error) {
+        setResetMessage('❌ Error: ' + error.message);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl max-w-md w-full p-8 relative">
+          <button
+            onClick={() => {
+              setShowForgotPassword(false);
+              setResetEmail('');
+              setResetMessage('');
+            }}
+            className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold"
+          >
+            ×
+          </button>
+          <h2 className="text-3xl font-bold text-white mb-2">Reset Password</h2>
+          <p className="text-white/70 mb-6">Enter your email and we'll send you a reset link</p>
+          
+          {resetMessage && (
+            <div className={`mb-4 p-3 rounded-lg ${resetMessage.includes('✅') ? 'bg-green-500/20 border border-green-400/30 text-green-300' : 'bg-red-500/20 border border-red-400/30 text-red-300'}`}>
+              {resetMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleResetRequest} className="space-y-4">
+            <input
+              type="email"
+              placeholder="Your Email Address"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
+            >
+              {authLoading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+          </form>
+          
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => {
+                setShowForgotPassword(false);
+                setShowAuthModal(true);
+              }}
+              className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Reset Password Modal
+  const ResetPasswordModal = () => {
+    if (!showResetPassword) return null;
+
+    const handlePasswordReset = async (e) => {
+      e.preventDefault();
+      if (newPassword !== confirmPassword) {
+        setResetMessage('❌ Passwords do not match');
+        return;
+      }
+      if (newPassword.length < 6) {
+        setResetMessage('❌ Password must be at least 6 characters long');
+        return;
+      }
+
+      setAuthLoading(true);
+      setResetMessage('');
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: resetToken, newPassword })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setResetMessage('✅ ' + data.message);
+          setTimeout(() => {
+            setShowResetPassword(false);
+            setShowAuthModal(true);
+            setNewPassword('');
+            setConfirmPassword('');
+            setResetToken('');
+          }, 2000);
+        } else {
+          setResetMessage('❌ ' + (data.message || 'Failed to reset password'));
+        }
+      } catch (error) {
+        setResetMessage('❌ Error: ' + error.message);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl max-w-md w-full p-8 relative">
+          <button
+            onClick={() => {
+              setShowResetPassword(false);
+              setNewPassword('');
+              setConfirmPassword('');
+              setResetMessage('');
+            }}
+            className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold"
+          >
+            ×
+          </button>
+          <h2 className="text-3xl font-bold text-white mb-2">Set New Password</h2>
+          <p className="text-white/70 mb-6">Enter your new password below</p>
+          
+          {resetMessage && (
+            <div className={`mb-4 p-3 rounded-lg ${resetMessage.includes('✅') ? 'bg-green-500/20 border border-green-400/30 text-green-300' : 'bg-red-500/20 border border-red-400/30 text-red-300'}`}>
+              {resetMessage}
+            </div>
+          )}
+
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                placeholder="New Password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <div className="mt-2">
+                <PasswordStrength password={newPassword} />
+              </div>
+            </div>
+            <input
+              type="password"
+              placeholder="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
+            >
+              {authLoading ? 'Resetting...' : 'Reset Password'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
   // Enhanced Booking Flow
   const renderBookingFlow = () => {
     if (!showBookingModal || !selectedCar) return null;
@@ -1107,7 +1538,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       <BookingFlow
         selectedCar={{
           ...selectedCar,
-          pricePerDay: selectedCar.price // Map price to pricePerDay for consistency
+          pricePerDay: selectedCar.price_per_day || selectedCar.price || selectedCar.pricePerDay || 3000 // Map price to pricePerDay for consistency
         }}
         onBookingComplete={handleBookingComplete}
         onClose={() => {
@@ -1128,7 +1559,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-6">
               <span className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></span>
               <span className="text-white/80 text-sm">
-                {apiConnected ? 'Live Database Connected' : 'Demo Mode'}  {cars.length} Cars Available
+                {apiConnected ? 'Live Database Connected' : 'Demo Mode'}  {cars.length} Vehicles Available
               </span>
             </div>
           </div>
@@ -1136,7 +1567,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             Drive<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Kenya</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/80 mb-8 leading-relaxed">
-            Premium car rentals across Kenya with real-time booking and authentic reviews.
+            Premium vehicle rentals across Kenya - Cars, Motorcycles, Bicycles, Vans, Trucks & more with real-time booking.
           </p>
           {/* Role-based Welcome Message */}
           {user && (
@@ -1173,7 +1604,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               onClick={() => setCurrentPage('cars')}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
             >
-              🚗 Browse {cars.length} Cars
+              🚗 Browse {cars.length} Vehicles
             </button>
             {user ? (
               <>
@@ -1189,7 +1620,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                       onClick={() => setCurrentPage('mycars')}
                       className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
                     >
-                      🔑 My Cars ({myCars.length})
+                      🔑 My Vehicles ({myCars.length})
                     </button>
                     <button
                       onClick={() => setCurrentPage('listcar')}
@@ -1201,7 +1632,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 ) : user.role === 'admin' ? (
                   <>
                     <button 
-                      onClick={() => setCurrentPage('admin-dashboard')}
+                      onClick={() => window.open('http://localhost:3001', '_blank')}
                       className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
                     >
                       ⚙️ Admin Dashboard
@@ -1314,15 +1745,30 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
   );
 
   // Enhanced Cars Page with Search and Map View
-  const renderCars = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-12">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">Available Cars</h1>
-          <p className="text-xl text-white/70">
-            {apiConnected ? 'Real-time data from our database' : 'Demo data'}  {filteredCars.length} of {cars.length} cars shown
-          </p>
+  const renderCars = () => {
+    // Show loading state while data is being fetched
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+            <p className="text-white text-xl">Loading cars...</p>
+          </div>
         </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="mb-12">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+              Available {getVehicleTypeLabel(selectedCategory, true, true)}
+            </h1>
+            <p className="text-xl text-white/70">
+              {apiConnected ? 'Real-time data from our database' : 'Demo data'}  {filteredCars?.length || 0} of {cars?.length || 0} {getVehicleTypeLabel(selectedCategory, true)} shown
+            </p>
+          </div>
         {/* View Toggle */}
         <div className="mb-8">
           <div className="flex justify-center">
@@ -1455,56 +1901,80 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           {/* Advanced Filters */}
           <div className="border-t border-white/10 pt-4">
             <div className="flex flex-wrap items-center gap-6">
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">⚙️ Transmission</label>
-                <div className="flex space-x-2">
-                  {['All', 'Automatic', 'Manual'].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setTransmission(type === 'All' ? 'all' : type.toLowerCase())}
-                      className={`px-3 py-1 rounded-full text-sm ${transmission === type.toLowerCase() || (type === 'All' && transmission === 'all')
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                        }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+              {/* Show Transmission only for motorized vehicles */}
+              {selectedCategory !== 'bicycle' && (
+                <div>
+                  <label className="block text-white/70 text-sm font-medium mb-2">⚙️ Transmission</label>
+                  <div className="flex space-x-2">
+                    {['All', 'Automatic', 'Manual'].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setTransmission(type === 'All' ? 'all' : type.toLowerCase())}
+                        className={`px-3 py-1 rounded-full text-sm ${transmission === type.toLowerCase() || (type === 'All' && transmission === 'all')
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                          }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">⛽ Fuel Type</label>
-                <div className="flex space-x-2">
-                  {['All', 'Petrol', 'Diesel', 'Hybrid', 'Electric'].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setFuelType(type === 'All' ? 'all' : type.toLowerCase())}
-                      className={`px-3 py-1 rounded-full text-sm ${fuelType === type.toLowerCase() || (type === 'All' && fuelType === 'all')
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                        }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+              )}
+              {/* Show Fuel Type only for motorized vehicles */}
+              {selectedCategory !== 'bicycle' && (
+                <div>
+                  <label className="block text-white/70 text-sm font-medium mb-2">⛽ Fuel Type</label>
+                  <div className="flex space-x-2">
+                    {['All', 'Petrol', 'Diesel', 'Hybrid', 'Electric'].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setFuelType(type === 'All' ? 'all' : type.toLowerCase())}
+                        className={`px-3 py-1 rounded-full text-sm ${fuelType === type.toLowerCase() || (type === 'All' && fuelType === 'all')
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                          }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex-1">
                 <label className="block text-white/70 text-sm font-medium mb-2">🔧 Features</label>
                 <div className="flex flex-wrap gap-2">
-                  {Object.keys(features).map((feature) => (
-                    <button
-                      key={feature}
-                      onClick={() => setFeatures(prev => ({ ...prev, [feature]: !prev[feature] }))}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center space-x-1 ${features[feature]
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                        }`}
-                    >
-                      <span>{features[feature] ? '✓' : '+'}</span>
-                      <span>{feature.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    </button>
-                  ))}
+                  {Object.keys(features)
+                    .filter((feature) => {
+                      // Filter features based on vehicle type
+                      if (selectedCategory === 'bicycle') {
+                        // Bicycles only have basic features
+                        return ['gps'].includes(feature);
+                      }
+                      if (selectedCategory === 'motorcycle') {
+                        // Motorcycles don't have sunroof, leather seats, parking sensors
+                        return !['sunroof', 'leatherSeats', 'parkingSensors'].includes(feature);
+                      }
+                      if (selectedCategory === 'truck' || selectedCategory === 'bus') {
+                        // Trucks/buses don't have sunroof typically
+                        return !['sunroof'].includes(feature);
+                      }
+                      // Cars, SUVs, Vans show all features
+                      return true;
+                    })
+                    .map((feature) => (
+                      <button
+                        key={feature}
+                        onClick={() => setFeatures(prev => ({ ...prev, [feature]: !prev[feature] }))}
+                        className={`px-3 py-1 rounded-full text-sm flex items-center space-x-1 ${features[feature]
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                          }`}
+                      >
+                        <span>{features[feature] ? '✓' : '+'}</span>
+                        <span>{feature.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      </button>
+                    ))}
                 </div>
               </div>
               <div className="flex items-end">
@@ -1564,11 +2034,13 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           </div>
         </div>
         {/* Conditional Content Based on View Mode and Car Count */}
-        {filteredCars.length === 0 && !loading ? ( // Render the "No cars found" message if no cars match filters
+        {filteredCars.length === 0 && !loading ? ( // Render the "No vehicles found" message if no vehicles match filters
           <div className="text-center py-20">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12 max-w-lg mx-auto">
               <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-bold text-white mb-4">No cars found</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">
+                No {getVehicleTypeLabel(selectedCategory, true)} found
+              </h3>
               <p className="text-white/70 mb-6">Try adjusting your filters or search terms</p>
               <button
                 onClick={() => { setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]); }}
@@ -1632,7 +2104,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   </div>
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {car.features?.slice(0, 3).map((feature, index) => (
+                      {(Array.isArray(car.features) ? car.features : (typeof car.features === 'string' ? JSON.parse(car.features || '[]') : [])).slice(0, 3).map((feature, index) => (
                         <span key={index} className="bg-white/10 text-white/80 px-2 py-1 rounded text-xs">
                           {feature}
                         </span>
@@ -1679,7 +2151,8 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   // Enhanced Bookings Page
   const renderBookings = () => {
@@ -1712,7 +2185,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">📆</div>
               <h3 className="text-2xl font-bold text-white mb-4">No Bookings Yet</h3>
-              <p className="text-white/70 mb-6">You haven't made any bookings yet. Start by browsing our available cars!</p>
+              <p className="text-white/70 mb-6">You haven't made any bookings yet. Start by browsing our available vehicles!</p>
               <button
                 onClick={() => setCurrentPage('cars')}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
@@ -1779,18 +2252,18 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
     );
   };
 
-  // My Cars Page - Show cars owned by current user
+  // My Vehicles Page - Show vehicles owned by current user
   const renderMyCars = () => {
     // Handle case when user is not logged in
     if (!user) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
           <div className="max-w-6xl mx-auto px-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Vehicles</h1>
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">🔐</div>
               <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
-              <p className="text-white/70 mb-6">Please sign in to view your cars</p>
+              <p className="text-white/70 mb-6">Please sign in to view your vehicles</p>
               <button
                 onClick={() => setShowAuthModal(true)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
@@ -1808,10 +2281,10 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       return (
         <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
           <div className="max-w-6xl mx-auto px-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Vehicles</h1>
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">⏳</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Loading Your Cars...</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">Loading Your Vehicles...</h3>
             </div>
           </div>
         </div>
@@ -1821,17 +2294,17 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
         <div className="max-w-6xl mx-auto px-6 py-20">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Cars</h1>
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">My Vehicles</h1>
           {myCars.length === 0 ? (
             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
               <div className="text-6xl mb-4">🚗</div>
-              <h3 className="text-2xl font-bold text-white mb-4">No cars listed yet</h3>
-              <p className="text-white/70 mb-6">Start earning by listing your first car!</p>
+              <h3 className="text-2xl font-bold text-white mb-4">No vehicles listed yet</h3>
+              <p className="text-white/70 mb-6">Start earning by listing your first vehicle!</p>
               <button
                 onClick={() => setCurrentPage('listcar')}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
               >
-                List Your Car
+                List Your Vehicle
               </button>
             </div>
           ) : (
@@ -1840,23 +2313,27 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 <div key={car.id} className="bg-black/40 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden group hover:scale-[1.02] transition-all duration-300">
                   <div className="relative">
                     <img
-                      src={car.images && car.images.length > 0 ? car.images[0] : '/default-car.jpg'}
-                      alt={`${car.make} ${car.model}`}
+                      src={car.image || '/default-car.jpg'}
+                      alt={car.name}
                       className="w-full h-48 object-cover"
                     />
                     <div className="absolute top-4 left-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${car.available ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                        {car.available ? 'Available' : 'Unavailable'}
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        car.availability_status === 'available' ? 'bg-green-500 text-white' : 
+                        car.availability_status === 'booked' ? 'bg-blue-500 text-white' :
+                        'bg-orange-500 text-white'
+                      }`}>
+                        {car.availability_status || 'Available'}
                       </span>
                     </div>
                   </div>
                   <div className="p-6">
-                    <h3 className="text-2xl font-bold text-white">{car.make} {car.model}</h3>
+                    <h3 className="text-2xl font-bold text-white">{car.name}</h3>
                     <p className="text-white/60 mb-2">{car.year} • {car.location}</p>
                     <p className="text-white/70 mb-4 text-sm line-clamp-2">{car.description}</p>
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <div className="text-2xl font-bold text-white">KSh {car.price_per_day?.toLocaleString()}</div>
+                        <div className="text-2xl font-bold text-white">KSh {car.price?.toLocaleString()}</div>
                         <div className="text-white/60 text-sm">per day</div>
                       </div>
                       <div className="flex items-center space-x-1">
@@ -1872,8 +2349,11 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                         <span className="mr-2">📝</span>
                         Manage Car
                       </button>
-                      <button className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white py-2 rounded-lg font-semibold transition-all">
-                        View Messages
+                      <button
+                        onClick={() => handleViewCarInquiries(car.id)}
+                        className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white py-2 rounded-lg font-semibold transition-all"
+                      >
+                        💬 View Messages
                       </button>
                     </div>
                   </div>
@@ -1890,12 +2370,12 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
   const renderListCar = () => (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
       <div className="max-w-4xl mx-auto px-6 py-20">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">List Your Car</h1>
+        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">List Your Vehicle</h1>
         {!user ? (
           <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center">
             <div className="text-6xl mb-4">🔐</div>
             <h3 className="text-2xl font-bold text-white mb-4">Sign In Required</h3>
-            <p className="text-white/70 mb-6">Please sign in to list your car for rental</p>
+            <p className="text-white/70 mb-6">Please sign in to list your vehicle for rental</p>
             <button
               onClick={() => setShowAuthModal(true)}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold transition-all"
@@ -1919,7 +2399,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   name="make"
                   value={carForm.make}
                   onChange={handleCarFormChange}
-                  placeholder="Car Make *"
+                  placeholder="Vehicle Make (e.g., Toyota, Yamaha) *"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -1927,7 +2407,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   name="model"
                   value={carForm.model}
                   onChange={handleCarFormChange}
-                  placeholder="Car Model *"
+                  placeholder="Vehicle Model *"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -1943,6 +2423,14 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   required
                 />
                 <input
+                  name="license_plate"
+                  value={carForm.license_plate}
+                  onChange={handleCarFormChange}
+                  placeholder="License Plate (e.g., KAA 123X) *"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <input
                   name="price_per_day"
                   value={carForm.price_per_day}
                   onChange={handleCarFormChange}
@@ -1953,6 +2441,64 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
+                <select
+                  name="vehicle_type"
+                  value={carForm.vehicle_type}
+                  onChange={handleCarFormChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="" className="bg-gray-900">Vehicle Type *</option>
+                  <option value="car" className="bg-gray-900">🚗 Car</option>
+                  <option value="suv" className="bg-gray-900">🚙 SUV</option>
+                  <option value="van" className="bg-gray-900">🚐 Van</option>
+                  <option value="truck" className="bg-gray-900">🚚 Truck/Lorry</option>
+                  <option value="motorcycle" className="bg-gray-900">🏍️ Motorcycle/Bike</option>
+                  <option value="bicycle" className="bg-gray-900">🚲 Bicycle</option>
+                  <option value="bus" className="bg-gray-900">🚌 Bus</option>
+                  <option value="trailer" className="bg-gray-900">🚛 Trailer</option>
+                </select>
+                <select
+                  name="fuel_type"
+                  value={carForm.fuel_type}
+                  onChange={handleCarFormChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="" className="bg-gray-900">Fuel Type *</option>
+                  <option value="petrol" className="bg-gray-900">Petrol</option>
+                  <option value="diesel" className="bg-gray-900">Diesel</option>
+                  <option value="hybrid" className="bg-gray-900">Hybrid</option>
+                  <option value="electric" className="bg-gray-900">Electric</option>
+                  <option value="none" className="bg-gray-900">None (Bicycle/Manual)</option>
+                </select>
+                <select
+                  name="transmission"
+                  value={carForm.transmission}
+                  onChange={handleCarFormChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="" className="bg-gray-900">Transmission *</option>
+                  <option value="automatic" className="bg-gray-900">Automatic</option>
+                  <option value="manual" className="bg-gray-900">Manual</option>
+                </select>
+                <select
+                  name="category"
+                  value={carForm.category}
+                  onChange={handleCarFormChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="" className="bg-gray-900">Category *</option>
+                  <option value="economy" className="bg-gray-900">Economy</option>
+                  <option value="sedan" className="bg-gray-900">Sedan</option>
+                  <option value="suv" className="bg-gray-900">SUV</option>
+                  <option value="hatchback" className="bg-gray-900">Hatchback</option>
+                  <option value="luxury" className="bg-gray-900">Luxury</option>
+                  <option value="van" className="bg-gray-900">Van</option>
+                  <option value="convertible" className="bg-gray-900">Convertible</option>
+                </select>
                 <input
                   name="color"
                   value={carForm.color}
@@ -1964,10 +2510,143 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   name="location"
                   value={carForm.location}
                   onChange={handleCarFormChange}
-                  placeholder="Location (e.g., Nairobi CBD)"
+                  placeholder="Location (e.g., Nairobi CBD) *"
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
+              
+              <div className="mt-6 space-y-4">
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">📸 Car Images (Required - at least 1)</label>
+                  
+                  {/* File Upload Section */}
+                  <div className="mb-4">
+                    <label className="block mb-2">
+                      <div className="flex items-center justify-center w-full px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border-2 border-blue-500/50 border-dashed rounded-lg cursor-pointer transition-colors">
+                        <div className="text-center">
+                          <div className="text-2xl mb-1">📷</div>
+                          <p className="text-white/80 text-sm font-medium">Click to upload images</p>
+                          <p className="text-white/50 text-xs">Upload multiple photos (up to 20)</p>
+                        </div>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        multiple
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (!files || files.length === 0) return;
+                          
+                          setIsUploadingImages(true);
+                          try {
+                            const formData = new FormData();
+                            Array.from(files).forEach(file => {
+                              formData.append('images', file);
+                            });
+                            
+                            const response = await fetch('http://localhost:5000/api/cars/upload-images', {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${token}`
+                              },
+                              body: formData
+                            });
+                            
+                            if (response.ok) {
+                              const data = await response.json();
+                              const newImages = data.data.imageUrls.map(url => `http://localhost:5000${url}`);
+                              setUploadedCarImages(prev => [...prev, ...newImages]);
+                              setCarSubmitMessage(`✅ ${files.length} image(s) uploaded successfully!`);
+                              setTimeout(() => setCarSubmitMessage(''), 3000);
+                            } else {
+                              setCarSubmitMessage('❌ Failed to upload images');
+                            }
+                          } catch (error) {
+                            setCarSubmitMessage('❌ Error uploading images');
+                          } finally {
+                            setIsUploadingImages(false);
+                          }
+                        }}
+                      />
+                    </label>
+                    {isUploadingImages && (
+                      <div className="text-center text-white/70 py-2">
+                        <div className="animate-spin inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></div>
+                        <span className="ml-2">Uploading...</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Display Uploaded Images */}
+                  {uploadedCarImages.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-white/70 text-sm mb-2">Uploaded Images ({uploadedCarImages.length}):</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {uploadedCarImages.map((url, index) => (
+                          <div key={index} className="relative group">
+                            <img src={url} alt={`Upload ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                            <button
+                              type="button"
+                              onClick={() => setUploadedCarImages(prev => prev.filter((_, i) => i !== index))}
+                              className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* OR Divider */}
+                  <div className="flex items-center my-4">
+                    <div className="flex-1 border-t border-white/20"></div>
+                    <span className="px-3 text-white/50 text-sm">OR</span>
+                    <div className="flex-1 border-t border-white/20"></div>
+                  </div>
+                  
+                  {/* URL Input Section */}
+                  <div>
+                    <label className="block text-white/70 text-sm mb-2">Paste Image URL</label>
+                    <input
+                      name="main_image_url"
+                      value={carForm.main_image_url}
+                      onChange={handleCarFormChange}
+                      placeholder="https://example.com/car-image.jpg"
+                      type="url"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {carForm.main_image_url && (
+                      <div className="mt-2">
+                        <img 
+                          src={carForm.main_image_url} 
+                          alt="Preview" 
+                          className="w-full h-48 object-cover rounded-lg"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">🎥 Video URL (optional)</label>
+                  <input
+                    name="video_url"
+                    value={carForm.video_url}
+                    onChange={handleCarFormChange}
+                    placeholder="https://youtube.com/watch?v=... or direct video URL"
+                    type="url"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-white/50 text-xs mt-1">Optional: Add a YouTube or direct video link to showcase your car</p>
+                </div>
+              </div>
+
               <textarea
                 name="description"
                 value={carForm.description}
@@ -1976,12 +2655,19 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 rows={3}
                 className="w-full mt-6 px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               ></textarea>
+              
+              <div className="mt-4 p-4 bg-blue-500/10 border border-blue-400/30 rounded-lg">
+                <p className="text-white/80 text-sm">
+                  <strong>Note:</strong> After listing, you can manage availability status and set calendar blocks from "My Vehicles" → "Manage Vehicle"
+                </p>
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmittingCar}
                 className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-3 rounded-lg font-semibold transition-all"
               >
-                {isSubmittingCar ? 'Listing Car...' : 'List My Car'}
+                {isSubmittingCar ? 'Listing Vehicle...' : 'List My Vehicle'}
               </button>
             </form>
           </div>
@@ -1992,28 +2678,147 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
 
   const renderAbout = () => (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-20">
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 text-center">About DriveKenya</h1>
-        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-          <p className="text-white/80 text-lg mb-6">
-            DriveKenya is Kenya's premier car rental platform, connecting travelers with quality vehicles across the country.
-            From budget-friendly economy cars to luxury vehicles, we offer the perfect ride for every journey.
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 text-center">About DriveKenya</h1>
+        <p className="text-white/70 text-center text-xl mb-12">Revolutionizing car rental in Kenya</p>
+        
+        {/* What is Drive Kenya */}
+        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
+          <h2 className="text-3xl font-bold text-white mb-4 flex items-center">
+            <span className="mr-3">🚗</span> What is DriveKenya?
+          </h2>
+          <p className="text-white/80 text-lg leading-relaxed mb-4">
+            DriveKenya is Kenya's premier peer-to-peer vehicle rental platform that connects vehicle owners with people who need reliable, affordable transportation. We're transforming how Kenyans access vehicles by creating a trusted marketplace where anyone can list their car, motorcycle, bicycle, van, truck, SUV, or bus - or find the perfect ride for their journey.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          <p className="text-white/80 text-lg leading-relaxed">
+            From bicycles for city commutes to motorcycles for quick errands, budget-friendly economy cars to luxury SUVs, cargo vans to moving trucks, and even buses for group travel - we offer Kenya's most diverse vehicle fleet spanning across Nairobi and major cities, ensuring you always have access to quality transportation when you need it.
+          </p>
+        </div>
+
+        {/* Mission & Vision */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+            <h2 className="text-3xl font-bold text-white mb-4 flex items-center">
+              <span className="mr-3">🎯</span> Our Mission
+            </h2>
+            <p className="text-white/80 text-lg leading-relaxed">
+              To democratize car ownership benefits by enabling every Kenyan with a vehicle to earn income, while providing affordable, flexible, and convenient transportation options to those who need them.
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+            <h2 className="text-3xl font-bold text-white mb-4 flex items-center">
+              <span className="mr-3">🌟</span> Our Vision
+            </h2>
+            <p className="text-white/80 text-lg leading-relaxed">
+              To become East Africa's most trusted car-sharing platform, where every idle vehicle becomes an opportunity and every journey begins with confidence and convenience.
+            </p>
+          </div>
+        </div>
+
+        {/* Who We Serve */}
+        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
+          <h2 className="text-3xl font-bold text-white mb-6 flex items-center">
+            <span className="mr-3">👥</span> Who We Serve
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+              <div className="text-5xl mb-4 text-center">🚙</div>
+              <h3 className="text-white font-bold text-xl mb-3 text-center">Vehicle Owners</h3>
+              <p className="text-white/70 leading-relaxed">
+                Turn your idle vehicle into a revenue stream. List your car, motorcycle, bicycle, van, truck, SUV, or bus - set your price, and earn money while helping others access reliable transportation. Perfect for anyone looking to offset vehicle maintenance costs or generate passive income.
+              </p>
+            </div>
+            <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+              <div className="text-5xl mb-4 text-center">🧳</div>
+              <h3 className="text-white font-bold text-xl mb-3 text-center">Renters</h3>
+              <p className="text-white/70 leading-relaxed">
+                Access quality vehicles without the burden of ownership. Whether you need a car for a road trip, business meeting, airport pickup, or daily commute, find the perfect vehicle at competitive rates with flexible rental periods.
+              </p>
+            </div>
+            <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+              <div className="text-5xl mb-4 text-center">💼</div>
+              <h3 className="text-white font-bold text-xl mb-3 text-center">Businesses</h3>
+              <p className="text-white/70 leading-relaxed">
+                Scale your transportation needs without heavy capital investment. Access a fleet of vehicles for corporate events, employee transport, or business operations with flexible terms and transparent pricing.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Problem & Solution */}
+        <div className="bg-gradient-to-r from-red-900/30 to-orange-900/30 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
+          <h2 className="text-3xl font-bold text-white mb-6 flex items-center">
+            <span className="mr-3">⚡</span> The Problem We Solve
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="text-red-300 font-semibold text-xl mb-3">🚫 Traditional Challenges:</h3>
+              <ul className="text-white/80 space-y-2 text-lg">
+                <li>• Expensive traditional car rental companies</li>
+                <li>• Limited vehicle availability in many areas</li>
+                <li>• Cars sitting idle and depreciating</li>
+                <li>• Lengthy paperwork and rigid terms</li>
+                <li>• High upfront costs for car ownership</li>
+                <li>• Lack of trust and transparency</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-green-300 font-semibold text-xl mb-3">✅ Our Solution:</h3>
+              <ul className="text-white/80 space-y-2 text-lg">
+                <li>• Up to 40% cheaper than traditional rentals</li>
+                <li>• Vehicles available across Kenya</li>
+                <li>• Owners monetize idle vehicles</li>
+                <li>• Digital booking in minutes</li>
+                <li>• Pay only for what you use</li>
+                <li>• Verified users and secure platform</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Impact */}
+        <div className="bg-gradient-to-r from-green-900/30 to-teal-900/30 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
+          <h2 className="text-3xl font-bold text-white mb-6 flex items-center">
+            <span className="mr-3">📊</span> Our Impact
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-4xl mb-4"></div>
-              <h3 className="text-white font-semibold mb-2">Wide Selection</h3>
-              <p className="text-white/70">Economy to luxury vehicles</p>
+              <div className="text-4xl font-bold text-green-400 mb-2">1000+</div>
+              <p className="text-white/70">Active Vehicles</p>
             </div>
             <div className="text-center">
-              <div className="text-4xl mb-4"></div>
-              <h3 className="text-white font-semibold mb-2">Trusted & Safe</h3>
-              <p className="text-white/70">All vehicles verified and insured</p>
+              <div className="text-4xl font-bold text-blue-400 mb-2">5000+</div>
+              <p className="text-white/70">Happy Renters</p>
             </div>
             <div className="text-center">
-              <div className="text-4xl mb-4"></div>
-              <h3 className="text-white font-semibold mb-2">Best Prices</h3>
-              <p className="text-white/70">Competitive rates nationwide</p>
+              <div className="text-4xl font-bold text-purple-400 mb-2">KSh 50M+</div>
+              <p className="text-white/70">Earned by Owners</p>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-yellow-400 mb-2">98%</div>
+              <p className="text-white/70">Satisfaction Rate</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Core Values */}
+        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+          <h2 className="text-3xl font-bold text-white mb-6 text-center">Our Core Values</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="text-5xl mb-4">🛡️</div>
+              <h3 className="text-white font-semibold text-xl mb-2">Trust & Safety</h3>
+              <p className="text-white/70">All users verified, vehicles insured, and transactions secured</p>
+            </div>
+            <div className="text-center">
+              <div className="text-5xl mb-4">💪</div>
+              <h3 className="text-white font-semibold text-xl mb-2">Empowerment</h3>
+              <p className="text-white/70">Enabling financial independence for car owners</p>
+            </div>
+            <div className="text-center">
+              <div className="text-5xl mb-4">🤝</div>
+              <h3 className="text-white font-semibold text-xl mb-2">Community</h3>
+              <p className="text-white/70">Building a trusted network of responsible drivers and owners</p>
             </div>
           </div>
         </div>
@@ -2030,8 +2835,8 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <div>
               <h3 className="text-white font-semibold text-xl mb-4">Get in Touch</h3>
               <div className="space-y-4 text-white/80">
-                <div>📧 info@driveKenya.com</div>
-                <div>📞 +254 700 123 456</div>
+                <div>📧 drivekenyaorg@gmail.com</div>
+                <div>📞 +254 717 052 939</div>
                 <div>📍 Nairobi, Kenya</div>
               </div>
             </div>
@@ -2121,11 +2926,15 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       {currentPage === 'phase4' && <Phase4Dashboard />}
       {currentPage === 'about' && renderAbout()}
       {currentPage === 'contact' && renderContact()}
-      {currentPage === 'admin-dashboard' && user?.role === 'admin' && <AdminDashboard />}
       {currentPage === 'owner-dashboard' && user?.role === 'host' && <OwnerDashboard />}
-      {currentPage === 'pricing' && <PricingCalculator />}
+      {currentPage === 'pricing' && <PricingCalculator onBookCar={(bookingData) => {
+        setSelectedCar(bookingData.car);
+        setShowBookingModal(true);
+      }} />}
       
       <AuthModal />
+      <ForgotPasswordModal />
+      <ResetPasswordModal />
       {renderBookingFlow()}
       <ChatModal
         isOpen={showChatModal}
@@ -2142,6 +2951,102 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           onClose={closeCustomerSelector}
         />
       )}
+      
+      {/* Car Inquiries Modal */}
+      {showCarInquiries && selectedInquiryCar && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowCarInquiries(false)}>
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-white/10 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="p-6 border-b border-white/10">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-1">Customer Inquiries</h2>
+                  <p className="text-white/60 text-sm">{selectedInquiryCar.make} {selectedInquiryCar.model}</p>
+                </div>
+                <button
+                  onClick={() => setShowCarInquiries(false)}
+                  className="text-white/60 hover:text-white transition-colors text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-white/70">
+                <span>💬</span>
+                <span>{carInquiries.length} customer(s) inquired about this car</span>
+              </div>
+            </div>
+            
+            {/* Inquiries List */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-200px)]">
+              {carInquiries.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">📭</div>
+                  <h3 className="text-xl font-semibold text-white mb-2">No Inquiries Yet</h3>
+                  <p className="text-white/60">
+                    When customers ask about this car, their messages will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {carInquiries.map((inquiry) => (
+                    <div
+                      key={inquiry.customer_id}
+                      className="bg-white/5 hover:bg-white/10 rounded-xl p-4 transition-colors border border-white/10 cursor-pointer"
+                      onClick={() => {
+                        // Open chat with this customer
+                        setShowCarInquiries(false);
+                        setShowChatModal(true);
+                        setSelectedCar(selectedInquiryCar);
+                        // You might want to pass customer info to chat modal
+                      }}
+                    >
+                      <div className="flex items-start space-x-4">
+                        {/* Avatar */}
+                        <div className="flex-shrink-0">
+                          {inquiry.avatar_url ? (
+                            <img 
+                              src={inquiry.avatar_url} 
+                              alt={inquiry.customer_name}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                              {inquiry.customer_name?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Customer Info */}
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="text-white font-semibold">{inquiry.customer_name}</h4>
+                            {inquiry.unread_count > 0 && (
+                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                {inquiry.unread_count} new
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-white/60 text-sm mb-2">{inquiry.customer_email}</p>
+                          <div className="flex items-center space-x-4 text-xs text-white/50">
+                            <span>💬 {inquiry.message_count} message{inquiry.message_count !== 1 ? 's' : ''}</span>
+                            <span>📅 Last: {new Date(inquiry.last_message_date).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Chat Button */}
+                        <button className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm">
+                          Open Chat
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Messages Panel */}
       {showMessagesPanel && (
         <div className="fixed top-20 right-4 w-80 bg-gray-900/95 backdrop-blur-sm border border-white/20 rounded-2xl shadow-2xl z-40 max-h-96 overflow-hidden">
@@ -2220,12 +3125,15 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
 
       {/* Car Management Interface */}
       {managingCarId && (
-        <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
-          <CarManagement 
-            carId={managingCarId}
-            onClose={() => setManagingCarId(null)}
-          />
-        </div>
+        <ManageCar 
+          carId={managingCarId}
+          onClose={() => setManagingCarId(null)}
+          onUpdated={() => {
+            // Reload cars to reflect changes
+            setManagingCarId(null);
+            window.location.reload();
+          }}
+        />
       )}
 
       {/* Profile Settings Modal */}
@@ -2242,7 +3150,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       )}
 
       {/* Phase 4 Advanced Features */}
-      
+      {/* EmergencyButton removed - now available in Profile & Settings > Emergency Info tab */}
       <LiveChatSupport />
       <PerformanceMonitor />
     </div>

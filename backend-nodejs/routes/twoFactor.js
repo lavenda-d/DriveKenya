@@ -1,8 +1,10 @@
-const express = require('express');
-const speakeasy = require('speakeasy');
-const QRCode = require('qrcode');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+import express from 'express';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
+import { emailUser, emailPassword } from '../config/env.js';
+
 const router = express.Router();
 
 // Email transporter setup
@@ -10,8 +12,8 @@ const transporter = nodemailer.createTransporter({
   // Configure your email service
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    user: emailUser,
+    pass: emailPassword
   }
 });
 
@@ -380,4 +382,4 @@ router.post('/login-verify', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

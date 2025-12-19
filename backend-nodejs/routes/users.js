@@ -9,21 +9,25 @@ const router = express.Router();
 // Get user profile
 router.get('/profile', async (req, res, next) => {
   try {
-    const result = await query(`
-      SELECT id, name, email, phone, is_car_owner, avatar_url, profile_photo, is_verified, role, created_at
+    const result = query(`
+      SELECT id, first_name, last_name, email, phone, is_car_owner, avatar_url, profile_photo, is_verified, role, created_at
       FROM users WHERE id = ?
     `, [req.user.id]);
 
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
+    // Add name field by combining first and last name
+    const user = result.rows[0];
+    user.name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+
     res.json({
       success: true,
-      data: { user: result[0] }
+      data: { user }
     });
 
   } catch (error) {

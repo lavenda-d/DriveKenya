@@ -346,6 +346,50 @@ export const initializeSocket = (server) => {
       }
     });
 
+    // Handle video call requests
+    socket.on('request-video-call', async (data) => {
+      try {
+        const { userId, userEmail, userName } = data;
+        
+        console.log(`📹 Video call requested by: ${userName} (${userEmail})`);
+        
+        // Create a notification for admins
+        const adminUsers = query('SELECT id FROM users WHERE role = ?', ['admin']);
+        
+        adminUsers.rows.forEach(admin => {
+          query(`
+            INSERT INTO notifications (user_id, type, title, message, created_at)
+            VALUES (?, ?, ?, ?, ?)
+          `, [
+            admin.id,
+            'admin_message',
+            'Video Call Request',
+            `${userName} (${userEmail}) has requested a video call support session.`,
+            new Date().toISOString()
+          ]);
+          
+          // Send real-time notification to admin if online
+          io.to(`user_${admin.id}`).emit('notification', {
+            type: 'video_call_request',
+            title: 'Video Call Request',
+            message: `${userName} needs video support`,
+            userEmail,
+            userId
+          });
+        });
+        
+        // Confirm to user
+        socket.emit('video_call_requested', {
+          success: true,
+          message: 'Video call request sent. Our support team will contact you shortly.'
+        });
+        
+      } catch (error) {
+        console.error('Video call request error:', error);
+        socket.emit('error', { message: 'Failed to request video call' });
+      }
+    });
+
     // Handle disconnect
     socket.on('disconnect', () => {
       console.log(`🔌 User disconnected: ${socket.user.first_name} ${socket.user.last_name}`);

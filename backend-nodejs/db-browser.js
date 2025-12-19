@@ -1,11 +1,71 @@
 // Database browser for DriveKenya
 import express from 'express';
 import Database from 'better-sqlite3';
+import nodemailer from 'nodemailer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { emailUser, emailPassword, emailHost, emailPort } from './config/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Email configuration
+const mailTransporter = nodemailer.createTransport({
+  host: emailHost,
+  port: emailPort,
+  secure: false,
+  auth: emailUser && emailPassword ? {
+    user: emailUser,
+    pass: emailPassword,
+  } : undefined,
+});
+
+// Helper function to send email notification
+async function sendTicketReplyEmail(userEmail, userName, ticketId, ticketSubject, replyMessage) {
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'support@drivekenya.com',
+      to: userEmail,
+      subject: `Re: ${ticketSubject} (Ticket #${ticketId})`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
+            <h1 style="color: white; margin: 0;">DriveKenya Support</h1>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
+            <h2 style="color: #333;">Hello ${userName},</h2>
+            <p style="color: #666; line-height: 1.6;">
+              We've responded to your support ticket <strong>#${ticketId}</strong>: "${ticketSubject}"
+            </p>
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+              <p style="color: #333; margin: 0; white-space: pre-wrap;">${replyMessage}</p>
+            </div>
+            <p style="color: #666; line-height: 1.6;">
+              If you have any additional questions, please reply to this email or check your ticket status in your account.
+            </p>
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="http://localhost:3000" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                View in Dashboard
+              </a>
+            </div>
+          </div>
+          <div style="background: #333; color: #999; padding: 20px; text-align: center; font-size: 12px;">
+            <p>© 2025 DriveKenya. All rights reserved.</p>
+            <p>This is an automated message from our support system.</p>
+          </div>
+        </div>
+      `,
+      text: `Hello ${userName},\n\nWe've responded to your support ticket #${ticketId}: "${ticketSubject}"\n\n${replyMessage}\n\nIf you have any additional questions, please reply to this email or check your ticket status in your account.\n\nBest regards,\nDriveKenya Support Team`
+    };
+
+    await mailTransporter.sendMail(mailOptions);
+    console.log(`✅ Email sent to ${userEmail} for ticket #${ticketId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Email send error:', error.message);
+    return false;
+  }
+}
 
 const app = express();
 const port = 3001;
@@ -56,13 +116,16 @@ const htmlTemplate = (title, content) => `
                         <i class="fas fa-users mr-1"></i> Users
                     </a>
                     <a href="/cars" class="nav-link bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-                        <i class="fas fa-car mr-1"></i> Cars
+                        <i class="fas fa-car mr-1"></i> Vehicles
                     </a>
                     <a href="/rentals" class="nav-link bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-calendar-check mr-1"></i> Rentals
                     </a>
                     <a href="/reviews" class="nav-link bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-md text-sm font-medium">
                         <i class="fas fa-star mr-1"></i> Reviews
+                    </a>
+                    <a href="/support" class="nav-link bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-headset mr-1"></i> Support Tickets
                     </a>
                 </div>
             </div>
@@ -674,6 +737,7 @@ app.get('/users', (req, res) => {
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Verified</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -687,6 +751,23 @@ app.get('/users', (req, res) => {
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">${user.email_verified ? '<span class="text-green-600">✓</span>' : '<span class="text-red-600">✗</span>'}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(user.created_at).toLocaleDateString()}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="/users/${user.id}/edit" class="text-blue-600 hover:text-blue-900 mr-3" title="Edit User">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        ${!user.email_verified ? `
+                                            <form action="/users/${user.id}/verify" method="POST" style="display: inline;">
+                                                <button type="submit" class="text-green-600 hover:text-green-900 mr-3" title="Verify Email">
+                                                    <i class="fas fa-check-circle"></i> Verify
+                                                </button>
+                                            </form>
+                                        ` : ''}
+                                        <form action="/users/${user.id}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Delete user ${user.email}?')">
+                                            <button type="submit" class="text-red-600 hover:text-red-900" title="Delete User">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -708,9 +789,9 @@ app.get('/cars', (req, res) => {
         const avgPrice = cars.length > 0 ? (cars.reduce((sum, c) => sum + c.price_per_day, 0) / cars.length).toFixed(2) : 0;
         const content = `
             <div class="mb-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4"><i class="fas fa-car text-indigo-500 mr-2"></i>Cars Management</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4"><i class="fas fa-car text-indigo-500 mr-2"></i>Vehicles Management</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500"><p class="text-sm text-gray-600">Total Cars</p><p class="text-2xl font-bold text-gray-900">${totalCars}</p></div>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500"><p class="text-sm text-gray-600">Total Vehicles</p><p class="text-2xl font-bold text-gray-900">${totalCars}</p></div>
                     <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500"><p class="text-sm text-gray-600">Available</p><p class="text-2xl font-bold text-gray-900">${availableCars}</p></div>
                     <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500"><p class="text-sm text-gray-600">Avg Price/Day</p><p class="text-2xl font-bold text-gray-900">KES ${avgPrice}</p></div>
                 </div>
@@ -726,6 +807,7 @@ app.get('/cars', (req, res) => {
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price/Day</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Available</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr></thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             ${cars.map(car => `
@@ -737,6 +819,16 @@ app.get('/cars', (req, res) => {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">KES ${car.price_per_day}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${car.owner_name || 'N/A'}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm">${car.available ? '<span class="text-green-600">✓</span>' : '<span class="text-red-600">✗</span>'}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="/cars/${car.id}/edit" class="text-blue-600 hover:text-blue-900 mr-3" title="Edit Vehicle">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form action="/cars/${car.id}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Delete vehicle ${car.make} ${car.model}?')">
+                                            <button type="submit" class="text-red-600 hover:text-red-900" title="Delete Vehicle">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -778,6 +870,7 @@ app.get('/rentals', (req, res) => {
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr></thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             ${rentals.map(rental => `
@@ -789,6 +882,16 @@ app.get('/rentals', (req, res) => {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(rental.end_date).toLocaleDateString()}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">KES ${rental.total_price}</td>
                                     <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${rental.status === 'active' ? 'bg-green-100 text-green-800' : rental.status === 'completed' ? 'bg-blue-100 text-blue-800' : rental.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}">${rental.status}</span></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="/rentals/${rental.id}/edit" class="text-blue-600 hover:text-blue-900 mr-3" title="Edit Rental">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form action="/rentals/${rental.id}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Delete rental #${rental.id}?')">
+                                            <button type="submit" class="text-red-600 hover:text-red-900" title="Delete Rental">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -827,6 +930,7 @@ app.get('/reviews', (req, res) => {
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rating</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comment</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr></thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             ${reviews.map(review => `
@@ -837,6 +941,13 @@ app.get('/reviews', (req, res) => {
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${'⭐'.repeat(review.rating)}</td>
                                     <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">${review.comment || '<span class="text-gray-400 italic">No comment</span>'}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(review.created_at).toLocaleDateString()}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <form action="/reviews/${review.id}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Delete review from ${review.reviewer_name}?')">
+                                            <button type="submit" class="text-red-600 hover:text-red-900" title="Delete Review">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -849,6 +960,749 @@ app.get('/reviews', (req, res) => {
         res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
     }
 });
+
+// Support Tickets route
+app.get('/support', (req, res) => {
+    try {
+        const tickets = db.prepare(`
+            SELECT 
+                st.*,
+                u.first_name || ' ' || u.last_name as user_name,
+                u.email as user_email,
+                u.phone as user_phone
+            FROM support_tickets st
+            JOIN users u ON st.user_id = u.id
+            ORDER BY 
+                CASE st.status 
+                    WHEN 'open' THEN 1 
+                    WHEN 'in_progress' THEN 2 
+                    ELSE 3 
+                END,
+                st.created_at DESC
+        `).all();
+        
+        const openCount = tickets.filter(t => t.status === 'open').length;
+        const inProgressCount = tickets.filter(t => t.status === 'in_progress').length;
+        const resolvedCount = tickets.filter(t => t.status === 'resolved').length;
+
+        const content = `
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-headset text-red-500 mr-2"></i>Support Tickets Management
+                </h2>
+                
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+                        <p class="text-sm text-gray-600">Total Tickets</p>
+                        <p class="text-2xl font-bold text-gray-900">${tickets.length}</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+                        <p class="text-sm text-gray-600">Open</p>
+                        <p class="text-2xl font-bold text-yellow-600">${openCount}</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+                        <p class="text-sm text-gray-600">In Progress</p>
+                        <p class="text-2xl font-bold text-orange-600">${inProgressCount}</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+                        <p class="text-sm text-gray-600">Resolved</p>
+                        <p class="text-2xl font-bold text-green-600">${resolvedCount}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white shadow overflow-hidden border border-gray-200 rounded-lg">
+                <div class="table-container overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${tickets.map(ticket => `
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">#${ticket.id}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        <div class="font-medium">${ticket.user_name}</div>
+                                        <div class="text-gray-500 text-xs">${ticket.user_email}</div>
+                                        <div class="text-gray-500 text-xs">${ticket.user_phone || 'N/A'}</div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">
+                                        <div class="max-w-xs">${ticket.subject}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                            ${ticket.category}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                            ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                            ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                            ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-green-100 text-green-800'
+                                        }">
+                                            ${ticket.priority}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                            ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                            ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                            ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }">
+                                            ${ticket.status.replace('_', ' ')}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        ${new Date(ticket.created_at).toLocaleString()}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">
+                                        <div class="max-w-md">${ticket.description}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <a href="/support/${ticket.id}" class="text-blue-600 hover:text-blue-900 font-medium mr-3">
+                                            <i class="fas fa-eye mr-1"></i>View & Reply
+                                        </a>
+                                        <form action="/support/${ticket.id}/delete" method="POST" style="display: inline;" onsubmit="return confirm('Delete ticket #${ticket.id}?')">
+                                            <button type="submit" class="text-red-600 hover:text-red-900" title="Delete Ticket">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ${tickets.length === 0 ? `
+                    <div class="text-center py-12">
+                        <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
+                        <p class="text-gray-500 text-lg">No support tickets found</p>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        res.send(htmlTemplate('Support Tickets', content));
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Support Ticket Detail & Reply
+app.get('/support/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const ticket = db.prepare(`
+            SELECT 
+                st.*,
+                u.first_name || ' ' || u.last_name as user_name,
+                u.email as user_email,
+                u.phone as user_phone
+            FROM support_tickets st
+            JOIN users u ON st.user_id = u.id
+            WHERE st.id = ?
+        `).get(id);
+
+        if (!ticket) {
+            return res.status(404).send(htmlTemplate('Error', '<div class="text-red-600">Ticket not found</div>'));
+        }
+
+        const messages = db.prepare(`
+            SELECT tm.*,
+                   CASE 
+                       WHEN tm.sender_type = 'user' THEN u.first_name || ' ' || u.last_name
+                       WHEN tm.sender_type = 'admin' THEN a.first_name || ' ' || a.last_name
+                       ELSE 'System'
+                   END as sender_name
+            FROM ticket_messages tm
+            LEFT JOIN users u ON tm.sender_type = 'user' AND tm.sender_id = u.id
+            LEFT JOIN users a ON tm.sender_type = 'admin' AND tm.sender_id = a.id
+            WHERE tm.ticket_id = ?
+            ORDER BY tm.created_at ASC
+        `).all(id);
+
+        const content = `
+            <div class="mb-6">
+                <a href="/support" class="text-blue-600 hover:text-blue-800 inline-flex items-center mb-4">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Tickets
+                </a>
+                
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">${ticket.subject}</h2>
+                            <p class="text-gray-600">Ticket #${ticket.id} • Created ${new Date(ticket.created_at).toLocaleString()}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="px-3 py-1 text-sm font-semibold rounded-full ${
+                                ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                            }">
+                                ${ticket.priority.toUpperCase()}
+                            </span>
+                            <span class="px-3 py-1 text-sm font-semibold rounded-full ${
+                                ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                            }">
+                                ${ticket.status.replace('_', ' ').toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6 mb-6 p-4 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Customer</p>
+                            <p class="font-semibold text-gray-900">${ticket.user_name}</p>
+                            <p class="text-sm text-gray-600">${ticket.user_email}</p>
+                            <p class="text-sm text-gray-600">${ticket.user_phone || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Category</p>
+                            <p class="font-semibold text-gray-900">${ticket.category}</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-gray-200 pt-4">
+                        <p class="text-sm text-gray-600 mb-2">Original Message:</p>
+                        <p class="text-gray-900">${ticket.description}</p>
+                    </div>
+                </div>
+
+                <!-- Status Update Buttons -->
+                <div class="bg-white rounded-lg shadow p-4 mb-6">
+                    <h3 class="font-semibold text-gray-900 mb-3">Update Status:</h3>
+                    <div class="flex gap-2">
+                        ${ticket.status === 'open' ? `
+                            <form action="/support/${ticket.id}/update-status" method="POST" style="display: inline;">
+                                <input type="hidden" name="status" value="in_progress">
+                                <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium">
+                                    <i class="fas fa-hourglass-half mr-1"></i> Mark In Progress
+                                </button>
+                            </form>
+                        ` : ''}
+                        ${ticket.status === 'open' || ticket.status === 'in_progress' ? `
+                            <form action="/support/${ticket.id}/update-status" method="POST" style="display: inline;">
+                                <input type="hidden" name="status" value="resolved">
+                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i> Mark Resolved
+                                </button>
+                            </form>
+                        ` : ''}
+                        ${ticket.status === 'resolved' ? `
+                            <form action="/support/${ticket.id}/update-status" method="POST" style="display: inline;">
+                                <input type="hidden" name="status" value="closed">
+                                <button type="submit" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium">
+                                    <i class="fas fa-times-circle mr-1"></i> Close Ticket
+                                </button>
+                            </form>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Conversation -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        <i class="fas fa-comments mr-2"></i>Conversation
+                    </h3>
+                    
+                    ${messages.length > 0 ? `
+                        <div class="space-y-4 mb-6">
+                            ${messages.map(msg => `
+                                <div class="flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}">
+                                    <div class="max-w-lg ${msg.sender_type === 'admin' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'} rounded-lg p-4">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-sm font-semibold">${msg.sender_name}</span>
+                                            <span class="text-xs opacity-75">${new Date(msg.created_at).toLocaleString()}</span>
+                                        </div>
+                                        <p class="text-sm">${msg.message}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<p class="text-gray-500 mb-6">No messages yet</p>'}
+
+                    <!-- Reply Form -->
+                    <form action="/support/${ticket.id}/reply" method="POST" class="border-t border-gray-200 pt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Your Reply:</label>
+                        <textarea 
+                            name="message" 
+                            required
+                            rows="4" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Type your response to the customer..."></textarea>
+                        <button 
+                            type="submit" 
+                            class="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium inline-flex items-center">
+                            <i class="fas fa-paper-plane mr-2"></i> Send Reply
+                        </button>
+                    </form>
+                </div>
+            </div>
+        `;
+        res.send(htmlTemplate(`Ticket #${ticket.id}`, content));
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Handle reply submission
+app.use(express.urlencoded({ extended: true }));
+app.post('/support/:id/reply', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { message } = req.body;
+
+        if (!message) {
+            return res.redirect(`/support/${id}?error=Message required`);
+        }
+
+        // Get ticket and user details
+        const ticket = db.prepare(`
+            SELECT st.*, u.email as user_email, u.first_name || ' ' || u.last_name as user_name
+            FROM support_tickets st
+            JOIN users u ON st.user_id = u.id
+            WHERE st.id = ?
+        `).get(id);
+
+        if (!ticket) {
+            return res.redirect('/support?error=Ticket not found');
+        }
+
+        // Insert reply (admin_id 1 is a placeholder - in production, use actual admin session)
+        db.prepare(`
+            INSERT INTO ticket_messages (ticket_id, sender_type, sender_id, message, created_at)
+            VALUES (?, 'admin', 1, ?, ?)
+        `).run(id, message, new Date().toISOString());
+
+        // Update ticket status to in_progress if it was open
+        db.prepare(`
+            UPDATE support_tickets 
+            SET status = CASE WHEN status = 'open' THEN 'in_progress' ELSE status END,
+                updated_at = ?
+            WHERE id = ?
+        `).run(new Date().toISOString(), id);
+
+        // Send email notification to customer
+        await sendTicketReplyEmail(
+            ticket.user_email,
+            ticket.user_name,
+            ticket.id,
+            ticket.subject,
+            message
+        );
+
+        res.redirect(`/support/${id}`);
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Handle status update
+app.post('/support/:id/update-status', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ['open', 'in_progress', 'resolved', 'closed'];
+        if (!validStatuses.includes(status)) {
+            return res.redirect(`/support/${id}?error=Invalid status`);
+        }
+
+        db.prepare(`
+            UPDATE support_tickets 
+            SET status = ?,
+                resolved_at = CASE WHEN ? IN ('resolved', 'closed') THEN ? ELSE resolved_at END,
+                updated_at = ?
+            WHERE id = ?
+        `).run(status, status, new Date().toISOString(), new Date().toISOString(), id);
+
+        res.redirect(`/support/${id}`);
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// ==================== EDIT FORMS AND UPDATE ROUTES ====================
+
+// User Edit Form
+app.get('/users/:id/edit', (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+        
+        if (!user) {
+            return res.status(404).send(htmlTemplate('Error', '<div class="text-red-600">User not found</div>'));
+        }
+
+        const content = `
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-user-edit text-blue-500 mr-2"></i>Edit User #${user.id}
+                </h2>
+                
+                <div class="bg-white shadow overflow-hidden border border-gray-200 rounded-lg p-6">
+                    <form method="POST" action="/users/${user.id}/update">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" name="email" value="${user.email}" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                <input type="text" name="first_name" value="${user.first_name || ''}" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                <input type="text" name="last_name" value="${user.last_name || ''}" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                <input type="tel" name="phone" value="${user.phone || ''}" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                <select name="role" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="customer" ${user.role === 'customer' ? 'selected' : ''}>Customer</option>
+                                    <option value="host" ${user.role === 'host' ? 'selected' : ''}>Host</option>
+                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <input type="checkbox" name="email_verified" id="email_verified" ${user.email_verified ? 'checked' : ''}
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="email_verified" class="ml-2 block text-sm text-gray-700">Email Verified</label>
+                            </div>
+                            
+                            <div class="flex gap-3 pt-4">
+                                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <i class="fas fa-save mr-2"></i>Save Changes
+                                </button>
+                                <a href="/users" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                                    <i class="fas fa-times mr-2"></i>Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        res.send(htmlTemplate('Edit User', content));
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// User Update Handler
+app.post('/users/:id/update', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { email, first_name, last_name, phone, role, email_verified } = req.body;
+        
+        db.prepare(`
+            UPDATE users 
+            SET email = ?, first_name = ?, last_name = ?, phone = ?, role = ?, email_verified = ?
+            WHERE id = ?
+        `).run(email, first_name, last_name, phone || null, role, email_verified ? 1 : 0, id);
+        
+        res.redirect('/users');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Car Edit Form
+app.get('/cars/:id/edit', (req, res) => {
+    try {
+        const { id } = req.params;
+        const car = db.prepare('SELECT * FROM cars WHERE id = ?').get(id);
+        const hosts = db.prepare("SELECT id, first_name, last_name FROM users WHERE role = 'host'").all();
+        
+        if (!car) {
+            return res.status(404).send(htmlTemplate('Error', '<div class="text-red-600">Car not found</div>'));
+        }
+
+        const content = `
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-car text-indigo-500 mr-2"></i>Edit Vehicle #${car.id}
+                </h2>
+                
+                <div class="bg-white shadow overflow-hidden border border-gray-200 rounded-lg p-6">
+                    <form method="POST" action="/cars/${car.id}/update">
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Make</label>
+                                    <input type="text" name="make" value="${car.make}" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                                    <input type="text" name="model" value="${car.model}" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                                    <input type="number" name="year" value="${car.year}" required min="1900" max="2100"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">License Plate</label>
+                                    <input type="text" name="license_plate" value="${car.license_plate}" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Price per Day (KES)</label>
+                                <input type="number" name="price_per_day" value="${car.price_per_day}" required min="0" step="0.01"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Owner (Host)</label>
+                                <select name="host_id" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    ${hosts.map(host => `
+                                        <option value="${host.id}" ${car.host_id === host.id ? 'selected' : ''}>
+                                            ${host.first_name} ${host.last_name}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center">
+                                <input type="checkbox" name="available" id="available" ${car.available ? 'checked' : ''}
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="available" class="ml-2 block text-sm text-gray-700">Available for Rent</label>
+                            </div>
+                            
+                            <div class="flex gap-3 pt-4">
+                                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <i class="fas fa-save mr-2"></i>Save Changes
+                                </button>
+                                <a href="/cars" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                                    <i class="fas fa-times mr-2"></i>Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        res.send(htmlTemplate('Edit Vehicle', content));
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Car Update Handler
+app.post('/cars/:id/update', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { make, model, year, license_plate, price_per_day, host_id, available } = req.body;
+        
+        db.prepare(`
+            UPDATE cars 
+            SET make = ?, model = ?, year = ?, license_plate = ?, price_per_day = ?, host_id = ?, available = ?
+            WHERE id = ?
+        `).run(make, model, parseInt(year), license_plate, parseFloat(price_per_day), parseInt(host_id), available ? 1 : 0, id);
+        
+        res.redirect('/cars');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Car Delete Handler
+app.post('/cars/:id/delete', (req, res) => {
+    try {
+        const { id } = req.params;
+        db.prepare('DELETE FROM cars WHERE id = ?').run(id);
+        res.redirect('/cars');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Rental Edit Form
+app.get('/rentals/:id/edit', (req, res) => {
+    try {
+        const { id } = req.params;
+        const rental = db.prepare('SELECT * FROM rentals WHERE id = ?').get(id);
+        
+        if (!rental) {
+            return res.status(404).send(htmlTemplate('Error', '<div class="text-red-600">Rental not found</div>'));
+        }
+
+        const content = `
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-calendar-check text-yellow-500 mr-2"></i>Edit Rental #${rental.id}
+                </h2>
+                
+                <div class="bg-white shadow overflow-hidden border border-gray-200 rounded-lg p-6">
+                    <form method="POST" action="/rentals/${rental.id}/update">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                <input type="date" name="start_date" value="${rental.start_date?.split('T')[0] || ''}" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                <input type="date" name="end_date" value="${rental.end_date?.split('T')[0] || ''}" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Total Price (KES)</label>
+                                <input type="number" name="total_price" value="${rental.total_price}" required min="0" step="0.01"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select name="status" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="pending" ${rental.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="confirmed" ${rental.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
+                                    <option value="active" ${rental.status === 'active' ? 'selected' : ''}>Active</option>
+                                    <option value="completed" ${rental.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                    <option value="cancelled" ${rental.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex gap-3 pt-4">
+                                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <i class="fas fa-save mr-2"></i>Save Changes
+                                </button>
+                                <a href="/rentals" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                                    <i class="fas fa-times mr-2"></i>Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        res.send(htmlTemplate('Edit Rental', content));
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Rental Update Handler
+app.post('/rentals/:id/update', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { start_date, end_date, total_price, status } = req.body;
+        
+        db.prepare(`
+            UPDATE rentals 
+            SET start_date = ?, end_date = ?, total_price = ?, status = ?
+            WHERE id = ?
+        `).run(start_date, end_date, parseFloat(total_price), status, id);
+        
+        res.redirect('/rentals');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Rental Delete Handler
+app.post('/rentals/:id/delete', (req, res) => {
+    try {
+        const { id } = req.params;
+        db.prepare('DELETE FROM rentals WHERE id = ?').run(id);
+        res.redirect('/rentals');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Review Delete Handler
+app.post('/reviews/:id/delete', (req, res) => {
+    try {
+        const { id } = req.params;
+        db.prepare('DELETE FROM reviews WHERE id = ?').run(id);
+        res.redirect('/reviews');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// Support Ticket Delete Handler
+app.post('/support/:id/delete', (req, res) => {
+    try {
+        const { id } = req.params;
+        // Delete messages first (foreign key constraint)
+        db.prepare('DELETE FROM ticket_messages WHERE ticket_id = ?').run(id);
+        db.prepare('DELETE FROM support_tickets WHERE id = ?').run(id);
+        res.redirect('/support');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// ==================== VERIFICATION/STATUS ROUTES ====================
+
+// User verification endpoint
+app.post('/users/:id/verify', (req, res) => {
+    try {
+        const { id } = req.params;
+        db.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').run(id);
+        res.redirect('/users');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
+// User deletion endpoint
+app.post('/users/:id/delete', (req, res) => {
+    try {
+        const { id } = req.params;
+        db.prepare('DELETE FROM users WHERE id = ?').run(id);
+        res.redirect('/users');
+    } catch (err) {
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+    }
+});
+
 // Start the server
 app.listen(port, () => {
     console.log(`🌐 Database Browser running at http://localhost:${port}`);

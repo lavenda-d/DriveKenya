@@ -25,9 +25,10 @@ router.get('/', async (req, res, next) => {
       transmission,
       fuelType,
       category,
+      vehicleType,
       availability,
       page = 1,
-      limit = 12,
+      limit = 100,
       sortBy = 'created_at',
       sortOrder = 'desc'
     } = req.query;
@@ -76,6 +77,12 @@ router.get('/', async (req, res, next) => {
       paramCount++;
       queryText += ` AND LOWER(c.category) = LOWER(?)`;
       queryParams.push(category);
+    }
+
+    if (vehicleType && vehicleType !== 'all') {
+      paramCount++;
+      queryText += ` AND LOWER(c.vehicle_type) = LOWER(?)`;
+      queryParams.push(vehicleType);
     }
 
     if (availability && availability !== 'any') {
@@ -389,7 +396,9 @@ router.post('/', authenticateToken, requireVerified, validateCar, async (req, re
       category,
       availability_status = 'available',
       price_per_day,
-      color
+      color,
+      license_plate,
+      vehicle_type = 'car'
     } = req.body;
 
     // Build gallery array: prioritize uploaded images, fallback to URLs
@@ -408,27 +417,42 @@ router.post('/', authenticateToken, requireVerified, validateCar, async (req, re
     // Use main_image_url if provided, otherwise use first gallery image
     const mainImage = main_image_url || (galleryImages.length > 0 ? galleryImages[0] : '');
 
+    // Get owner info from authenticated user
+    const ownerName = `${req.user.first_name} ${req.user.last_name}`;
+    const ownerEmail = req.user.email;
+    const ownerPhone = req.user.phone || '';
+
     const result = query(`
       INSERT INTO cars (
-        host_id, make, model, year, color, location, description, features, 
+        host_id, owner_name, owner_email, owner_phone,
+        make, model, year, color, location, description, features, 
         images, main_image_url, gallery_json, video_url, fuel_type, transmission,
-        category, availability_status, price_per_day, license_plate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        category, availability_status, price_per_day, license_plate, vehicle_type, available
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      req.user.id, make, model, year, color || '', location, description || '',
+      req.user.id, ownerName, ownerEmail, ownerPhone,
+      make, model, year, color || '', location, description || '',
       JSON.stringify(features || []), JSON.stringify(galleryImages), mainImage,
       JSON.stringify(galleryImages), video_url || '', fuel_type || 'petrol',
       transmission || 'manual', category || 'economy', availability_status,
-      price_per_day, `${make}-${model}-${Date.now()}` // Generate license plate
+      price_per_day, license_plate || `${make}-${model}-${Date.now()}`, vehicle_type, 1
     ]);
+
+    console.log('✅ Car created successfully with ID:', result.lastInsertRowid);
 
     res.status(201).json({
       success: true,
       message: 'Car created successfully',
-      data: { car: result.rows[0] }
+      data: { 
+        car: { 
+          id: result.lastInsertRowid,
+          ...req.body 
+        } 
+      }
     });
 
   } catch (error) {
+    console.error('❌ Error creating car:', error);
     next(error);
   }
 });

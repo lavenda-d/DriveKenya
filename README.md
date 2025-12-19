@@ -1,65 +1,112 @@
-# 🚗 DriveKenya - Premium Car Rental Platform
+# 🚗 DriveKenya - Premium Vehicle Rental Platform
 
-> **A comprehensive, full-stack peer-to-peer car rental platform connecting car owners with renters in Nairobi, featuring real-time communication, advanced booking management, progressive web app capabilities, and enterprise-grade features.**
+> **A comprehensive, full-stack peer-to-peer vehicle rental platform connecting vehicle owners with renters in Nairobi, featuring real-time communication, advanced booking management, email notifications, password recovery, progressive web app capabilities, and enterprise-grade features.**
 
-**Built with:** React 18 + TypeScript • Node.js + Express • SQLite • Socket.io • Google Maps API
+**Built with:** React 18 + TypeScript • Node.js + Express • SQLite • Socket.io • Google Maps API • Nodemailer
+
+**Version:** 1.0.0 | **Status:** Production Ready ✅
 
 ---
 
 ## 📖 **Table of Contents**
-1. [Overview](#overview)
-2. [What is DriveKenya?](#what-is-driveKenya)
-3. [Complete Feature List](#complete-feature-list)
-4. [User Roles & Capabilities](#user-roles--capabilities)
-5. [Technology Stack](#technology-stack)
-6. [Getting Started](#getting-started)
-7. [Architecture & Design](#architecture--design)
-8. [Database Schema](#database-schema)
-9. [API Documentation](#api-documentation)
-10. [Security Features](#security-features)
-11. [Deployment Guide](#deployment-guide)
-12. [Troubleshooting](#troubleshooting)
+1. [What's New in Version 1.0](#whats-new-in-version-10)
+2. [Overview](#overview)
+3. [What is DriveKenya?](#what-is-driveKenya)
+4. [Complete Feature List](#complete-feature-list)
+5. [User Roles & Capabilities](#user-roles--capabilities)
+6. [Technology Stack](#technology-stack)
+7. [Getting Started](#getting-started)
+8. [Architecture & Design](#architecture--design)
+9. [Database Schema](#database-schema)
+10. [API Documentation](#api-documentation)
+11. [Security Features](#security-features)
+12. [Deployment Guide](#deployment-guide)
+13. [Troubleshooting](#troubleshooting)
+14. [Feature Status](#feature-status)
+15. [Recent Updates](#recent-updates)
+16. [Support & Contributing](#support--contributing)
 
 ---
 
-## 🎯 **Overview**
+## � **What's New in Version 1.0**
+
+### **Latest Updates (December 2025)**
+
+#### **✨ Password Recovery System**
+- Full forgot password feature with email-based reset
+- Secure UUID token generation with 1-hour expiration
+- Professional HTML email templates sent via Nodemailer
+- Gmail SMTP integration (drivekenyaorg@gmail.com)
+
+#### **📧 Enhanced Contact System**
+- Contact form messages forwarded to admin email
+- Dual storage: database + instant email notification
+- Reply-To headers for seamless customer communication
+
+#### **🖼️ Profile Photo Persistence**
+- Fixed profile photos disappearing after logout/login
+- Profile pictures now maintained across all sessions
+
+#### **🔔 Welcome Notifications**
+- New users receive 2 welcome messages upon registration
+- In-app notification system fully functional
+
+#### **🚗 Complete Vehicle Fleet**
+- 45+ diverse vehicles now displaying correctly
+- Fixed pagination limit (increased from 12 to 100)
+- All vehicle types: cars, SUVs, trucks, vans, motorcycles, bicycles, electric vehicles
+
+#### **🌍 Language Preference UI**
+- "Coming Soon" badge on language selector
+- i18n infrastructure ready for English/Swahili
+
+#### **📱 Contact Information**
+- Primary Email: **drivekenyaorg@gmail.com**
+- Support Phone: **+254 717 052 939**
+- 24/7 emergency assistance available
+
+---
+
+## �🎯 **Overview**
 
 **DriveKenya** is a modern, secure, and feature-rich car rental platform designed specifically for Nairobi, Kenya. It enables car owners to list their vehicles and earn income while providing renters with an easy, transparent way to find and book quality vehicles for short or long-term use.
 
 ### **Key Highlights**
 - 🌐 **Peer-to-Peer Platform**: Direct connection between car owners and renters
 - 💬 **Real-Time Communication**: Instant chat between users with WebSocket technology
+- � **Email System**: Password reset & contact form notifications via Gmail SMTP
 - 📱 **Progressive Web App**: Install on any device, works offline
 - 🗺️ **Location Intelligence**: Google Maps integration for pickup/drop-off
+- 🚗 **Various Vehicles**: Complete fleet covering all transportation needs
 - 💰 **Flexible Payments**: Cash, M-Pesa, and more payment options
-- 🔐 **Enterprise Security**: JWT authentication, role-based access, data encryption
-- 🚀 **Production Ready**: Built for scale with modern best practices
+- 🔐 **Enterprise Security**: JWT, Bcrypt (12 rounds), secure password recovery
+- 🚀 **Production Ready**: Version 1.0 - Built for scale with modern best practices
 
 ---
 
 ## 🏢 **What is DriveKenya?**
 
 ### **The Problem We Solve**
-In Nairobi, car rental services are often expensive, inflexible, and controlled by large corporations. Individual car owners have vehicles sitting idle, while potential renters struggle to find affordable, convenient options.
+In Nairobi, vehicle rental services are often expensive, inflexible, and controlled by large corporations. Individual vehicle owners have cars, motorcycles, bicycles, and other vehicles sitting idle, while potential renters struggle to find affordable, convenient options.
 
 ### **Our Solution**
 DriveKenya creates a trusted marketplace where:
-- **Car Owners** can monetize their idle vehicles with full control over pricing and availability
-- **Renters** access a wide variety of vehicles at competitive prices with transparent terms
+- **Vehicle Owners** can monetize their idle vehicles (cars, SUVs, trucks, vans, motorcycles, bicycles, electric vehicles) with full control over pricing and availability
+- **Renters** access a wide variety of transportation options at competitive prices with transparent terms
 - **Both parties** communicate directly, build trust, and complete transactions securely
 
 ### **Who It Serves**
-1. **Car Owners/Hosts**: Individuals looking to earn passive income from their vehicles
+1. **Vehicle Owners/Hosts**: Individuals looking to earn passive income from their vehicles
 2. **Renters/Customers**: Locals, tourists, and businesses needing temporary transportation
 3. **Administrators**: Platform managers ensuring quality, safety, and user satisfaction
 
 ### **Mission & Vision**
-**Mission**: Democratize car rental in Nairobi by connecting car owners directly with renters through technology.
+**Mission**: Democratize vehicle rental in Nairobi by connecting vehicle owners directly with renters through technology.
 
 **Vision**: Become East Africa's leading peer-to-peer vehicle sharing platform, fostering economic opportunity and sustainable transportation.
 
 ### **Impact**
-- 💼 **Economic Empowerment**: Help car owners generate income
+- 💼 **Economic Empowerment**: Help vehicle owners generate income
 - 🌍 **Environmental**: Maximize vehicle utilization, reduce need for new cars
 - 🤝 **Community**: Build trust through transparent ratings and reviews
 - 📈 **Accessibility**: Make quality vehicles affordable for everyone
@@ -71,22 +118,30 @@ DriveKenya creates a trusted marketplace where:
 ### **🔐 Authentication & User Management**
 - **Multi-Role System**: Customer, Host (Car Owner), and Administrator roles
 - **JWT Authentication**: Secure token-based login with 7-day expiration
+- **Password Recovery**: Forgot password feature with email-based reset
+  - Token-based password reset with 1-hour expiration
+  - Professional HTML email templates via Nodemailer
+  - Secure UUID tokens stored with expiration timestamps
 - **Email Verification**: Account verification with development bypass
-- **Password Security**: Bcrypt hashing with salt rounds
+- **Password Security**: Bcrypt hashing (12 rounds) with salt
+- **Profile Photo Persistence**: Profile pictures maintained across sessions
+- **Welcome Notifications**: New users receive 2 welcome notifications on signup
 - **Profile Management**: Edit personal details, upload profile photos
 - **Multi-Browser Support**: Seamless authentication across devices
 - **Session Management**: Automatic token refresh and logout
 
 ### **🚗 Car Listing & Management**
+- **Diverse Vehicles**: Complete fleet including sedans, SUVs, trucks, vans, motorcycles, bicyles, and electric vehicles
 - **Comprehensive Car Profiles**: Make, model, year, color, specs, features
 - **Multiple Images**: Support for `main_image_url` and JSON `images` array
 - **Video Support**: Optional car videos for better presentation
 - **Detailed Specifications**: Fuel type, transmission, category, seats
-- **Pricing Control**: Set daily rates with flexible adjustments
+- **Pricing Control**: Set daily rates with flexible adjustments (0-50,000 KSh)
 - **Availability Management**: Calendar-based blackout dates
 - **Status Indicators**: Available, Booked, Under Maintenance
 - **Feature Tags**: Air conditioning, GPS, Bluetooth, sunroof, etc.
 - **Location Settings**: Set car location with Google Maps
+- **Pagination Fixed**: Display all vehicles (limit increased from 12 to 100)
 
 ### **🔍 Advanced Search & Filtering**
 - **Multi-Criteria Search**: Filter by price range (0-50,000 KSh), category, location
@@ -179,17 +234,17 @@ DriveKenya creates a trusted marketplace where:
 - **Notification Preferences**: Control what alerts you receive
 - **Language Selection**: English / Kiswahili (i18n ready)
 
-### **🏠 "My Cars" Section (For Car Owners)**
-- **Car Dashboard**: View all your listed vehicles
+### **🏠 "My Vehicles" Section (For Vehicle Owners)**
+- **Vehicle Dashboard**: View all your listed vehicles
 - **Performance Metrics**: Bookings, revenue, ratings
-- **Image Display**: All car images properly shown
+- **Image Display**: All vehicle images properly shown
 - **Quick Actions**:
-  - **Manage Car**: Edit details, pricing, availability
-  - **View Messages**: All conversations about specific car
+  - **Manage Vehicle**: Edit details, pricing, availability
+  - **View Messages**: All conversations about specific vehicle
   - **Update Availability**: Toggle available/unavailable
-  - **View Bookings**: See all bookings for each car
-- **Add New Car**: List additional vehicles
-- **Delete/Archive**: Remove cars from listings
+  - **View Bookings**: See all bookings for each vehicle
+- **Add New Vehicle**: List additional vehicles
+- **Delete/Archive**: Remove vehicles from listings
 
 ### **🛠️ Settings & Preferences**
 - **Profile Settings**: Edit all personal information
@@ -203,7 +258,12 @@ DriveKenya creates a trusted marketplace where:
 ### **🆘 Support System**
 - **Live Chat Support**: Automated support with expanded replies
 - **FAQ Section**: Common questions and answers
-- **Contact Form**: Direct message to admin
+- **Contact Form**: Direct message to admin with email forwarding
+  - All submissions saved to database
+  - Instant email notification to **drivekenyaorg@gmail.com**
+  - Reply-To set to customer email for direct responses
+  - Professional HTML email formatting
+- **Emergency Contact**: **+254 717 052 939** for urgent assistance
 - **Help Center**: Comprehensive guides and tutorials
 - **Status Display**: Show support availability
 - **No "Connecting" State**: Direct automated responses
@@ -221,11 +281,15 @@ DriveKenya creates a trusted marketplace where:
 
 ### **ℹ️ About Us Page**
 - **Company Overview**: Mission, vision, values
+- **Inclusive Vehicle Types**: Covers all transportation modes (cars, SUVs, trucks, vans, motorcycles, bicycles, electric vehicles)
 - **Team Information**: Who runs DriveKenya
-- **How It Works**: Step-by-step platform explanation
+- **How It Works**: Step-by-step platform explanation for all vehicle categories
 - **Trust & Safety**: Security measures and policies
 - **Community Impact**: Economic and environmental benefits
-- **Contact Information**: Reach the team
+- **Contact Information**: 
+  - Email: **drivekenyaorg@gmail.com**
+  - Phone: **+254 717 052 939**
+  - Based in Nairobi, Kenya
 
 ### **📱 Progressive Web App (PWA)**
 - **Installable**: Add to home screen on mobile and desktop
@@ -238,7 +302,10 @@ DriveKenya creates a trusted marketplace where:
 - **Update Prompts**: Notify users of new versions
 
 ### **🌍 Localization & Accessibility**
-- **Multi-Language**: English and Swahili (Kiswahili)
+- **Multi-Language**: English and Swahili (Kiswahili) - **Coming Soon** badge displayed
+  - Infrastructure ready with i18next
+  - Language selector UI implemented in Profile Settings
+  - Currently showing "Coming Soon" to users
 - **Timezone Accuracy**: East Africa Time (EAT) throughout
 - **Responsive Design**: Works on all screen sizes
 - **Keyboard Navigation**: Full keyboard accessibility
@@ -265,43 +332,43 @@ DriveKenya creates a trusted marketplace where:
 **Primary Goal**: Find and book vehicles for personal or business use
 
 **Capabilities**:
-- Browse and search available cars
-- Filter by price, location, features, ratings
-- View detailed car information with images/videos
+- Browse and search available vehicles (cars, motorcycles, bicycles, etc.)
+- Filter by price, location, features, ratings, vehicle type
+- View detailed vehicle information with images/videos
 - Select pickup/drop-off locations on map
-- Book cars with date selection
+- Book vehicles with date selection
 - Choose payment method
-- Chat with car owners
+- Chat with vehicle owners
 - Receive booking notifications
-- Rate and review cars after rental
+- Rate and review vehicles after rental
 - Manage booking history
 - Update personal profile
 - Install PWA for easy access
 
 **Typical User Journey**:
-1. Sign up/Login → 2. Search Cars → 3. Select Vehicle → 4. Choose Dates & Location → 5. Select Payment → 6. Confirm Booking → 7. Chat with Owner → 8. Pick Up Car → 9. Return Car → 10. Leave Review
+1. Sign up/Login → 2. Search Vehicles → 3. Select Vehicle → 4. Choose Dates & Location → 5. Select Payment → 6. Confirm Booking → 7. Chat with Owner → 8. Pick Up Vehicle → 9. Return Vehicle → 10. Leave Review
 
-### **2. Host/Car Owner**
+### **2. Host/Vehicle Owner**
 **Primary Goal**: List vehicles and earn rental income
 
 **Capabilities**:
-- List multiple cars with comprehensive details
-- Upload car images and videos
+- List multiple vehicles (cars, SUVs, motorcycles, bicycles, etc.) with comprehensive details
+- Upload vehicle images and videos
 - Set pricing (daily rates)
 - Manage availability calendar (blackout dates)
-- Set car location and service area
+- Set vehicle location and service area
 - Receive booking requests with notifications
 - Accept or decline bookings
 - Chat with multiple renters
 - View performance metrics (bookings, revenue)
 - Manage booking status (confirm, cancel, complete)
 - Respond to customer reviews
-- Update car details anytime
+- Update vehicle details anytime
 - View earnings and payment history
 - Manage profile and contact information
 
 **Typical User Journey**:
-1. Sign up as Host → 2. List First Car (photos, details, pricing) → 3. Set Availability → 4. Receive Booking Request → 5. Review Renter Profile → 6. Chat to Confirm Details → 7. Accept Booking → 8. Arrange Pickup → 9. Hand Over Car → 10. Receive Car Back → 11. Confirm Return → 12. Receive Payment
+1. Sign up as Host → 2. List First Vehicle (photos, details, pricing) → 3. Set Availability → 4. Receive Booking Request → 5. Review Renter Profile → 6. Chat to Confirm Details → 7. Accept Booking → 8. Arrange Pickup → 9. Hand Over Vehicle → 10. Receive Vehicle Back → 11. Confirm Return → 12. Receive Payment
 
 ### **3. Administrator**
 **Primary Goal**: Manage platform, ensure quality, resolve disputes
@@ -310,7 +377,7 @@ DriveKenya creates a trusted marketplace where:
 - Access comprehensive admin dashboard (`db-browser.js`)
 - View and edit all users (customers, hosts, admins)
 - Approve/suspend user accounts
-- Review and approve car listings
+- Review and approve vehicle listings
 - Monitor all bookings and transactions
 - Access full chat histories
 - Handle support tickets
@@ -324,7 +391,7 @@ DriveKenya creates a trusted marketplace where:
 - Manage content (About Us, FAQs)
 
 **Typical User Journey**:
-1. Login to Admin → 2. Review Dashboard Stats → 3. Check New Car Listings (Approve/Reject) → 4. Monitor Active Bookings → 5. Review Support Tickets → 6. Investigate User Reports → 7. Update Platform Content → 8. Generate Reports
+1. Login to Admin → 2. Review Dashboard Stats → 3. Check New Vehicle Listings (Approve/Reject) → 4. Monitor Active Bookings → 5. Review Support Tickets → 6. Investigate User Reports → 7. Update Platform Content → 8. Generate Reports
 
 ---
 
@@ -351,7 +418,9 @@ DriveKenya creates a trusted marketplace where:
 | **Socket.io** | 4.x | WebSocket server for real-time communication |
 | **Better-SQLite3** | Latest | Fast, synchronous SQLite database |
 | **JWT** | 9.x | JSON Web Token authentication |
-| **Bcryptjs** | 2.x | Password hashing and encryption |
+| **Bcryptjs** | 2.x | Password hashing and encryption (12 rounds) |
+| **Nodemailer** | Latest | Email sending for password reset & contact forms |
+| **UUID** | Latest | Secure token generation for password resets |
 | **Express Validator** | 7.x | Input validation and sanitization |
 | **Helmet** | 7.x | Security headers middleware |
 | **CORS** | 2.x | Cross-Origin Resource Sharing |
@@ -366,6 +435,18 @@ DriveKenya creates a trusted marketplace where:
   - **ACID Compliant**: Full transaction support
   - **Fast Queries**: Synchronous API for speed
   - **Easy Backup**: Simple file copy
+  - **Schema Updates**: Migration-ready with password reset columns
+
+### **Email Infrastructure**
+- **SMTP Provider**: Gmail (smtp.gmail.com:587)
+- **Service Email**: drivekenyaorg@gmail.com
+- **Email Features**:
+  - **Password Reset Emails**: Professional HTML templates with secure reset links
+  - **Contact Form Notifications**: Instant alerts to admin when customers reach out
+  - **Token Expiration**: Password reset links valid for 1 hour
+  - **HTML Templates**: Mobile-responsive email designs
+  - **Reply-To Headers**: Direct customer replies for contact forms
+- **Security**: App-specific passwords, TLS encryption
 
 ### **Real-Time Infrastructure**
 - **WebSocket Protocol** via Socket.io
@@ -513,12 +594,16 @@ GOOGLE_MAPS_API_KEY=your-google-maps-api-key-here
 RATE_LIMIT_WINDOW=15
 RATE_LIMIT_MAX_REQUESTS=100
 
-# Email Configuration (Optional - for production)
+# Email Configuration (REQUIRED for password reset & contact forms)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-email-password
-EMAIL_FROM=noreply@drivekenya.com
+EMAIL_USER=drivekenyaorg@gmail.com
+EMAIL_PASSWORD=your-gmail-app-specific-password
+EMAIL_FROM=DriveKenya <drivekenyaorg@gmail.com>
+
+# Note: Gmail requires app-specific password (not regular password)
+# Generate at: https://myaccount.google.com/apppasswords
+# Current production credentials are hardcoded in passwordReset.js and contact.js
 
 # Payment Integration (Optional - for M-Pesa)
 MPESA_CONSUMER_KEY=your-mpesa-consumer-key
@@ -628,7 +713,7 @@ Middleware Verification → Protected Resources
 
 **2. Booking Flow:**
 ```
-Browse Cars → Select Car → Choose Dates → Pick Location (Google Maps) → 
+Browse Vehicles → Select Vehicle → Choose Dates → Pick Location (Google Maps) → 
 Select Payment → Create Booking (POST /api/bookings) → 
 Notification to Owner (WebSocket) → Owner Accepts → 
 Notification to Renter → Booking Confirmed
@@ -729,18 +814,19 @@ car-hiring-system-for-nairobi/
 │   │   ├── uploadReview.js               # Review image uploads
 │   │   └── uploadUser.js                 # Profile/document uploads
 │   │
-│   ├── routes/                           # API route handlers (22 files)
+│   ├── routes/                           # API route handlers (23 files)
 │   │   ├── admin.js                      # Admin endpoints
 │   │   ├── auth.js                       # Login, register, verify
 │   │   ├── biometric.js                  # Biometric authentication
 │   │   ├── bookings.js                   # Booking CRUD
-│   │   ├── cars.js                       # Car listings CRUD
-│   │   ├── contact.js                    # Contact form
+│   │   ├── cars.js                       # Car listings CRUD (limit: 100)
+│   │   ├── contact.js                    # Contact form + email forwarding
 │   │   ├── emergency.js                  # Emergency SOS
 │   │   ├── fraud.js                      # Fraud detection
 │   │   ├── messages.js                   # Chat persistence
 │   │   ├── notifications.js              # Notification management
 │   │   ├── owner.js                      # Host-specific endpoints
+│   │   ├── passwordReset.js              # ⭐ Password reset via email
 │   │   ├── payments.js                   # Payment processing
 │   │   ├── performance.js                # Analytics
 │   │   ├── pricing.js                    # Dynamic pricing
@@ -806,12 +892,15 @@ DriveKenya uses SQLite with 18 tables for comprehensive data management:
 **1. users** - User accounts
 - `id` (INTEGER, PRIMARY KEY)
 - `email` (TEXT, UNIQUE) - Login email
-- `password` (TEXT) - Bcrypt hashed
+- `password` (TEXT) - Bcrypt hashed (12 rounds)
 - `first_name`, `last_name` (TEXT)
 - `phone` (TEXT)
 - `role` (TEXT) - 'customer', 'host', 'admin'
-- `profile_photo_url` (TEXT)
+- `profile_photo` (TEXT) - Profile image URL (persists across sessions)
+- `profile_photo_url` (TEXT) - Legacy field
 - `email_verified` (INTEGER) - 0 or 1
+- `password_reset_token` (TEXT) - UUID token for password reset
+- `password_reset_expires` (TEXT) - Timestamp for token expiration
 - `created_at`, `updated_at` (TEXT)
 
 **2. cars** - Vehicle listings
@@ -948,6 +1037,18 @@ Base URL: `http://localhost:5000/api`
 - Headers: `Authorization: Bearer <token>`
 - Returns: `{ user: { id, email, ... } }`
 
+**POST /auth/forgot-password**
+- Request password reset email
+- Body: `{ email }`
+- Returns: `{ success: true, message: "Password reset email sent" }`
+- Sends email with reset link valid for 1 hour
+
+**POST /auth/reset-password**
+- Reset password with token
+- Body: `{ token, newPassword }`
+- Returns: `{ success: true, message: "Password has been reset successfully" }`
+- Token expires after 1 hour
+
 ### **Car Endpoints**
 
 **GET /cars**
@@ -1056,6 +1157,15 @@ Base URL: `http://localhost:5000/api`
 - Content-Type: `multipart/form-data`
 - Returns: `{ success, fileUrl }`
 
+### **Contact Endpoints**
+
+**POST /contact**
+- Submit contact form message
+- Body: `{ name, email, message }`
+- Returns: `{ success: true, message: "Message sent successfully" }`
+- Saves to database AND sends email notification to drivekenyaorg@gmail.com
+- Reply-To header set to customer email for direct responses
+
 ### **Admin Endpoints**
 
 **GET /admin/users**
@@ -1127,10 +1237,14 @@ DriveKenya implements enterprise-grade security measures:
    - Middleware validates every protected request
 
 2. **Password Security**
-   - Bcrypt hashing with 10 salt rounds
+   - Bcrypt hashing with 12 salt rounds
    - Minimum 8 characters required
    - Never stored in plain text
    - Password reset with email verification
+   - Secure UUID token generation for password resets
+   - 1-hour expiration on reset tokens
+   - Tokens stored hashed in database
+   - Single-use tokens (deleted after successful reset)
 
 3. **Role-Based Access Control (RBAC)**
    - Three roles: Customer, Host, Admin
@@ -1261,6 +1375,29 @@ DriveKenya implements enterprise-grade security measures:
 
 ## 🚀 **Deployment Guide**
 
+### **Important Production Notes**
+
+**Email System:**
+- Password reset and contact form features require SMTP configuration
+- Current setup uses Gmail SMTP with credentials hardcoded in:
+  - `backend-nodejs/routes/passwordReset.js`
+  - `backend-nodejs/routes/contact.js`
+- For security, consider:
+  - Moving credentials to environment variables
+  - Using a dedicated email service (SendGrid, Mailgun, AWS SES)
+  - Updating email templates with production domain URLs
+
+**Database:**
+- SQLite is suitable for small-to-medium deployments
+- For high traffic, consider migrating to PostgreSQL or MySQL
+- Current schema includes password reset columns (`password_reset_token`, `password_reset_expires`)
+- Regular backups recommended (automated cron job)
+
+**File Uploads:**
+- User uploads stored in `backend-nodejs/uploads/`
+- Consider using cloud storage (AWS S3, Cloudinary) for production
+- Ensure proper permissions and backup strategy
+
 ### **Pre-Deployment Checklist**
 
 **Configuration:**
@@ -1271,8 +1408,12 @@ DriveKenya implements enterprise-grade security measures:
 - ✅ Enable HTTPS/SSL certificates
 - ✅ Set NODE_ENV=production
 - ✅ Configure Google Maps API keys with domain restrictions
-- ✅ Set up email service (SMTP)
+- ✅ Set up email service (Gmail SMTP or custom SMTP)
+  - **Note**: Email credentials currently hardcoded in `passwordReset.js` and `contact.js`
+  - For production, consider moving to environment variables
+  - Current: drivekenyaorg@gmail.com with app-specific password
 - ✅ Configure payment gateway (M-Pesa)
+- ✅ Update password reset URL to production domain in email templates
 
 **Security:**
 - ✅ Enable rate limiting
@@ -1751,25 +1892,27 @@ localStorage.setItem('debug', 'true');
 
 | Feature Category | Status | Details |
 |------------------|---------|---------|
-| **Authentication** | ✅ Complete | JWT, Roles, Multi-browser, Email verification |
+| **Authentication** | ✅ Complete | JWT, Roles, Multi-browser, Email verification, Password reset |
+| **Password Recovery** | ✅ Complete | Email-based reset, Secure tokens, 1-hour expiration |
 | **Real-time Chat** | ✅ Complete | WebSocket, Rooms, Typing indicators, History |
 | **Google Maps** | ✅ Complete | Location picker, Route planning, Landmarks |
+| **Email System** | ✅ Complete | Gmail SMTP, Password reset emails, Contact notifications |
 | **Payment UI** | ✅ Complete | Cash, M-Pesa (UI), Card/Bank (Coming soon) |
-| **Notifications** | ✅ Complete | Push, In-app, Real-time counts, History |
+| **Notifications** | ✅ Complete | Push, In-app, Real-time counts, History, Welcome messages |
 | **Progressive Web App** | ✅ Complete | Service worker, Offline, Installable, Updates |
 | **Booking System** | ✅ Complete | 3-step flow, Validation, Pricing, History |
-| **Car Management** | ✅ Complete | Listing, Images, Availability, Calendar |
-| **Search & Filtering** | ✅ Complete | Price, Location, Category, Features, Rating |
-| **User Dashboard** | ✅ Complete | Bookings, Messages, Profile, Settings |
+| **Car Management** | ✅ Complete | 45+ vehicles, Listing, Images, Availability, Calendar |
+| **Search & Filtering** | ✅ Complete | Price (0-50K), Location, Category, Features, Rating |
+| **User Dashboard** | ✅ Complete | Bookings, Messages, Profile (persistent photos), Settings |
 | **"My Cars" Section** | ✅ Complete | Manage cars, View bookings, Analytics |
 | **Admin Panel** | ✅ Complete | DB Browser, User management, System stats |
 | **Reviews & Ratings** | ✅ Complete | 5-star ratings, Comments, Photos |
-| **Profile Management** | ✅ Complete | Edit info, Upload photo, Verification |
-| **Settings Page** | ✅ Complete | Language, Emergency contacts, Preferences |
-| **Support System** | ✅ Complete | Automated chat, Contact form, FAQ |
-| **About Us** | ✅ Complete | Mission, vision, team, how it works |
-| **Localization** | ✅ Complete | English / Kiswahili support |
-| **Security** | ✅ Complete | JWT, CORS, Rate limiting, Input validation |
+| **Profile Management** | ✅ Complete | Edit info, Upload photo, Verification, Photo persistence |
+| **Settings Page** | ✅ Complete | Language (Coming Soon badge), Emergency contacts, Preferences |
+| **Support System** | ✅ Complete | Automated chat, Contact form + email forwarding, FAQ |
+| **About Us** | ✅ Complete | Mission, vision, team, how it works (all vehicle types) |
+| **Localization** | 🔜 Coming Soon | English / Kiswahili infrastructure ready |
+| **Security** | ✅ Complete | JWT, CORS, Rate limiting, Input validation, Bcrypt (12 rounds) |
 
 **Platform Readiness:** 🚀 **100% Production Ready**
 
@@ -1777,12 +1920,22 @@ localStorage.setItem('debug', 'true');
 
 ## 🎉 **Recent Updates**
 
-### **Latest Improvements (Dec 2025)**
+### **Latest Improvements (Dec 2024 - v1.0)**
+- ✅ **Password Reset System**: Complete forgot password feature with email-based recovery
+  - Secure UUID tokens with 1-hour expiration
+  - Professional HTML email templates via Nodemailer
+  - Gmail SMTP integration (drivekenyaorg@gmail.com)
+- ✅ **Contact Form Email**: Messages forwarded to admin email + database storage
+- ✅ **Profile Photo Persistence**: Fixed photos disappearing after logout/login
+- ✅ **Welcome Notifications**: New users receive 2 welcome messages on registration
+- ✅ **Vehicle Display Fix**: All 45 vehicles showing (increased limit from 12 to 100)
+- ✅ **About Us Update**: Made inclusive of all vehicle types (cars, SUVs, trucks, vans, motorcycles, bicycles, electric)
+- ✅ **Language Preference UI**: "Coming Soon" badge on language selector
 - ✅ **Image Display Fix**: Properly parse JSON `images` field from database
 - ✅ **Price Filter Expansion**: Increased range to 0-50,000 KSh for luxury cars
 - ✅ **Features Parsing**: Handle features stored as JSON string
 - ✅ **Rating Null Safety**: Prevent crashes from missing ratings
-- ✅ **Code Cleanup**: Removed 18 test/debug files for production readiness
+- ✅ **Code Cleanup**: Removed temporary test/debug files for production
 - ✅ **Navbar Optimization**: Cleaned up navigation, proper labeling
 - ✅ **Settings Restructure**: Language selection, emergency contacts
 - ✅ **Support Enhancement**: Removed "connecting" state, expanded auto-replies
@@ -1950,29 +2103,30 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 
 **DriveKenya Platform**
 - 🌐 Website: https://drivekenya.com (when deployed)
-- 📧 Email: info@drivekenya.com
-- 📱 Phone: +254 XXX XXX XXX
+- 📧 Email: **drivekenyaorg@gmail.com**
+- 📱 Phone: **+254 717 052 939**
 - 📍 Location: Nairobi, Kenya
+- 🆘 Emergency Support: Available 24/7 via phone
 
-**Developer:**
-- 💼 GitHub: [Your GitHub Profile]
-- 🔗 LinkedIn: [Your LinkedIn]
-- 🐦 Twitter: [Your Twitter]
+**Technical Support:**
+- 💬 In-App Chat: Use the support feature in the application
+- 📧 Contact Form: Messages are forwarded to drivekenyaorg@gmail.com
+- 🔐 Password Reset: Automated email-based recovery system
 
 ---
 
 <div align="center">
 
 ## 🚗 **DriveKenya**
-### *Premium Car Rental Platform for Nairobi*
+### *Premium Vehicle Rental Platform for Nairobi*
 
 **Where Technology Meets Transportation**
 
-Built with ❤️ in Nairobi • Powered by React, Node.js & WebSockets
+Built with ❤️ • Powered by React, Node.js & WebSockets
 
 ---
 
-**Ready to Drive the Future of Car Rental?**
+**Ready to Drive the Future of Vehicle Rental?**
 
 [⭐ Star on GitHub](https://github.com/your-repo) • [📖 Read Docs](README.md) • [🚀 Get Started](#getting-started) • [💬 Get Support](#support--contributing)
 

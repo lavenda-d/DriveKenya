@@ -12,8 +12,17 @@ export const authenticateToken = async (req, res, next) => {
     });
   }
 
+  // Check if token looks like a JWT (has 3 parts separated by dots)
+  if (!token.includes('.') || token.split('.').length !== 3) {
+    console.error('Malformed token received:', token.substring(0, 20) + '...');
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Invalid token format. Please log in again.' 
+    });
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'driveKenya-secret-2024');
     
     // Get user from database to ensure they still exist
     const result = await query(
@@ -34,12 +43,16 @@ export const authenticateToken = async (req, res, next) => {
     // Reduce spam by only logging JWT signature errors once per minute
     const now = Date.now();
     if (!global.lastAuthJWTError || (now - global.lastAuthJWTError) > 60000) {
-      console.error('Token verification error:', error.name === 'JsonWebTokenError' ? 'JWT signature invalid - clear browser storage' : error.message);
+      console.error('Token verification error:', error.name, error.message);
       global.lastAuthJWTError = now;
     }
-    return res.status(403).json({ 
+    
+    // Return 401 for expired tokens, 403 for invalid tokens
+    const statusCode = error.name === 'TokenExpiredError' ? 401 : 403;
+    return res.status(statusCode).json({ 
       success: false, 
-      message: 'Invalid or expired token' 
+      message: error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token',
+      error: error.message
     });
   }
 };
