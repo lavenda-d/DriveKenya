@@ -7,18 +7,24 @@ import { emailUser, emailPassword, emailHost, emailPort } from '../config/env.js
 const router = express.Router();
 
 // Email transporter configuration for Gmail
-const mailTransporter = nodemailer.createTransport({
-  host: emailHost,
-  port: emailPort,
-  secure: false,
-  auth: {
-    user: emailUser,
-    pass: emailPassword,
-  },
-  tls: {
-    rejectUnauthorized: false
+// Email transporter configuration for Gmail
+const mailTransporter = (() => {
+  if (emailUser && emailPassword) {
+    return nodemailer.createTransport({
+      host: emailHost,
+      port: emailPort,
+      secure: false,
+      auth: {
+        user: emailUser,
+        pass: emailPassword,
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
   }
-});
+  return nodemailer.createTransport({ jsonTransport: true });
+})();
 
 // Contact form endpoint (no authentication required)
 router.post('/', [

@@ -239,7 +239,7 @@ const createTables = (db) => {
   `);
 
   // Phase 4 Advanced Features Tables
-  
+
   // Two-factor authentication settings
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_two_factor (
@@ -524,6 +524,18 @@ const createTables = (db) => {
   `);
 
   console.log('✅ All business and Phase 4 advanced feature tables created successfully');
+
+  // AUTO-MIGRATION: Add vehicle_type to cars if missing (fixes 500 error on filters)
+  try {
+    const columns = db.pragma('table_info(cars)');
+    const hasVehicleType = columns.some(col => col.name === 'vehicle_type');
+    if (!hasVehicleType) {
+      db.exec("ALTER TABLE cars ADD COLUMN vehicle_type TEXT DEFAULT 'car'");
+      console.log('🔄 Schema updated: Added missing vehicle_type column to cars table');
+    }
+  } catch (error) {
+    console.error('⚠️ Schema migration warning:', error.message);
+  }
 };
 
 // Initialize tables

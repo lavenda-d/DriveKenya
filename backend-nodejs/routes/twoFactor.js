@@ -8,20 +8,25 @@ import { emailUser, emailPassword } from '../config/env.js';
 const router = express.Router();
 
 // Email transporter setup
-const transporter = nodemailer.createTransporter({
-  // Configure your email service
-  service: 'gmail',
-  auth: {
-    user: emailUser,
-    pass: emailPassword
+// Email transporter setup
+const transporter = (() => {
+  if (emailUser && emailPassword) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPassword
+      }
+    });
   }
-});
+  return nodemailer.createTransport({ jsonTransport: true });
+})();
 
 // Setup authenticator app
 router.post('/setup-app', async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     // Generate secret
     const secret = speakeasy.generateSecret({
       name: `DriveKenya (${req.user.email})`,
@@ -183,10 +188,10 @@ router.post('/verify', async (req, res) => {
       // Verify SMS code
       const now = new Date();
       const expiresAt = new Date(user.temp_sms_expires);
-      
+
       if (user.temp_sms_code === code && now < expiresAt) {
         isValid = true;
-        
+
         // Activate 2FA
         await req.db.run(
           `UPDATE users SET 
@@ -204,10 +209,10 @@ router.post('/verify', async (req, res) => {
       // Verify email code
       const now = new Date();
       const expiresAt = new Date(user.temp_email_expires);
-      
+
       if (user.temp_email_code === code && now < expiresAt) {
         isValid = true;
-        
+
         // Activate 2FA
         await req.db.run(
           `UPDATE users SET 
@@ -328,7 +333,7 @@ router.post('/login-verify', async (req, res) => {
       const backupCodes = JSON.parse(user.backup_codes);
       if (backupCodes.includes(backupCode)) {
         isValid = true;
-        
+
         // Remove used backup code
         const updatedCodes = backupCodes.filter(c => c !== backupCode);
         await req.db.run(

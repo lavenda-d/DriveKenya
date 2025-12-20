@@ -1,3 +1,4 @@
+export const genericAPI: any;
 export const carsAPI: any;
 export const authAPI: any;
 export const bookingsAPI: any;

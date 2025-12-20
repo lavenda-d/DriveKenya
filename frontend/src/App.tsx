@@ -1,9 +1,10 @@
-                                                                                                                                                                                                                                                                                                                    import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
 import ChatModal from './components/ChatModal';
-import NotificationBadge from './components/NotificationBadge';
+import { NotificationBadge } from './components/NotificationBadge';
 import NotificationCenter from './components/NotificationCenter';
+import { showToast, AnimatedSection, StaggerContainer, StaggerItem, ScaleInteraction } from './components/UIUtils';
 import ToastNotification from './components/ToastNotification';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import PWAStatus from './components/PWAStatus';
@@ -12,7 +13,7 @@ import CustomerChatSelector from './components/CustomerChatSelector';
 import GoogleMapEnhanced from './components/GoogleMapEnhanced';
 import OwnerDashboard from './components/OwnerDashboardEnhanced';
 import PricingCalculator from './components/PricingCalculator';
-import LanguageSwitcher from './components/LanguageSwitcher';
+
 import Phase4Dashboard from './components/Phase4Dashboard';
 // EmergencyButton removed - now in Profile & Settings
 import LiveChatSupport from './components/LiveChatSupport';
@@ -21,11 +22,11 @@ import { chatService } from './services/chatService';
 import { notificationService } from './services/notificationService';
 import { pwaService } from './services/pwaService';
 import CarDetailView from './components/CarDetailView';
-import CarManagement from './pages/CarManagement';
+
 import PasswordStrength from './components/PasswordStrength';
 import ProfileSettings from './pages/ProfileSettings';
 import ManageCar from './pages/ManageCar';
-import { FaCar, FaStar, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaCar, FaStar, FaMapMarkerAlt, FaUserCircle } from 'react-icons/fa';
 import { Car } from '../types/car';
 
 // Helper function to get vehicle type labels
@@ -42,7 +43,7 @@ const getVehicleTypeLabel = (category: string, plural = false, titleCase = false
   };
 
   const label = labels[category] || labels.all;
-  
+
   if (titleCase) {
     return plural ? label.titlePlural : label.title;
   }
@@ -275,59 +276,59 @@ const App: React.FC = () => {
           if (selectedCategory !== 'all') params.vehicleType = selectedCategory;
           if (priceRange[0] > 0) params.minPrice = priceRange[0];
           if (priceRange[1] < 15000) params.maxPrice = priceRange[1];
-          
-          const response = Object.keys(params).length > 0 
+
+          const response = Object.keys(params).length > 0
             ? await carsAPI.searchCars(params)
             : await carsAPI.getAllCars();
           const carsData = response.data?.cars || response.cars || [];
           if (response.success && carsData.length > 0) {
             const transformedCars = carsData.map((car) => {
-            // Parse images from JSON string if needed
-            let carImages = [];
-            if (car.images) {
-              try {
-                carImages = typeof car.images === 'string' ? JSON.parse(car.images) : car.images;
-              } catch (e) {
-                carImages = [];
+              // Parse images from JSON string if needed
+              let carImages = [];
+              if (car.images) {
+                try {
+                  carImages = typeof car.images === 'string' ? JSON.parse(car.images) : car.images;
+                } catch (e) {
+                  carImages = [];
+                }
               }
-            }
 
-            // Get the first image or use main_image_url
-            const getCarImage = () => {
-              if (car.main_image_url && car.main_image_url.trim() !== '') {
-                return car.main_image_url;
-              }
-              if (Array.isArray(carImages) && carImages.length > 0 && carImages[0]) {
-                return carImages[0];
-              }
-              // Fallback - use a generic car image
-              return 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop';
-            };
+              // Get the first image or use main_image_url
+              const getCarImage = () => {
+                if (car.main_image_url && car.main_image_url.trim() !== '') {
+                  return car.main_image_url;
+                }
+                if (Array.isArray(carImages) && carImages.length > 0 && carImages[0]) {
+                  return carImages[0];
+                }
+                // Fallback - use a generic car image
+                return 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop';
+              };
 
-            return {
-              id: car.id,
-              name: `${car.make} ${car.model}`,
-              category: car.category || (car.price_per_day > 8000 ? 'luxury' : car.price_per_day > 5000 ? 'suv' : 'economy'),
-              vehicle_type: car.vehicle_type || 'car',
-              price: car.price_per_day,
-              image: getCarImage(),
-              features: car.features || [],
-              seats: 5,
-              transmission: car.transmission || 'Automatic',
-              fuel: car.fuel_type || 'Petrol',
-              location: car.location,
-              rating: 4.5 + Math.random() * 0.5,
-              reviews: Math.floor(Math.random() * 200) + 50,
-              year: car.year,
-              color: car.color,
-              description: car.description,
-              available: car.available,
-              availability_status: car.availability_status || 'available',
-              host_id: car.host_id,
-              owner_name: car.owner_name,
-              owner_phone: car.owner_phone
-            };
-          });
+              return {
+                id: car.id,
+                name: `${car.make} ${car.model}`,
+                category: car.category || (car.price_per_day > 8000 ? 'luxury' : car.price_per_day > 5000 ? 'suv' : 'economy'),
+                vehicle_type: car.vehicle_type || 'car',
+                price: car.price_per_day,
+                image: getCarImage(),
+                features: car.features || [],
+                seats: 5,
+                transmission: car.transmission || 'Automatic',
+                fuel: car.fuel_type || 'Petrol',
+                location: car.location,
+                rating: 4.5 + Math.random() * 0.5,
+                reviews: Math.floor(Math.random() * 200) + 50,
+                year: car.year,
+                color: car.color,
+                description: car.description,
+                available: car.available,
+                availability_status: car.availability_status || 'available',
+                host_id: car.host_id,
+                owner_name: car.owner_name,
+                owner_phone: car.owner_phone
+              };
+            });
             setCars(transformedCars);
             console.log('✅ Loaded cars from API:', transformedCars.length);
           }
@@ -481,17 +482,16 @@ const App: React.FC = () => {
         console.log('✅ Authentication successful!', { user: userData, token: tokenData, actualRole: userData.role });
         if (authMode === 'register') {
           const roleText = userData.role === 'customer' ? 'car renter' : userData.role === 'host' ? 'car owner' : userData.role;
-          alert(`🎉 Registration successful! Welcome to DriveKenya as a ${roleText}!
-${userData.role === 'host' ? 'You can now list your vehicles and start earning!' : 'You can now browse and rent amazing vehicles!'}`);
+          showToast(`🎉 Registration successful! Welcome to DriveKenya as a ${roleText}!`, 'success');
         } else {
           const roleText = userData.role === 'customer' ? 'Customer' : userData.role === 'host' ? 'Car Owner' : userData.role;
           console.log(`Welcome back! Logged in as: ${roleText} (Role from DB: ${userData.role})`);
         }
       } else {
-        alert(response.message || 'Authentication failed');
+        showToast(response.message || 'Authentication failed', 'error');
       }
     } catch (error) {
-      alert(error.message || 'Authentication failed');
+      showToast(error.message || 'Authentication failed', 'error');
     } finally {
       setAuthLoading(false);
     }
@@ -516,15 +516,15 @@ ${userData.role === 'host' ? 'You can now list your vehicles and start earning!'
     try {
       const response = await bookingsAPI.createBooking(bookingData, token);
       if (response.success) {
-        alert('Booking created successfully!');
+        showToast('Booking created successfully!', 'success');
         setShowBookingModal(false);
         setSelectedCar(null);
         loadUserBookings();
       } else {
-        alert(response.message || 'Booking failed');
+        showToast(response.message || 'Booking failed', 'error');
       }
     } catch (error) {
-      alert(error.message || 'Booking failed');
+      showToast(error.message || 'Booking failed', 'error');
     } finally {
       setBookingLoading(false);
     }
@@ -554,19 +554,16 @@ ${userData.role === 'host' ? 'You can now list your vehicles and start earning!'
 
       const response = await bookingsAPI.createBooking(apiBookingData, token);
       if (response.success) {
-        alert(`🎉 Booking confirmed successfully!
-Booking Number: ${bookingData.bookingNumber}
-Total Cost: KSH ${bookingData.totalCost.toLocaleString()}
-You will receive a confirmation email shortly.`);
+        showToast(`🎉 Booking confirmed successfully! Number: ${bookingData.bookingNumber}`, 'success');
         setShowBookingModal(false);
         setSelectedCar(null);
         loadUserBookings();
       } else {
-        alert(response.message || 'Booking failed');
+        showToast(response.message || 'Booking failed', 'error');
       }
     } catch (error) {
       console.error('❌ Booking error:', error);
-      alert(error.message || 'Booking failed. Please try again.');
+      showToast(error.message || 'Booking failed. Please try again.', 'error');
     }
   };
 
@@ -590,10 +587,10 @@ You will receive a confirmation email shortly.`);
   // Upload car images to server
   const handleUploadCarImages = async () => {
     if (selectedCarImages.length === 0) {
-      alert('Please select images to upload');
+      showToast('Please select images to upload', 'error');
       return;
     }
-    
+
     setIsUploadingImages(true);
     try {
       const formData = new FormData();
@@ -610,18 +607,18 @@ You will receive a confirmation email shortly.`);
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         const newImageUrls = data.data.imageUrls.map(url => `http://localhost:5000${url}`);
         setUploadedCarImages(prev => [...prev, ...newImageUrls]);
         setSelectedCarImages([]);
-        alert(`${newImageUrls.length} image(s) uploaded successfully!`);
+        showToast(`${newImageUrls.length} image(s) uploaded successfully!`, 'success');
       } else {
-        alert(data.message || 'Failed to upload images');
+        showToast(data.message || 'Failed to upload images', 'error');
       }
     } catch (error) {
       console.error('Image upload error:', error);
-      alert('Failed to upload images');
+      showToast('Failed to upload images', 'error');
     } finally {
       setIsUploadingImages(false);
     }
@@ -682,13 +679,13 @@ You will receive a confirmation email shortly.`);
     setCarSubmitMessage('');
     try {
       const dailyRate = parseFloat(carForm.price_per_day);
-      
+
       // Combine uploaded images with URL if provided
       let allImages = [...uploadedCarImages];
       if (carForm.main_image_url && !allImages.includes(carForm.main_image_url)) {
         allImages.push(carForm.main_image_url);
       }
-      
+
       const carData = {
         make: carForm.make,
         model: carForm.model,
@@ -741,7 +738,7 @@ You will receive a confirmation email shortly.`);
   };
 
   // Contact form handlers
-  const handleContactFormChange = (e) => {
+  const handleContactFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setContactForm(prev => ({
       ...prev,
@@ -749,7 +746,7 @@ You will receive a confirmation email shortly.`);
     }));
   };
 
-  const handleSubmitContact = async (e) => {
+  const handleSubmitContact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
       setContactSubmitMessage('Please fill in all required fields');
@@ -766,7 +763,7 @@ You will receive a confirmation email shortly.`);
         subject: '',
         message: ''
       });
-    } catch (error) {
+    } catch (error: any) {
       setContactSubmitMessage(`❌ Error: ${error.message}`);
       console.error('Contact form error:', error);
     } finally {
@@ -775,7 +772,7 @@ You will receive a confirmation email shortly.`);
   };
 
   // Chat handling functions
-  const handleOpenChat = (car) => {
+  const handleOpenChat = (car: any) => {
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -857,11 +854,11 @@ You will receive a confirmation email shortly.`);
     // Vehicle type filter - check vehicle_type field for vehicle type filtering
     const vehicleTypes = ['car', 'motorcycle', 'bicycle', 'van', 'truck', 'suv', 'bus'];
     const isVehicleTypeFilter = vehicleTypes.includes(selectedCategory);
-    
-    const matchesCategory = selectedCategory === 'all' || 
-      (isVehicleTypeFilter 
-        ? (car.vehicle_type?.toLowerCase() === selectedCategory.toLowerCase() || 
-           (!car.vehicle_type && selectedCategory === 'car')) // Default to car if vehicle_type not set
+
+    const matchesCategory = selectedCategory === 'all' ||
+      (isVehicleTypeFilter
+        ? (car.vehicle_type?.toLowerCase() === selectedCategory.toLowerCase() ||
+          (!car.vehicle_type && selectedCategory === 'car')) // Default to car if vehicle_type not set
         : car.category === selectedCategory);
 
     // Price range filter - handle both price and price_per_day properties
@@ -885,8 +882,8 @@ You will receive a confirmation email shortly.`);
     // Features filter (all selected features must match)
     const matchesFeatures = Object.entries(features).every(([feature, isSelected]) => {
       if (!isSelected) return true; // Skip unselected features
-      const carFeatures = Array.isArray(car.features) ? car.features : 
-                          (typeof car.features === 'string' ? JSON.parse(car.features || '[]') : []);
+      const carFeatures = Array.isArray(car.features) ? car.features :
+        (typeof car.features === 'string' ? JSON.parse(car.features || '[]') : []);
       return carFeatures.includes(feature) || car.amenities?.includes(feature);
     });
 
@@ -920,48 +917,57 @@ You will receive a confirmation email shortly.`);
     return (
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/30 backdrop-blur-xl border-b border-white/20">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             <div
-              className="flex items-center space-x-3 text-2xl font-bold text-white cursor-pointer hover:text-blue-400 transition-colors"
+              className="flex items-center space-x-3 text-2xl font-black text-white cursor-pointer group"
               onClick={() => setCurrentPage('home')}
             >
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-xl group-hover:rotate-12 transition-transform duration-500">
+                <FaCar className="text-white text-xl" />
+              </div>
               <span>Drive<span className="text-blue-400">Kenya</span></span>
             </div>
 
             <div className="hidden md:flex items-center space-x-2">
-              <button
-                onClick={() => setCurrentPage('home')}
-                className={`px-3 py-2 rounded-full transition-all duration-200 text-sm ${
-                  currentPage === 'home'
-                    ? 'bg-blue-500/20 text-white border border-blue-400/30'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                <span className="mr-1">🏠</span>Home
-              </button>
+              <ScaleInteraction>
+                <button
+                  onClick={() => setCurrentPage('home')}
+                  className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${currentPage === 'home'
+                    ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
+                    : 'text-white/40 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  Home
+                </button>
+              </ScaleInteraction>
 
               <div className="relative">
-                <button
-                  onClick={() => setShowVehiclesMenu(!showVehiclesMenu)}
-                  className={`px-3 py-2 rounded-full transition-all duration-200 text-sm flex items-center ${
-                    currentPage === 'cars'
-                      ? 'bg-blue-500/20 text-white border border-blue-400/30'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <span className="mr-1">🚗</span>Vehicles
-                  <span className="ml-1">▾</span>
-                </button>
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowVehiclesMenu(!showVehiclesMenu)}
+                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${currentPage === 'cars'
+                      ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
+                      : 'text-white/40 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    Vehicles
+                    <span className="ml-2 text-[8px]">▼</span>
+                  </button>
+                </ScaleInteraction>
 
                 {showVehiclesMenu && (
-                  <div className="absolute top-full mt-2 right-0 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl py-2 min-w-[180px]">
+                  <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl py-4 min-w-[220px] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="px-6 py-2 border-b border-white/5 mb-2">
+                      <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Select Type</span>
+                    </div>
                     {vehicleTypes.map((type) => (
                       <button
                         key={type.value}
                         onClick={() => handleVehicleTypeClick(type.value)}
-                        className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                        className="w-full px-6 py-3 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
                       >
-                        <span className="mr-2">{type.icon}</span>{type.label}
+                        <span className="mr-4 text-xl group-hover:scale-125 transition-transform">{type.icon}</span>
+                        <span className="text-xs font-black uppercase tracking-widest">{type.label}</span>
                       </button>
                     ))}
                   </div>
@@ -969,137 +975,153 @@ You will receive a confirmation email shortly.`);
               </div>
 
               <div className="relative">
-                <button
-                  onClick={() => setShowServicesMenu(!showServicesMenu)}
-                  className={`px-3 py-2 rounded-full transition-all duration-200 text-sm flex items-center ${
-                    ['listcar', 'bookings', 'mycars'].includes(currentPage)
-                      ? 'bg-blue-500/20 text-white border border-blue-400/30'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <span className="mr-1">⚙️</span>{t('nav.services', 'Services')}
-                  <span className="ml-1">▾</span>
-                </button>
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowServicesMenu(!showServicesMenu)}
+                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['listcar', 'bookings', 'mycars'].includes(currentPage)
+                      ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
+                      : 'text-white/40 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    {t('nav.services', 'Services')}
+                    <span className="ml-2 text-[8px]">▼</span>
+                  </button>
+                </ScaleInteraction>
 
                 {showServicesMenu && (
-                  <div className="absolute top-full mt-2 right-0 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl py-2 min-w-[160px]">
+                  <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl py-6 min-w-[240px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
                     <button
                       onClick={() => { setCurrentPage('listcar'); setShowServicesMenu(false); }}
-                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
                     >
-                      <span className="mr-2">📝</span>List Your Vehicle
+                      <span className="mr-4 text-blue-400 group-hover:scale-125 transition-transform">➕</span>
+                      <span className="text-xs font-black uppercase tracking-widest">List Vehicle</span>
                     </button>
                     <button
                       onClick={() => { setCurrentPage('bookings'); setShowServicesMenu(false); }}
-                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
                     >
-                      <span className="mr-2">📋</span>Rentals
+                      <span className="mr-4 text-purple-400 group-hover:scale-125 transition-transform">📋</span>
+                      <span className="text-xs font-black uppercase tracking-widest">Bookings</span>
                     </button>
                     <button
                       onClick={() => { setCurrentPage('mycars'); setShowServicesMenu(false); }}
-                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
                     >
-                      <span className="mr-2">🚙</span>My Vehicles
+                      <span className="mr-4 text-emerald-400 group-hover:scale-125 transition-transform">🚙</span>
+                      <span className="text-xs font-black uppercase tracking-widest">My Vehicles</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('pricing'); setShowServicesMenu(false); }}
+                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group border-t border-white/5 mt-2"
+                    >
+                      <span className="mr-4 text-amber-400 group-hover:scale-125 transition-transform">📊</span>
+                      <span className="text-xs font-black uppercase tracking-widest">Pricing Calculator</span>
                     </button>
                   </div>
                 )}
               </div>
 
               <div className="relative">
-                <button
-                  onClick={() => setShowMoreMenu(!showMoreMenu)}
-                  className={`px-3 py-2 rounded-full transition-all duration-200 text-sm flex items-center ${
-                    ['about', 'contact'].includes(currentPage)
-                      ? 'bg-blue-500/20 text-white border border-blue-400/30'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <span className="mr-1">ℹ️</span>{t('nav.more', 'More')}
-                  <span className="ml-1">▾</span>
-                </button>
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowMoreMenu(!showMoreMenu)}
+                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['about', 'contact'].includes(currentPage)
+                      ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
+                      : 'text-white/40 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    {t('nav.more', 'More')}
+                    <span className="ml-2 text-[8px]">▼</span>
+                  </button>
+                </ScaleInteraction>
 
                 {showMoreMenu && (
-                  <div className="absolute top-full mt-2 right-0 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl py-2 min-w-[140px]">
+                  <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl py-4 min-w-[180px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
                     <button
                       onClick={() => { setCurrentPage('about'); setShowMoreMenu(false); }}
-                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
                     >
-                      <span className="mr-2">ℹ️</span>About
+                      <span className="mr-4 text-xl group-hover:scale-125 transition-transform">ℹ️</span>
+                      <span className="text-xs font-black uppercase tracking-widest">About</span>
                     </button>
                     <button
                       onClick={() => { setCurrentPage('contact'); setShowMoreMenu(false); }}
-                      className="w-full px-4 py-2 text-left text-white/90 hover:bg-white/10 transition-colors flex items-center"
+                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
                     >
-                      <span className="mr-2">📞</span>Contact
+                      <span className="mr-4 text-xl group-hover:scale-125 transition-transform">📞</span>
+                      <span className="text-xs font-black uppercase tracking-widest">Contact</span>
                     </button>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <div className="hidden md:block">
-                <span className="text-white/60 text-sm flex items-center">
-                  {apiConnected ? (
-                    <>
-                      <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                      Database Connected
-                    </>
-                  ) : (
-                    <>
-                      <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
-                      Demo Mode
-                    </>
-                  )}
-                </span>
-              </div>
-
+            <div className="flex items-center space-x-4">
               {user ? (
-                <div className="flex items-center space-x-3">
-                  <NotificationBadge>
+                <div className="flex items-center space-x-4">
+                  <ScaleInteraction>
                     <button
                       onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-                      className="text-white text-lg hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-white/10"
+                      className="relative text-white/70 hover:text-white p-3 bg-white/5 rounded-2xl border border-white/5 group"
                       title="Notifications"
                     >
-                      🔔
+                      <span className="text-xl group-hover:scale-110 transition-transform block">🔔</span>
+                      {unreadCount > 0 && (
+                        <span className="absolute top-2 right-2 flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                      )}
                     </button>
-                  </NotificationBadge>
-                  <div className="text-white text-xs">
-                    <div className="font-semibold">{user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim()}</div>
-                    <div className="text-white/60 text-xs">{user.role === 'host' ? '🔑 Owner' : user.role === 'admin' ? '👑 Admin' : '🚗 Customer'}</div>
-                  </div>
-                  <button
-                    onClick={() => setShowProfileSettings(true)}
-                    className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-white"
-                  >
-                    {user.profile_photo ? (
-                      <img
-                        src={user.profile_photo}
-                        alt="Profile"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                        {user.name?.charAt(0) || '?'}
+                  </ScaleInteraction>
+
+                  <ScaleInteraction>
+                    <button
+                      onClick={() => setShowProfileSettings(true)}
+                      className="flex items-center space-x-4 bg-white/5 hover:bg-white/10 p-2 pr-6 rounded-[1.5rem] border border-white/5 group transition-all"
+                    >
+                      <div className="relative">
+                        {user.profile_photo ? (
+                          <img
+                            src={user.profile_photo}
+                            alt="Profile"
+                            className="w-10 h-10 rounded-2xl object-cover ring-2 ring-transparent group-hover:ring-blue-500/50 transition-all"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black">
+                            {user.name?.charAt(0) || user.first_name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
                       </div>
-                    )}
-                    <span className="text-sm font-medium">Profile & Settings</span>
-                  </button>
+                      <div className="text-left hidden lg:block">
+                        <div className="text-white text-[10px] font-black uppercase tracking-widest mb-0.5">
+                          {user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                        </div>
+                        <div className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                          {user.role?.toUpperCase()}
+                        </div>
+                      </div>
+                    </button>
+                  </ScaleInteraction>
+
                   <button
                     onClick={handleLogout}
-                    className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-white px-4 py-2 rounded-full font-semibold transition-all"
+                    className="text-white/40 hover:text-red-400 font-black text-[10px] uppercase tracking-widest transition-colors px-4 py-2 border border-white/5 rounded-xl hover:bg-red-500/5"
                   >
-                    Sign Out
+                    Logout
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg"
-                >
-                  Sign In
-                </button>
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-blue-500 hover:text-white shadow-2xl shadow-blue-500/10"
+                  >
+                    Sign In
+                  </button>
+                </ScaleInteraction>
               )}
             </div>
           </div>
@@ -1126,17 +1148,19 @@ You will receive a confirmation email shortly.`);
       });
       const data = await response.json();
       if (data.success) {
-        // Handle successful Google sign-up
-        alert('Google Sign-Up successful!');
+        showToast('Google Sign-Up successful!', 'success');
+        if (data.user && data.token) {
+          setUser(data.user);
+          setToken(data.token);
+        }
+        setShowAuthModal(false);
       } else {
-        // Show the placeholder message
-        alert(`🚀 ${data.message}
-Google Sign-Up is coming soon!
-${data.data?.instructions || 'Please use regular registration for now.'}`);
+        console.error('Google Sign-Up failed:', data.message);
+        showToast(`🚀 ${data.message}\nGoogle Sign-Up is coming soon!\n${data.data?.instructions || 'Please use regular registration for now.'}`, 'info');
       }
     } catch (error) {
       console.error('Google Sign-Up error:', error);
-      alert('Google Sign-Up is temporarily unavailable. Please use regular registration.');
+      showToast('Google Sign-Up is temporarily unavailable. Please use regular registration.', 'error');
     } finally {
       setAuthLoading(false);
     }
@@ -1157,190 +1181,200 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
 
     if (!showAuthModal) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       handleAuth(formData);
     };
 
     return (
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl max-w-lg w-full relative max-h-[90vh] overflow-y-auto">
-          <button
-            onClick={() => setShowAuthModal(false)}
-            className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl font-bold z-10"
-          >
-            ×
-          </button>
-          <div className="p-8">
-            <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold text-white mb-2">
-                {authMode === 'login' ? 'Welcome Back' : 'Join DriveKenya'}
-              </h2>
-              <p className="text-white/70">
-                {authMode === 'login'
-                  ? 'Sign in to access your account'
-                  : 'Create your account and start your journey'}
-              </p>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-500"
+          onClick={() => setShowAuthModal(false)}
+        ></div>
+
+        <div className="relative bg-gray-900/90 backdrop-blur-2xl border border-white/10 rounded-[3rem] w-full max-w-lg overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-in zoom-in-95 fade-in slide-in-from-bottom-10 duration-700">
+          {/* Decorative Gradient Blob */}
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-purple-600/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+
+          <div className="p-10 md:p-14 relative z-10">
+            <div className="flex justify-between items-start mb-12">
+              <div className="animate-in slide-in-from-left-4 duration-500">
+                <h2 className="text-4xl font-black text-white mb-2 tracking-tighter">
+                  {authMode === 'login' ? 'Welcome Back' : 'Join the Elite'}
+                </h2>
+                <p className="text-white/40 text-sm font-medium">
+                  {authMode === 'login' ? 'Continue your premium journey' : 'Start earning or exploring today'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="text-white/20 hover:text-white transition-colors text-4xl leading-none"
+              >
+                ×
+              </button>
             </div>
-            {/* Role Selection */}
-            <div className="mb-6">
-              <p className="text-white/80 text-sm mb-3">
-                {authMode === 'login' ? 'Sign in as:' : 'I want to:'}
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: 'customer' })}
-                  className={`p-3 rounded-lg border transition-all ${formData.role === 'customer'
-                      ? 'bg-blue-600/30 border-blue-400 text-white'
-                      : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10'
-                    }`}
-                >
-                  <div className="text-2xl mb-1">🚗</div>
-                  <div className="font-semibold text-sm">
-                    {authMode === 'login' ? 'Customer' : 'Rent Cars'}
-                  </div>
-                  <div className="text-xs opacity-75">
-                    {authMode === 'login' ? 'Browse & rent' : 'Find & book vehicles'}
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: 'owner' })}
-                  className={`p-3 rounded-lg border transition-all ${formData.role === 'owner'
-                      ? 'bg-green-600/30 border-green-400 text-white'
-                      : 'bg-white/5 border-white/20 text-white/70 hover:bg-white/10'
-                    }`}
-                >
-                  <div className="text-2xl mb-1">🔑</div>
-                  <div className="font-semibold text-sm">
-                    {authMode === 'login' ? 'Car Owner' : 'List Cars'}
-                  </div>
-                  <div className="text-xs opacity-75">
-                    {authMode === 'login' ? 'Manage listings' : 'Earn from your car'}
-                  </div>
-                </button>
+
+            {/* Path Selection */}
+            <div className="mb-10 animate-in slide-in-from-up-4 duration-500">
+              <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Select Your Path</p>
+              <div className="grid grid-cols-2 gap-4">
+                <ScaleInteraction>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'customer' })}
+                    className={`relative p-5 rounded-[1.5rem] border transition-all overflow-hidden group w-full text-center ${formData.role === 'customer'
+                      ? 'bg-blue-600 border-blue-400 text-white shadow-2xl shadow-blue-600/20'
+                      : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
+                      }`}
+                  >
+                    <div className="text-2xl mb-2 group-hover:scale-125 transition-transform">🚗</div>
+                    <div className="font-black text-xs uppercase tracking-widest">
+                      {authMode === 'login' ? 'Customer' : 'Rent Cars'}
+                    </div>
+                  </button>
+                </ScaleInteraction>
+                <ScaleInteraction>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'owner' })}
+                    className={`relative p-5 rounded-[1.5rem] border transition-all overflow-hidden group w-full text-center ${formData.role === 'owner'
+                      ? 'bg-purple-600 border-purple-400 text-white shadow-2xl shadow-purple-600/20'
+                      : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
+                      }`}
+                  >
+                    <div className="text-2xl mb-2 group-hover:scale-125 transition-transform">🔑</div>
+                    <div className="font-black text-xs uppercase tracking-widest">
+                      {authMode === 'login' ? 'Owner' : 'List Cars'}
+                    </div>
+                  </button>
+                </ScaleInteraction>
               </div>
             </div>
-            {/* Google Sign-Up (only for register mode) */}
+
+            {/* Google Social */}
             {authMode === 'register' && (
-              <div className="mb-6">
-                <button
-                  type="button"
-                  onClick={() => handleGoogleSignUp()}
-                  className="w-full bg-white hover:bg-gray-100 text-gray-800 py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center space-x-3 border border-gray-300"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
-                  <span>Continue with Google</span>
-                </button>
-                <div className="flex items-center my-4">
-                  <div className="flex-1 border-t border-white/20"></div>
-                  <span className="px-3 text-white/50 text-sm">or</span>
-                  <div className="flex-1 border-t border-white/20"></div>
+              <div className="mb-10 animate-in fade-in duration-700 delay-300">
+                <ScaleInteraction>
+                  <button
+                    type="button"
+                    onClick={() => handleGoogleSignUp()}
+                    className="w-full bg-white/5 hover:bg-white/10 text-white py-4 px-6 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center space-x-4 border border-white/10 shadow-xl"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                    <span>Connect with Google</span>
+                  </button>
+                </ScaleInteraction>
+                <div className="flex items-center my-8">
+                  <div className="flex-1 border-t border-white/5"></div>
+                  <span className="px-4 text-white/20 text-[10px] font-black uppercase tracking-widest">or email</span>
+                  <div className="flex-1 border-t border-white/5"></div>
                 </div>
               </div>
             )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {authMode === 'register' && (
-                <>
+                <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-left-4 duration-500">
                   <input
-                    type="text"
                     placeholder="First Name"
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-medium"
                     required
                   />
                   <input
-                    type="text"
                     placeholder="Last Name"
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-medium"
                     required
                   />
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </>
+                </div>
               )}
-              <input
-                type="email"
-                placeholder="Email Address"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
+
+              <div className="animate-in slide-in-from-left-4 duration-500 delay-100">
+                <input
+                  type="email"
+                  placeholder="Email Address"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-medium"
+                  required
+                />
+              </div>
+
               {authMode === 'register' ? (
-                <div>
+                <div className="animate-in slide-in-from-left-4 duration-500 delay-200">
                   <input
                     type="password"
-                    placeholder="Password"
+                    placeholder="Premium Password"
                     value={regPassword}
-                    onChange={(e) => {
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       setRegPassword(e.target.value);
                       setFormData(prev => ({ ...prev, password: e.target.value }));
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-medium"
                     required
                   />
-                  <div className="mt-2">
+                  <div className="mt-4 px-2">
                     <PasswordStrength password={regPassword} />
                   </div>
                 </div>
               ) : (
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+                <div className="animate-in slide-in-from-left-4 duration-500 delay-200">
+                  <input
+                    type="password"
+                    placeholder="Secure Password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm font-medium"
+                    required
+                  />
+                </div>
               )}
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition-all"
-              >
-                {authLoading ? 'Processing...' : (authMode === 'login' ? 'Sign In' : 'Create Account')}
-              </button>
-            </form>
-            {authMode === 'login' && (
-              <div className="mt-3 text-center">
-                <button
-                  onClick={() => setShowForgotPassword(true)}
-                  className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
-                >
-                  Forgot your password?
-                </button>
+
+              <div className="pt-6">
+                <ScaleInteraction>
+                  <button
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-full bg-white text-slate-900 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all hover:bg-blue-400 hover:text-white shadow-[0_20px_40px_rgba(0,0,0,0.3)] disabled:opacity-50"
+                  >
+                    {authLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Authenticating...</span>
+                      </div>
+                    ) : authMode === 'login' ? 'Sign In Now' : 'Create My Identity'}
+                  </button>
+                </ScaleInteraction>
               </div>
-            )}
-            <div className="mt-6 text-center">
+            </form>
+
+            <div className="mt-12 flex flex-col items-center space-y-6">
               <button
                 onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                className="text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-white/40 hover:text-white text-xs font-black uppercase tracking-widest transition-all"
               >
-                {authMode === 'login'
-                  ? "Don't have an account? Sign up"
-                  : 'Already have an account? Sign in'}
+                {authMode === 'login' ? "New to the platform? Join now" : "Member already? Sign in"}
               </button>
+
+              {authMode === 'login' && (
+                <button
+                  onClick={() => { setShowAuthModal(false); setShowForgotPassword(true); }}
+                  className="text-blue-400/40 hover:text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+                >
+                  Forgot Password?
+                </button>
+              )}
             </div>
-            <button
-              onClick={() => setShowAuthModal(false)}
-              className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl"
-            >
-            </button>
           </div>
         </div>
       </div>
@@ -1351,7 +1385,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
   const ForgotPasswordModal = () => {
     if (!showForgotPassword) return null;
 
-    const handleResetRequest = async (e) => {
+    const handleResetRequest = async (e: React.FormEvent) => {
       e.preventDefault();
       setAuthLoading(true);
       setResetMessage('');
@@ -1367,7 +1401,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
         } else {
           setResetMessage('❌ ' + (data.message || 'Failed to send reset link'));
         }
-      } catch (error) {
+      } catch (error: any) {
         setResetMessage('❌ Error: ' + error.message);
       } finally {
         setAuthLoading(false);
@@ -1389,7 +1423,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           </button>
           <h2 className="text-3xl font-bold text-white mb-2">Reset Password</h2>
           <p className="text-white/70 mb-6">Enter your email and we'll send you a reset link</p>
-          
+
           {resetMessage && (
             <div className={`mb-4 p-3 rounded-lg ${resetMessage.includes('✅') ? 'bg-green-500/20 border border-green-400/30 text-green-300' : 'bg-red-500/20 border border-red-400/30 text-red-300'}`}>
               {resetMessage}
@@ -1413,7 +1447,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               {authLoading ? 'Sending...' : 'Send Reset Link'}
             </button>
           </form>
-          
+
           <div className="mt-4 text-center">
             <button
               onClick={() => {
@@ -1434,7 +1468,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
   const ResetPasswordModal = () => {
     if (!showResetPassword) return null;
 
-    const handlePasswordReset = async (e) => {
+    const handlePasswordReset = async (e: React.FormEvent) => {
       e.preventDefault();
       if (newPassword !== confirmPassword) {
         setResetMessage('❌ Passwords do not match');
@@ -1466,7 +1500,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
         } else {
           setResetMessage('❌ ' + (data.message || 'Failed to reset password'));
         }
-      } catch (error) {
+      } catch (error: any) {
         setResetMessage('❌ Error: ' + error.message);
       } finally {
         setAuthLoading(false);
@@ -1489,7 +1523,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           </button>
           <h2 className="text-3xl font-bold text-white mb-2">Set New Password</h2>
           <p className="text-white/70 mb-6">Enter your new password below</p>
-          
+
           {resetMessage && (
             <div className={`mb-4 p-3 rounded-lg ${resetMessage.includes('✅') ? 'bg-green-500/20 border border-green-400/30 text-green-300' : 'bg-red-500/20 border border-red-400/30 text-red-300'}`}>
               {resetMessage}
@@ -1552,45 +1586,58 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
   // Enhanced Home Page
   const renderHome = () => (
     <div className="min-h-screen">
-      <section className="relative h-screen flex items-center justify-center text-center bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900">
+      <section className="relative h-screen flex items-center justify-center text-center bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 overflow-hidden">
         <div className="absolute inset-0 bg-black/30"></div>
+
+        {/* Animated Background Blobs */}
+        <div className="absolute top-0 -left-20 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-0 -right-20 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+
         <div className="relative z-10 max-w-4xl mx-auto px-6">
-          <div className="mb-8">
-            <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-6">
-              <span className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></span>
-              <span className="text-white/80 text-sm">
-                {apiConnected ? 'Live Database Connected' : 'Demo Mode'}  {cars.length} Vehicles Available
-              </span>
-            </div>
-          </div>
-          <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tight">
-            Drive<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Kenya</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-white/80 mb-8 leading-relaxed">
-            Premium vehicle rentals across Kenya - Cars, Motorcycles, Bicycles, Vans, Trucks & more with real-time booking.
-          </p>
-          {/* Role-based Welcome Message */}
-          {user && (
+          <AnimatedSection delay={0.2}>
             <div className="mb-8">
-              <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-blue-400/30 rounded-full px-6 py-3">
-                <span className="text-2xl">
-                  {(() => {
-                    console.log('🔍 User object in welcome:', user);
-                    console.log('🔍 User role in welcome:', user.role);
-                    return user.role === 'host' ? '🔑' : user.role === 'admin' ? '👑' : '🚗';
-                  })()}
-                </span>
-                <span className="text-white font-medium">
-                  {user.role === 'host' ?
-                    `Welcome back, Car Owner! Manage your ${myCars.length} listed vehicles` :
-                    user.role === 'admin' ?
-                      'Welcome back, Admin! Full system access' :
-                      `Welcome back, ${user.name?.split(' ')[0] || 'Driver'}! Ready to explore?`
-                  }
+              <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-6">
+                <span className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></span>
+                <span className="text-white/80 text-sm">
+                  {apiConnected ? 'Live Database Connected' : 'Demo Mode'}  {cars.length} Vehicles Available
                 </span>
               </div>
             </div>
+          </AnimatedSection>
+
+          <AnimatedSection delay={0.4}>
+            <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 tracking-tight">
+              Drive<span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Kenya</span>
+            </h1>
+          </AnimatedSection>
+
+          <AnimatedSection delay={0.6}>
+            <p className="text-xl md:text-2xl text-white/80 mb-8 leading-relaxed max-w-3xl mx-auto">
+              Premium vehicle rentals across Kenya - Cars, Motorcycles, Bicycles, Vans, Trucks & more with real-time booking.
+            </p>
+          </AnimatedSection>
+
+          {/* Role-based Welcome Message */}
+          {user && (
+            <AnimatedSection delay={0.7}>
+              <div className="mb-8">
+                <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-blue-400/30 rounded-full px-6 py-3">
+                  <span className="text-2xl">
+                    {user.role === 'host' ? '🔑' : user.role === 'admin' ? '👑' : '🚗'}
+                  </span>
+                  <span className="text-white font-medium">
+                    {user.role === 'host' ?
+                      `Welcome back, Car Owner! Manage your ${myCars.length} listed vehicles` :
+                      user.role === 'admin' ?
+                        'Welcome back, Admin! Full system access' :
+                        `Welcome back, ${user.name?.split(' ')[0] || 'Driver'}! Ready to explore?`
+                    }
+                  </span>
+                </div>
+              </div>
+            </AnimatedSection>
           )}
+
           {loading && (
             <div className="mb-8">
               <div className="inline-flex items-center space-x-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-3">
@@ -1599,146 +1646,124 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               </div>
             </div>
           )}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => setCurrentPage('cars')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
-            >
-              🚗 Browse {cars.length} Vehicles
-            </button>
-            {user ? (
-              <>
-                {user.role === 'host' ? (
-                  <>
-                    <button 
-                      onClick={() => setCurrentPage('owner-dashboard')}
-                      className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
-                    >
-                      📊 Owner Dashboard
-                    </button>
-                    <button 
-                      onClick={() => setCurrentPage('mycars')}
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
-                    >
-                      🔑 My Vehicles ({myCars.length})
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('listcar')}
-                      className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 backdrop-blur-sm"
-                    >
-                      ➕ List New Car
-                    </button>
-                  </>
-                ) : user.role === 'admin' ? (
-                  <>
-                    <button 
-                      onClick={() => window.open('http://localhost:3001', '_blank')}
-                      className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
-                    >
-                      ⚙️ Admin Dashboard
-                    </button>
-                    <button 
-                      onClick={() => setCurrentPage('bookings')}
-                      className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 backdrop-blur-sm"
-                    >
-                      📋 All Bookings
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setCurrentPage('bookings')}
-                    className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 backdrop-blur-sm"
-                  >
-                    📋 My Bookings ({userBookings.length})
-                  </button>
-                )}
-                <button 
-                  onClick={() => setCurrentPage('pricing')}
-                  className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 shadow-2xl"
+
+          <AnimatedSection delay={0.8}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <ScaleInteraction>
+                <button
+                  onClick={() => setCurrentPage('cars')}
+                  className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-5 rounded-full font-bold text-lg transition-all shadow-2xl hover:shadow-blue-500/25"
                 >
-                  💰 Pricing Calculator
+                  🚗 Browse {cars.length} Vehicles
                 </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all transform hover:scale-105 backdrop-blur-sm"
-              >
-                Sign In to Book
-              </button>
-            )}
-          </div>
+              </ScaleInteraction>
+              {user ? (
+                <div className="flex flex-wrap gap-4 justify-center">
+                  {user.role === 'host' && (
+                    <ScaleInteraction>
+                      <button
+                        onClick={() => setCurrentPage('owner-dashboard')}
+                        className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-4 rounded-full font-bold transition-all backdrop-blur-sm"
+                      >
+                        📊 Dashboard
+                      </button>
+                    </ScaleInteraction>
+                  )}
+                  <ScaleInteraction>
+                    <button
+                      onClick={() => setCurrentPage('pricing')}
+                      className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-8 py-4 rounded-full font-bold transition-all shadow-lg"
+                    >
+                      💰 Pricing Calculator
+                    </button>
+                  </ScaleInteraction>
+                </div>
+              ) : (
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowAuthModal(true)}
+                    className="w-full sm:w-auto bg-white/10 hover:bg-white/20 border border-white/30 text-white px-10 py-5 rounded-full font-bold text-lg transition-all backdrop-blur-sm"
+                  >
+                    Sign In to Book
+                  </button>
+                </ScaleInteraction>
+              )}
+            </div>
+          </AnimatedSection>
         </div>
       </section>
       {/* Stats Section */}
-      <section className="py-20 bg-gradient-to-r from-slate-900 to-blue-900">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <div className="text-4xl font-bold text-white mb-2">{cars.length}+</div>
-              <div className="text-white/70">Cars Available</div>
-            </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <div className="text-4xl font-bold text-white mb-2">{userBookings.length}</div>
-              <div className="text-white/70">{user ? 'Your Bookings' : 'Active Bookings'}</div>
-            </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <div className="text-4xl font-bold text-white mb-2">24/7</div>
-              <div className="text-white/70">Support</div>
-            </div>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-              <div className="text-4xl font-bold text-white mb-2">4.9</div>
-              <div className="text-white/70">Average Rating</div>
-            </div>
-          </div>
+      <section className="py-24 bg-gradient-to-r from-slate-950 to-blue-950 relative overflow-hidden">
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {[
+              { label: 'Cars Available', value: `${cars.length}+` },
+              { label: user ? 'Your Bookings' : 'Active Bookings', value: userBookings.length },
+              { label: 'Support', value: '24/7' },
+              { label: 'Average Rating', value: '4.9' }
+            ].map((stat, idx) => (
+              <StaggerItem key={idx}>
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-[2rem] p-10 hover:bg-white/10 transition-all duration-500 hover:-translate-y-2 group">
+                  <div className="text-5xl font-black text-white mb-3 bg-gradient-to-b from-white to-white/40 bg-clip-text text-transparent group-hover:scale-110 transition-transform">{stat.value}</div>
+                  <div className="text-white/40 font-bold uppercase tracking-widest text-[10px]">{stat.label}</div>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
         </div>
       </section>
       {/* Featured Cars */}
-      <section className="py-20 bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900">
+      <section className="py-24 bg-gradient-to-br from-blue-900 via-purple-900 to-slate-950">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Featured Cars</h2>
-            <p className="text-xl text-white/70">Discover our most popular vehicles</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <AnimatedSection className="text-center mb-16">
+            <h2 className="text-5xl md:text-6xl font-black text-white mb-6">Featured Fleet</h2>
+            <div className="w-24 h-1.5 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto rounded-full"></div>
+            <p className="text-xl text-white/50 mt-6 font-medium">Discover our most premium vehicles curated for you</p>
+          </AnimatedSection>
+
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {filteredCars.slice(0, 3).map(car => (
-              <div key={car.id} className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden hover:scale-105 transition-all duration-300">
-                <div className="relative overflow-hidden">
-                  <img
-                    src={car.image}
-                    alt={car.name}
-                    className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
-                    {car.rating?.toFixed(1) || '4.8'}
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-white mb-2">{car.name}</h3>
-                  <p className="text-white/60 mb-4"> {car.location}</p>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-2xl font-bold text-white">KSh {car.price?.toLocaleString()}</div>
-                      <div className="text-white/60 text-sm">per day</div>
+              <StaggerItem key={car.id}>
+                <div className="group bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] overflow-hidden hover:bg-white/10 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10">
+                  <div className="relative h-64 overflow-hidden">
+                    <img
+                      src={car.image}
+                      alt={car.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                    />
+                    <div className="absolute top-6 right-6 bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center space-x-2">
+                      <span className="text-yellow-400 text-xs">★</span>
+                      <span className="text-white font-black text-sm">{car.rating?.toFixed(1) || '4.8'}</span>
                     </div>
-                    <button
-                      onClick={() => {
-                        setSelectedCar(car);
-                        if (user) {
-                          setShowBookingModal(true);
-                        } else {
-                          setShowAuthModal(true);
-                        }
-                      }}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all"
-                    >
-                      Book Now
-                    </button>
+                  </div>
+                  <div className="p-8">
+                    <h3 className="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors">{car.name}</h3>
+                    <p className="text-white/40 mb-6 font-medium flex items-center">
+                      <FaMapMarkerAlt className="mr-2 text-blue-500/50" /> {car.location}
+                    </p>
+                    <div className="flex justify-between items-center pt-6 border-t border-white/5">
+                      <div>
+                        <div className="text-3xl font-black text-white">KSh {car.price?.toLocaleString()}</div>
+                        <div className="text-white/30 text-[10px] font-bold uppercase tracking-widest mt-1">per day</div>
+                      </div>
+                      <ScaleInteraction>
+                        <button
+                          onClick={() => {
+                            setSelectedCar(car);
+                            if (user) setShowBookingModal(true);
+                            else setShowAuthModal(true);
+                          }}
+                          className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-sm transition-all hover:bg-blue-400 hover:text-white"
+                        >
+                          Details
+                        </button>
+                      </ScaleInteraction>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerContainer>
         </div>
       </section>
     </div>
@@ -1769,388 +1794,381 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               {apiConnected ? 'Real-time data from our database' : 'Demo data'}  {filteredCars?.length || 0} of {cars?.length || 0} {getVehicleTypeLabel(selectedCategory, true)} shown
             </p>
           </div>
-        {/* View Toggle */}
-        <div className="mb-8">
-          <div className="flex justify-center">
-            <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-full p-2">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-6 py-2 rounded-full font-medium transition-all ${viewMode === 'grid'
-                    ? 'bg-white text-slate-900'
-                    : 'text-white hover:bg-white/10'
-                  }`}
-              >
-                🏷️ Grid View
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={`px-6 py-2 rounded-full font-medium transition-all ${viewMode === 'map'
-                    ? 'bg-white text-slate-900'
-                    : 'text-white hover:bg-white/10'
-                  }`}
-              >
-                🗺️ Map View
-              </button>
-            </div>
-          </div>
-        </div>
-        {/* Enhanced Search and Filter Section */}
-        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 mb-8 shadow-2xl">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            {/* Search with suggestions */}
-            <div className="relative">
-              <label className="block text-white/70 text-sm font-medium mb-2">🔍 Search</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Car name, model, or location..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => searchTerm.length > 1 && setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
-                  >
-                    ✕
-                  </button>
-                )}
-                {showSuggestions && searchSuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg">
-                    {searchSuggestions.map((suggestion, index) => (
-                      <div
-                        key={index}
-                        className="px-4 py-2 hover:bg-gray-700 cursor-pointer text-white"
-                        onMouseDown={() => {
-                          if (suggestion.startsWith('With ')) {
-                            const feature = suggestion.substring(5).replace(/\s+/g, '').toLowerCase();
-                            setFeatures(prev => ({ ...prev, [feature]: true }));
-                            setSearchTerm('');
-                          } else {
-                            setSearchTerm(suggestion.split(' (')[0]);
-                          }
-                          setShowSuggestions(false);
-                        }}
-                      >
-                        {suggestion}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">🏷️ Category</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Categories</option>
-                <option value="economy">Economy</option>
-                <option value="suv">SUV</option>
-                <option value="luxury">Luxury</option>
-                <option value="convertible">Convertible</option>
-                <option value="van">Van</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">💰 Price (KSh/day)</label>
-              <div className="flex space-x-2">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={priceRange[0]}
-                  min="0"
-                  onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
-                  className="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={priceRange[1]}
-                  min={priceRange[0] + 100}
-                  onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 15000])}
-                  className="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col space-y-2">
-              <div>
-                <label className="block text-white/70 text-sm font-medium mb-2">⭐ Min. Rating</label>
-                <div className="flex items-center space-x-2">
-                  {[0, 3, 4, 5].map((rating) => (
-                    <button
-                      key={rating}
-                      onClick={() => setMinRating(rating === minRating ? 0 : rating)}
-                      className={`px-3 py-1 rounded-full text-sm ${minRating === rating
-                          ? 'bg-yellow-500 text-black'
-                          : 'bg-white/10 text-white/70 hover:bg-white/20'
-                        }`}
-                    >
-                      {rating === 0 ? 'Any' : `${rating}+`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Advanced Filters */}
-          <div className="border-t border-white/10 pt-4">
-            <div className="flex flex-wrap items-center gap-6">
-              {/* Show Transmission only for motorized vehicles */}
-              {selectedCategory !== 'bicycle' && (
-                <div>
-                  <label className="block text-white/70 text-sm font-medium mb-2">⚙️ Transmission</label>
-                  <div className="flex space-x-2">
-                    {['All', 'Automatic', 'Manual'].map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => setTransmission(type === 'All' ? 'all' : type.toLowerCase())}
-                        className={`px-3 py-1 rounded-full text-sm ${transmission === type.toLowerCase() || (type === 'All' && transmission === 'all')
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white/10 text-white/70 hover:bg-white/20'
-                          }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Show Fuel Type only for motorized vehicles */}
-              {selectedCategory !== 'bicycle' && (
-                <div>
-                  <label className="block text-white/70 text-sm font-medium mb-2">⛽ Fuel Type</label>
-                  <div className="flex space-x-2">
-                    {['All', 'Petrol', 'Diesel', 'Hybrid', 'Electric'].map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => setFuelType(type === 'All' ? 'all' : type.toLowerCase())}
-                        className={`px-3 py-1 rounded-full text-sm ${fuelType === type.toLowerCase() || (type === 'All' && fuelType === 'all')
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white/10 text-white/70 hover:bg-white/20'
-                          }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="flex-1">
-                <label className="block text-white/70 text-sm font-medium mb-2">🔧 Features</label>
-                <div className="flex flex-wrap gap-2">
-                  {Object.keys(features)
-                    .filter((feature) => {
-                      // Filter features based on vehicle type
-                      if (selectedCategory === 'bicycle') {
-                        // Bicycles only have basic features
-                        return ['gps'].includes(feature);
-                      }
-                      if (selectedCategory === 'motorcycle') {
-                        // Motorcycles don't have sunroof, leather seats, parking sensors
-                        return !['sunroof', 'leatherSeats', 'parkingSensors'].includes(feature);
-                      }
-                      if (selectedCategory === 'truck' || selectedCategory === 'bus') {
-                        // Trucks/buses don't have sunroof typically
-                        return !['sunroof'].includes(feature);
-                      }
-                      // Cars, SUVs, Vans show all features
-                      return true;
-                    })
-                    .map((feature) => (
-                      <button
-                        key={feature}
-                        onClick={() => setFeatures(prev => ({ ...prev, [feature]: !prev[feature] }))}
-                        className={`px-3 py-1 rounded-full text-sm flex items-center space-x-1 ${features[feature]
-                            ? 'bg-green-600 text-white'
-                            : 'bg-white/10 text-white/70 hover:bg-white/20'
-                          }`}
-                      >
-                        <span>{features[feature] ? '✓' : '+'}</span>
-                        <span>{feature.replace(/([A-Z])/g, ' $1').trim()}</span>
-                      </button>
-                    ))}
-                </div>
-              </div>
-              <div className="flex items-end">
+          {/* View Toggle */}
+          <div className="mb-8">
+            <div className="flex justify-center">
+              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-full p-2">
                 <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedCategory('all');
-                    setPriceRange([0, 15000]);
-                    setTransmission('all');
-                    setFuelType('all');
-                    setMinRating(0);
-                    setFeatures({
-                      ac: false,
-                      bluetooth: false,
-                      gps: false,
-                      usb: false,
-                      sunroof: false,
-                      parkingSensors: false,
-                      camera: false,
-                      leatherSeats: false
-                    });
-                  }}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg font-medium transition-all"
+                  onClick={() => setViewMode('grid')}
+                  className={`px-6 py-2 rounded-full font-medium transition-all ${viewMode === 'grid'
+                    ? 'bg-white text-slate-900'
+                    : 'text-white hover:bg-white/10'
+                    }`}
                 >
-                  Clear Filters
+                  🏷️ Grid View
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={`px-6 py-2 rounded-full font-medium transition-all ${viewMode === 'map'
+                    ? 'bg-white text-slate-900'
+                    : 'text-white hover:bg-white/10'
+                    }`}
+                >
+                  🗺️ Map View
                 </button>
               </div>
             </div>
           </div>
-        </div>
-        {/* View Mode Toggle */}
-        <div className="mb-8">
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl p-4 flex justify-between items-center">
-            <div className="text-white font-medium">
-              {viewMode === 'grid' ? '📋 Grid View' : '🗺️ Map View'} - {filteredCars.length} cars
-            </div>
-            <div className="flex bg-white/10 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-4 py-2 rounded-md font-medium transition-all ${viewMode === 'grid'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-              >
-                📋 Grid
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={`px-4 py-2 rounded-md font-medium transition-all ${viewMode === 'map'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-              >
-                🗺️ Map
-              </button>
-            </div>
-          </div>
-        </div>
-        {/* Conditional Content Based on View Mode and Car Count */}
-        {filteredCars.length === 0 && !loading ? ( // Render the "No vehicles found" message if no vehicles match filters
-          <div className="text-center py-20">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12 max-w-lg mx-auto">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-bold text-white mb-4">
-                No {getVehicleTypeLabel(selectedCategory, true)} found
-              </h3>
-              <p className="text-white/70 mb-6">Try adjusting your filters or search terms</p>
-              <button
-                onClick={() => { setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]); }}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-full font-semibold transition-all"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
-        ) : viewMode === 'map' ? ( // If cars exist and view mode is map
-          /* Map View */
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden shadow-2xl mb-8">
-            <div className="p-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/20">
-              <h3 className="text-xl font-bold text-white mb-2">🗺️ Interactive Nairobi Car Map</h3>
-              <p className="text-white/70">Explore cars across Nairobi's key areas: CBD, Westlands, Karen, Kilimani & more. Click markers to view details and book instantly.</p>
-            </div>
-            <div className="h-[600px]">
-              <GoogleMapEnhanced
-                cars={filteredCars}
-                onCarSelect={(car) => {
-                  setSelectedCar(car);
-                  setViewingCar(car);
-                  window.scrollTo(0, 0);
-                }}
-                showLocationSelector={false}
-                initialCenter={{
-                  lat: -1.2864,  // Nairobi CBD coordinates
-                  lng: 36.8172
-                }}
-                initialZoom={13}
-                mapHeight="600px"
-                onChatClick={(car) => handleOpenChat(car)}
-                user={user}
-                className="rounded-xl overflow-hidden"
-              />
-            </div>
-          </div>
-        ) : ( // If cars exist and view mode is grid
-          /* Grid View */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCars.map(car => (
-              <div key={car.id} className="group bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-2xl">
+          {/* Enhanced Search and Filter Section */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6 mb-8 shadow-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+              {/* Search with suggestions */}
+              <div className="relative">
+                <label className="block text-white/70 text-sm font-medium mb-2">🔍 Search</label>
                 <div className="relative">
-                  <img src={car.image} alt={car.name} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300" />
-                  <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full flex items-center">
-                    <span className="text-yellow-400">⭐</span>
-                    <span className="text-white text-sm ml-1">{car.rating?.toFixed(1) || '4.8'}</span>
-                  </div>
-                  {car.available && (
-                    <div className="absolute top-4 left-4 bg-green-500/80 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                      Available
+                  <input
+                    type="text"
+                    placeholder="Car name, model, or location..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => searchTerm.length > 1 && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  {showSuggestions && searchSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg">
+                      {searchSuggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          className="px-4 py-2 hover:bg-gray-700 cursor-pointer text-white"
+                          onMouseDown={() => {
+                            if (suggestion.startsWith('With ')) {
+                              const feature = suggestion.substring(5).replace(/\s+/g, '').toLowerCase();
+                              setFeatures(prev => ({ ...prev, [feature]: true }));
+                              setSearchTerm('');
+                            } else {
+                              setSearchTerm(suggestion.split(' (')[0]);
+                            }
+                            setShowSuggestions(false);
+                          }}
+                        >
+                          {suggestion}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-white mb-2">{car.name}</h3>
-                  <div className="text-white/60 text-sm mb-4 space-x-4">
-                    <span>📍 {car.location}</span>
-                    <span>👥 {car.seats} seats</span>
-                    <span>⛽ {car.fuel}</span>
-                  </div>
-                  <div className="mb-4">
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {(Array.isArray(car.features) ? car.features : (typeof car.features === 'string' ? JSON.parse(car.features || '[]') : [])).slice(0, 3).map((feature, index) => (
-                        <span key={index} className="bg-white/10 text-white/80 px-2 py-1 rounded text-xs">
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-2xl font-bold text-white">KSh {car.price?.toLocaleString()}</div>
-                        <div className="text-white/60 text-sm">per day</div>
-                      </div>
-                      <div className="flex space-x-2">
-                        {user && (
-                          <NotificationBadge>
-                            <button
-                              onClick={() => handleOpenChat(car)}
-                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
-                              title={user?.role === 'host' && car.host_id === user.id ? "Chat with customers" : "Chat with owner"}
-                            >
-                              💬
-                            </button>
-                          </NotificationBadge>
-                        )}
-                        <button
-                          onClick={() => {
-                            setSelectedCar(car);
-                            setViewingCar(car);
-                            if (user) {
-                              setShowBookingModal(true);
-                            } else {
-                              setShowAuthModal(true);
-                            }
-                          }}
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-full font-semibold transition-all transform hover:scale-105"
-                        >
-                          Book Now
-                        </button>
-                      </div>
-                    </div>
+              </div>
+              <div>
+                <label className="block text-white/70 text-sm font-medium mb-2">🏷️ Category</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="economy">Economy</option>
+                  <option value="suv">SUV</option>
+                  <option value="luxury">Luxury</option>
+                  <option value="convertible">Convertible</option>
+                  <option value="van">Van</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-white/70 text-sm font-medium mb-2">💰 Price (KSh/day)</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={priceRange[0]}
+                    min="0"
+                    onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
+                    className="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={priceRange[1]}
+                    min={priceRange[0] + 100}
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 15000])}
+                    className="w-full px-3 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col space-y-2">
+                <div>
+                  <label className="block text-white/70 text-sm font-medium mb-2">⭐ Min. Rating</label>
+                  <div className="flex items-center space-x-2">
+                    {[0, 3, 4, 5].map((rating) => (
+                      <button
+                        key={rating}
+                        onClick={() => setMinRating(rating === minRating ? 0 : rating)}
+                        className={`px-3 py-1 rounded-full text-sm ${minRating === rating
+                          ? 'bg-yellow-500 text-black'
+                          : 'bg-white/10 text-white/70 hover:bg-white/20'
+                          }`}
+                      >
+                        {rating === 0 ? 'Any' : `${rating}+`}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
-            ))}
+            </div>
+            {/* Advanced Filters */}
+            <div className="border-t border-white/10 pt-4">
+              <div className="flex flex-wrap items-center gap-6">
+                {/* Show Transmission only for motorized vehicles */}
+                {selectedCategory !== 'bicycle' && (
+                  <div>
+                    <label className="block text-white/70 text-sm font-medium mb-2">⚙️ Transmission</label>
+                    <div className="flex space-x-2">
+                      {['All', 'Automatic', 'Manual'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setTransmission(type === 'All' ? 'all' : type.toLowerCase())}
+                          className={`px-3 py-1 rounded-full text-sm ${transmission === type.toLowerCase() || (type === 'All' && transmission === 'all')
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                            }`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Show Fuel Type only for motorized vehicles */}
+                {selectedCategory !== 'bicycle' && (
+                  <div>
+                    <label className="block text-white/70 text-sm font-medium mb-2">⛽ Fuel Type</label>
+                    <div className="flex space-x-2">
+                      {['All', 'Petrol', 'Diesel', 'Hybrid', 'Electric'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setFuelType(type === 'All' ? 'all' : type.toLowerCase())}
+                          className={`px-3 py-1 rounded-full text-sm ${fuelType === type.toLowerCase() || (type === 'All' && fuelType === 'all')
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                            }`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <label className="block text-white/70 text-sm font-medium mb-2">🔧 Features</label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.keys(features)
+                      .filter((feature) => {
+                        // Filter features based on vehicle type
+                        if (selectedCategory === 'bicycle') {
+                          // Bicycles only have basic features
+                          return ['gps'].includes(feature);
+                        }
+                        if (selectedCategory === 'motorcycle') {
+                          // Motorcycles don't have sunroof, leather seats, parking sensors
+                          return !['sunroof', 'leatherSeats', 'parkingSensors'].includes(feature);
+                        }
+                        if (selectedCategory === 'truck' || selectedCategory === 'bus') {
+                          // Trucks/buses don't have sunroof typically
+                          return !['sunroof'].includes(feature);
+                        }
+                        // Cars, SUVs, Vans show all features
+                        return true;
+                      })
+                      .map((feature) => (
+                        <button
+                          key={feature}
+                          onClick={() => setFeatures(prev => ({ ...prev, [feature]: !prev[feature] }))}
+                          className={`px-3 py-1 rounded-full text-sm flex items-center space-x-1 ${features[feature]
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                            }`}
+                        >
+                          <span>{features[feature] ? '✓' : '+'}</span>
+                          <span>{feature.replace(/([A-Z])/g, ' $1').trim()}</span>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedCategory('all');
+                      setPriceRange([0, 15000]);
+                      setTransmission('all');
+                      setFuelType('all');
+                      setMinRating(0);
+                      setFeatures({
+                        ac: false,
+                        bluetooth: false,
+                        gps: false,
+                        usb: false,
+                        sunroof: false,
+                        parkingSensors: false,
+                        camera: false,
+                        leatherSeats: false
+                      });
+                    }}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg font-medium transition-all"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+          {/* View Mode Toggle */}
+          <div className="mb-8">
+            <AnimatedSection delay={0.2} className="mb-8">
+              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl p-4 flex justify-between items-center">
+                <div className="text-white font-medium">
+                  {viewMode === 'grid' ? '📋 Grid View' : '🗺️ Map View'} - {filteredCars.length} cars
+                </div>
+                <div className="flex bg-white/10 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-4 py-2 rounded-md font-medium transition-all ${viewMode === 'grid'
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                  >
+                    📋 Grid
+                  </button>
+                  <button
+                    onClick={() => setViewMode('map')}
+                    className={`px-4 py-2 rounded-md font-medium transition-all ${viewMode === 'map'
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                  >
+                    🗺️ Map
+                  </button>
+                </div>
+              </div>
+            </AnimatedSection>
+          </div>
+          {/* Conditional Content Based on View Mode and Car Count */}
+          {filteredCars.length === 0 && !loading ? ( // Render the "No vehicles found" message if no vehicles match filters
+            <div className="text-center py-20">
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12 max-w-lg mx-auto">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-2xl font-bold text-white mb-4">
+                  No {getVehicleTypeLabel(selectedCategory, true)} found
+                </h3>
+                <p className="text-white/70 mb-6">Try adjusting your filters or search terms</p>
+                <button
+                  onClick={() => { setSearchTerm(''); setSelectedCategory('all'); setPriceRange([0, 15000]); }}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-full font-semibold transition-all"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          ) : viewMode === 'map' ? ( // If cars exist and view mode is map
+            /* Map View */
+            <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden shadow-2xl mb-8">
+              <div className="p-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/20">
+                <h3 className="text-xl font-bold text-white mb-2">🗺️ Interactive Nairobi Car Map</h3>
+                <p className="text-white/70">Explore cars across Nairobi's key areas: CBD, Westlands, Karen, Kilimani & more. Click markers to view details and book instantly.</p>
+              </div>
+              <div className="h-[600px]">
+                <GoogleMapEnhanced
+                  cars={filteredCars}
+                  onCarSelect={(car) => {
+                    setSelectedCar(car);
+                    setViewingCar(car);
+                    window.scrollTo(0, 0);
+                  }}
+                  showLocationSelector={false}
+                  initialCenter={{
+                    lat: -1.2864,  // Nairobi CBD coordinates
+                    lng: 36.8172
+                  }}
+                  initialZoom={13}
+                  mapHeight="600px"
+                  onChatClick={(car) => handleOpenChat(car)}
+                  user={user}
+                  className="rounded-xl overflow-hidden"
+                />
+              </div>
+            </div>
+          ) : ( // If cars exist and view mode is grid
+            /* Grid View */
+            <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12">
+              {filteredCars.map(car => (
+                <StaggerItem key={car.id}>
+                  <div className="group bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden hover:bg-white/10 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10">
+                    <div className="relative">
+                      <img src={car.image} alt={car.name} className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-2xl flex items-center border border-white/5">
+                        <span className="text-yellow-400">★</span>
+                        <span className="text-white text-xs font-black ml-1">{car.rating?.toFixed(1) || '4.8'}</span>
+                      </div>
+                      {car.available && (
+                        <div className="absolute top-4 left-4 bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
+                          InstaBook
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors">{car.name}</h3>
+                      <div className="text-white/40 text-[11px] font-bold uppercase tracking-wider mb-6 flex flex-wrap gap-x-4 gap-y-2">
+                        <span>📍 {car.location}</span>
+                        <span>👥 {car.seats} SEATS</span>
+                        <span>⛽ {car.fuel?.toUpperCase()}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-4 border-t border-white/5">
+                        <div className="flex flex-col">
+                          <span className="text-white/30 text-[9px] font-black uppercase">Start From</span>
+                          <span className="text-2xl font-black text-white">KSh {car.price?.toLocaleString()}</span>
+                        </div>
+                        <div className="flex space-x-2">
+                          {user && (
+                            <ScaleInteraction>
+                              <button
+                                onClick={() => handleOpenChat(car)}
+                                className="bg-white/5 hover:bg-white/10 text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all border border-white/10"
+                              >
+                                💬
+                              </button>
+                            </ScaleInteraction>
+                          )}
+                          <ScaleInteraction>
+                            <button
+                              onClick={() => {
+                                setSelectedCar(car);
+                                setViewingCar(car);
+                                if (user) setShowBookingModal(true);
+                                else setShowAuthModal(true);
+                              }}
+                              className="bg-white text-slate-900 px-6 py-2 rounded-xl font-black text-xs uppercase tracking-tighter transition-all hover:bg-blue-400 hover:text-white"
+                            >
+                              Reserve
+                            </button>
+                          </ScaleInteraction>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          )}
+        </div>
       </div>
-    </div>
     );
   };
 
@@ -2234,6 +2252,9 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                             if (confirm('Are you sure you want to cancel this booking?')) {
                               bookingsAPI.cancelBooking(booking.id, token);
                               loadUserBookings();
+                              showToast('Booking cancellation initiated.', 'info');
+                            } else {
+                              showToast('Booking cancellation aborted.', 'info');
                             }
                           }}
                           className="bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-red-300 px-4 py-2 rounded-lg font-semibold transition-all"
@@ -2318,11 +2339,10 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                       className="w-full h-48 object-cover"
                     />
                     <div className="absolute top-4 left-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        car.availability_status === 'available' ? 'bg-green-500 text-white' : 
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${car.availability_status === 'available' ? 'bg-green-500 text-white' :
                         car.availability_status === 'booked' ? 'bg-blue-500 text-white' :
-                        'bg-orange-500 text-white'
-                      }`}>
+                          'bg-orange-500 text-white'
+                        }`}>
                         {car.availability_status || 'Available'}
                       </span>
                     </div>
@@ -2342,7 +2362,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <button 
+                      <button
                         onClick={() => setManagingCarId(car.id)}
                         className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                       >
@@ -2388,7 +2408,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
             <p className="text-white/80 text-lg mb-6">Start earning by renting out your vehicle on DriveKenya!</p>
             {carSubmitMessage && (
               <div className={`mb-6 p-4 rounded-lg ${carSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' :
-                  'bg-green-500/20 border border-green-400/30 text-green-300'
+                'bg-green-500/20 border border-green-400/30 text-green-300'
                 }`}>
                 {carSubmitMessage}
               </div>
@@ -2515,11 +2535,11 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                   required
                 />
               </div>
-              
+
               <div className="mt-6 space-y-4">
                 <div>
                   <label className="block text-white/80 text-sm font-medium mb-2">📸 Car Images (Required - at least 1)</label>
-                  
+
                   {/* File Upload Section */}
                   <div className="mb-4">
                     <label className="block mb-2">
@@ -2538,14 +2558,14 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                         onChange={async (e) => {
                           const files = e.target.files;
                           if (!files || files.length === 0) return;
-                          
+
                           setIsUploadingImages(true);
                           try {
                             const formData = new FormData();
                             Array.from(files).forEach(file => {
                               formData.append('images', file);
                             });
-                            
+
                             const response = await fetch('http://localhost:5000/api/cars/upload-images', {
                               method: 'POST',
                               headers: {
@@ -2553,7 +2573,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                               },
                               body: formData
                             });
-                            
+
                             if (response.ok) {
                               const data = await response.json();
                               const newImages = data.data.imageUrls.map(url => `http://localhost:5000${url}`);
@@ -2563,7 +2583,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                             } else {
                               setCarSubmitMessage('❌ Failed to upload images');
                             }
-                          } catch (error) {
+                          } catch (error: any) {
                             setCarSubmitMessage('❌ Error uploading images');
                           } finally {
                             setIsUploadingImages(false);
@@ -2578,7 +2598,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Display Uploaded Images */}
                   {uploadedCarImages.length > 0 && (
                     <div className="mb-4">
@@ -2599,14 +2619,14 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                       </div>
                     </div>
                   )}
-                  
+
                   {/* OR Divider */}
                   <div className="flex items-center my-4">
                     <div className="flex-1 border-t border-white/20"></div>
                     <span className="px-3 text-white/50 text-sm">OR</span>
                     <div className="flex-1 border-t border-white/20"></div>
                   </div>
-                  
+
                   {/* URL Input Section */}
                   <div>
                     <label className="block text-white/70 text-sm mb-2">Paste Image URL</label>
@@ -2620,9 +2640,9 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                     />
                     {carForm.main_image_url && (
                       <div className="mt-2">
-                        <img 
-                          src={carForm.main_image_url} 
-                          alt="Preview" 
+                        <img
+                          src={carForm.main_image_url}
+                          alt="Preview"
                           className="w-full h-48 object-cover rounded-lg"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
@@ -2632,7 +2652,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-white/80 text-sm font-medium mb-2">🎥 Video URL (optional)</label>
                   <input
@@ -2655,7 +2675,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 rows={3}
                 className="w-full mt-6 px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               ></textarea>
-              
+
               <div className="mt-4 p-4 bg-blue-500/10 border border-blue-400/30 rounded-lg">
                 <p className="text-white/80 text-sm">
                   <strong>Note:</strong> After listing, you can manage availability status and set calendar blocks from "My Vehicles" → "Manage Vehicle"
@@ -2681,38 +2701,45 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       <div className="max-w-6xl mx-auto px-6 py-12">
         <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 text-center">About DriveKenya</h1>
         <p className="text-white/70 text-center text-xl mb-12">Revolutionizing car rental in Kenya</p>
-        
+
         {/* What is Drive Kenya */}
-        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-8">
-          <h2 className="text-3xl font-bold text-white mb-4 flex items-center">
-            <span className="mr-3">🚗</span> What is DriveKenya?
-          </h2>
-          <p className="text-white/80 text-lg leading-relaxed mb-4">
-            DriveKenya is Kenya's premier peer-to-peer vehicle rental platform that connects vehicle owners with people who need reliable, affordable transportation. We're transforming how Kenyans access vehicles by creating a trusted marketplace where anyone can list their car, motorcycle, bicycle, van, truck, SUV, or bus - or find the perfect ride for their journey.
-          </p>
-          <p className="text-white/80 text-lg leading-relaxed">
-            From bicycles for city commutes to motorcycles for quick errands, budget-friendly economy cars to luxury SUVs, cargo vans to moving trucks, and even buses for group travel - we offer Kenya's most diverse vehicle fleet spanning across Nairobi and major cities, ensuring you always have access to quality transportation when you need it.
-          </p>
-        </div>
+        <AnimatedSection>
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 mb-10 overflow-hidden relative group">
+            <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl group-hover:bg-blue-600/20 transition-all duration-700"></div>
+            <h2 className="text-3xl font-black text-white mb-6 flex items-center">
+              <span className="mr-4 p-3 bg-blue-500 rounded-2xl">🚗</span> What is DriveKenya?
+            </h2>
+            <p className="text-white/60 text-lg leading-relaxed mb-6 font-medium">
+              DriveKenya is Kenya's premier peer-to-peer vehicle rental platform that connects vehicle owners with people who need reliable, affordable transportation. We're transforming how Kenyans access vehicles by creating a trusted marketplace where anyone can list their car, motorcycle, bicycle, van, truck, SUV, or bus.
+            </p>
+            <p className="text-white/40 text-lg leading-relaxed font-medium">
+              From bicycles for city commutes to luxury SUVs, cargo vans to moving trucks - we offer Kenya's most diverse vehicle fleet across Nairobi and major cities.
+            </p>
+          </div>
+        </AnimatedSection>
 
         {/* Mission & Vision */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-            <h2 className="text-3xl font-bold text-white mb-4 flex items-center">
-              <span className="mr-3">🎯</span> Our Mission
-            </h2>
-            <p className="text-white/80 text-lg leading-relaxed">
-              To democratize car ownership benefits by enabling every Kenyan with a vehicle to earn income, while providing affordable, flexible, and convenient transportation options to those who need them.
-            </p>
-          </div>
-          <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
-            <h2 className="text-3xl font-bold text-white mb-4 flex items-center">
-              <span className="mr-3">🌟</span> Our Vision
-            </h2>
-            <p className="text-white/80 text-lg leading-relaxed">
-              To become East Africa's most trusted car-sharing platform, where every idle vehicle becomes an opportunity and every journey begins with confidence and convenience.
-            </p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
+          <AnimatedSection delay={0.1} className="h-full">
+            <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 h-full">
+              <h2 className="text-3xl font-black text-white mb-4 flex items-center">
+                <span className="mr-4 text-blue-400">🎯</span> Our Mission
+              </h2>
+              <p className="text-white/70 text-lg leading-relaxed font-medium">
+                To democratize car ownership benefits by enabling every Kenyan with a vehicle to earn income, while providing affordable, flexible, and convenient transportation options.
+              </p>
+            </div>
+          </AnimatedSection>
+          <AnimatedSection delay={0.3} className="h-full">
+            <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 h-full">
+              <h2 className="text-3xl font-black text-white mb-4 flex items-center">
+                <span className="mr-4 text-purple-400">🌟</span> Our Vision
+              </h2>
+              <p className="text-white/70 text-lg leading-relaxed font-medium">
+                To become East Africa's most trusted car-sharing platform, where every idle vehicle becomes an opportunity and every journey begins with confidence.
+              </p>
+            </div>
+          </AnimatedSection>
         </div>
 
         {/* Who We Serve */}
@@ -2844,7 +2871,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
               <h3 className="text-white font-semibold text-xl mb-4">Send Message</h3>
               {contactSubmitMessage && (
                 <div className={`mb-4 p-3 rounded-lg ${contactSubmitMessage.includes('Error') ? 'bg-red-500/20 border border-red-400/30 text-red-300' :
-                    'bg-green-500/20 border border-green-400/30 text-green-300'
+                  'bg-green-500/20 border border-green-400/30 text-green-300'
                   }`}>
                   {contactSubmitMessage}
                 </div>
@@ -2926,12 +2953,14 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
       {currentPage === 'phase4' && <Phase4Dashboard />}
       {currentPage === 'about' && renderAbout()}
       {currentPage === 'contact' && renderContact()}
-      {currentPage === 'owner-dashboard' && user?.role === 'host' && <OwnerDashboard />}
+      {currentPage === 'owner-dashboard' && user?.role === 'host' && (
+        <OwnerDashboard user={user} onLogout={handleLogout} onNavigate={setCurrentPage} />
+      )}
       {currentPage === 'pricing' && <PricingCalculator onBookCar={(bookingData) => {
         setSelectedCar(bookingData.car);
         setShowBookingModal(true);
       }} />}
-      
+
       <AuthModal />
       <ForgotPasswordModal />
       <ResetPasswordModal />
@@ -2951,7 +2980,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           onClose={closeCustomerSelector}
         />
       )}
-      
+
       {/* Car Inquiries Modal */}
       {showCarInquiries && selectedInquiryCar && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowCarInquiries(false)}>
@@ -2975,7 +3004,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                 <span>{carInquiries.length} customer(s) inquired about this car</span>
               </div>
             </div>
-            
+
             {/* Inquiries List */}
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-200px)]">
               {carInquiries.length === 0 ? (
@@ -3004,8 +3033,8 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                         {/* Avatar */}
                         <div className="flex-shrink-0">
                           {inquiry.avatar_url ? (
-                            <img 
-                              src={inquiry.avatar_url} 
+                            <img
+                              src={inquiry.avatar_url}
                               alt={inquiry.customer_name}
                               className="w-12 h-12 rounded-full object-cover"
                             />
@@ -3015,7 +3044,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Customer Info */}
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
@@ -3032,7 +3061,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
                             <span>📅 Last: {new Date(inquiry.last_message_date).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        
+
                         {/* Chat Button */}
                         <button className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm">
                           Open Chat
@@ -3046,7 +3075,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
           </div>
         </div>
       )}
-      
+
       {/* Messages Panel */}
       {showMessagesPanel && (
         <div className="fixed top-20 right-4 w-80 bg-gray-900/95 backdrop-blur-sm border border-white/20 rounded-2xl shadow-2xl z-40 max-h-96 overflow-hidden">
@@ -3125,7 +3154,7 @@ ${data.data?.instructions || 'Please use regular registration for now.'}`);
 
       {/* Car Management Interface */}
       {managingCarId && (
-        <ManageCar 
+        <ManageCar
           carId={managingCarId}
           onClose={() => setManagingCarId(null)}
           onUpdated={() => {

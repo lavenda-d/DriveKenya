@@ -96,7 +96,7 @@ router.post('/register', validateRegistration, async (req, res, next) => {
     }
 
     const { name, email, password, phone, role, accountType } = req.body;
-    
+
     // Determine the user role (prioritize 'role', then 'accountType', default to 'customer')
     const userRole = role || accountType || 'customer';
     // Map 'owner' to 'host' for consistency with existing database
@@ -119,9 +119,9 @@ router.post('/register', validateRegistration, async (req, res, next) => {
     const saltRounds = 12;
     console.log('🔐 Hashing password with salt rounds:', saltRounds);
     const passwordHash = await bcrypt.hash(password, saltRounds);
-    console.log('✅ Password hash created:', { 
-      length: passwordHash.length, 
-      prefix: passwordHash.substring(0, 10) 
+    console.log('✅ Password hash created:', {
+      length: passwordHash.length,
+      prefix: passwordHash.substring(0, 10)
     });
 
     // Create user
@@ -132,7 +132,9 @@ router.post('/register', validateRegistration, async (req, res, next) => {
     );
 
     const emailToken = uuidv4();
-    query('UPDATE users SET email_verification_token = ?, email_verification_sent_at = CURRENT_TIMESTAMP, email_verified = 0 WHERE id = ?', [emailToken, result.insertId]);
+    // Auto-verify if email service is not configured
+    const shouldVerify = emailUser && emailPassword;
+    query('UPDATE users SET email_verification_token = ?, email_verification_sent_at = CURRENT_TIMESTAMP, email_verified = ? WHERE id = ?', [emailToken, shouldVerify ? 0 : 1, result.insertId]);
     try {
       await sendVerificationEmail(email, emailToken, name.split(' ')[0] || name);
       console.log('✉️ Sent verification email to', email);
@@ -148,12 +150,12 @@ router.post('/register', validateRegistration, async (req, res, next) => {
         INSERT INTO notifications (user_id, type, title, message, is_read)
         VALUES (?, ?, ?, ?, ?)
       `, [result.insertId, 'system', 'Welcome to DriveKenya!', 'Thank you for joining DriveKenya. Start exploring available cars and book your first ride!', 0]);
-      
+
       query(`
         INSERT INTO notifications (user_id, type, title, message, is_read)
         VALUES (?, ?, ?, ?, ?)
       `, [result.insertId, 'system', 'Enhanced Features Available', 'New features: Real-time notifications, payment options, and improved booking flow are now live!', 0]);
-      
+
       console.log('✅ Created welcome notifications for user:', result.insertId);
     } catch (notifError) {
       console.error('Failed to create welcome notifications:', notifError.message);
@@ -272,16 +274,16 @@ router.post('/login', validateLogin, async (req, res, next) => {
       }
     }
 
-    console.log('🔐 Password comparison:', { 
-      inputLength: password.length, 
+    console.log('🔐 Password comparison:', {
+      inputLength: password.length,
       hashLength: user.password.length,
-      hashPrefix: user.password.substring(0, 10) 
+      hashPrefix: user.password.substring(0, 10)
     });
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     console.log('✅ Password valid:', isValidPassword);
-    
+
     if (!isValidPassword) {
       console.log('❌ Password mismatch for user:', email);
       const attempts = (user.failed_login_attempts || 0) + 1;
@@ -295,7 +297,8 @@ router.post('/login', validateLogin, async (req, res, next) => {
         message: attempts >= 5 ? 'Too many failed attempts. Account locked for 15 minutes.' : 'Invalid email or password'
       });
     }
-    if (!user.email_verified) {
+    // Only enforce verification if email service is configured
+    if (emailUser && emailPassword && !user.email_verified) {
       return res.status(403).json({
         success: false,
         message: 'Email not verified. Please check your inbox for the verification email or resend a new one.',
@@ -389,7 +392,7 @@ router.get('/verify', async (req, res, next) => {
 router.post('/google-signup', async (req, res, next) => {
   try {
     const { googleToken, role, accountType } = req.body;
-    
+
     // TODO: Verify Google token with Google OAuth API
     // For now, return a placeholder response
     res.status(200).json({
@@ -413,7 +416,7 @@ router.post('/google-signup', async (req, res, next) => {
 router.get('/biometric/status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     const biometric = await query(
       'SELECT * FROM biometric_credentials WHERE user_id = ?',
       [userId]

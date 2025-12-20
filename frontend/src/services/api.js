@@ -18,7 +18,7 @@ const apiRequest = async (endpoint, options = {}) => {
     console.log(`🌐 API Request: ${config.method || 'GET'} ${url}`);
     const response = await fetch(url, config);
     const data = await response.json();
-    
+
     if (!response.ok) {
       // Log detailed validation errors for debugging
       if (data.errors && Array.isArray(data.errors)) {
@@ -29,7 +29,7 @@ const apiRequest = async (endpoint, options = {}) => {
       }
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
-    
+
     console.log(`✅ API Success: ${endpoint}`, data);
     return data;
   } catch (error) {
@@ -42,10 +42,10 @@ const apiRequest = async (endpoint, options = {}) => {
 export const carsAPI = {
   // Get all cars
   getAllCars: () => apiRequest('/cars'),
-  
+
   // Get car by ID
   getCarById: (id) => apiRequest(`/cars/${id}`),
-  
+
   // Search cars
   searchCars: (params) => {
     const query = new URLSearchParams(params).toString();
@@ -105,19 +105,19 @@ export const authAPI = {
     method: 'POST',
     body: JSON.stringify(credentials),
   }),
-  
+
   // Register user
   register: (userData) => apiRequest('/auth/register', {
     method: 'POST',
     body: JSON.stringify(userData),
   }),
-  
+
   // Resend verification email
   resendVerification: (email) => apiRequest('/auth/resend-verification', {
     method: 'POST',
     body: JSON.stringify({ email }),
   }),
-  
+
   // Get current user
   getCurrentUser: (token) => apiRequest('/auth/me', {
     headers: {
@@ -145,7 +145,7 @@ export const bookingsAPI = {
     },
     body: JSON.stringify(bookingData),
   }),
-  
+
   // Get user bookings
   getUserBookings: (token) => apiRequest('/bookings/my-bookings', {
     headers: {
@@ -203,7 +203,7 @@ export const usersAPI = {
       Authorization: `Bearer ${token}`,
     },
   }),
-  
+
   // Update user profile
   updateProfile: (profileData, token) => apiRequest('/users/profile', {
     method: 'PUT',
@@ -212,7 +212,7 @@ export const usersAPI = {
     },
     body: JSON.stringify(profileData),
   }),
-  
+
   // Upload profile avatar (FormData)
   uploadAvatar: (file, token) => {
     const form = new FormData();
@@ -330,7 +330,7 @@ export const messagesAPI = {
 export const systemAPI = {
   // Check backend health
   checkHealth: () => apiRequest('/health'),
-  
+
   // Get system status
   getStatus: () => apiRequest('/status'),
 };
@@ -408,12 +408,21 @@ export const authStorage = {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   },
-  
+
   // Function to clear all auth data and force fresh login
   clearAllAuthData: () => {
     authStorage.clearAuth();
     console.log('🗑️ Cleared all authentication data - please login again');
   }
+};
+
+// Lightweight adapter that mimics an axios-like `api` object used elsewhere
+export const genericAPI = {
+  get: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'GET' }),
+  post: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'POST' }),
+  put: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PUT' }),
+  patch: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PATCH' }),
+  delete: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
 };
 
 export default {
@@ -426,14 +435,6 @@ export default {
   systemAPI,
   checkAPIConnection,
   mockCarsData,
-  authStorage
-};
-
-// Lightweight adapter that mimics an axios-like `api` object used elsewhere
-export const api = {
-  get: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'GET' }),
-  post: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'POST' }),
-  put: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PUT' }),
-  patch: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PATCH' }),
-  delete: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
+  authStorage,
+  api: genericAPI
 };

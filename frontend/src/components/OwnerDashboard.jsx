@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Car, 
-  DollarSign, 
-  Calendar, 
-  TrendingUp, 
+import {
+  Car,
+  DollarSign,
+  Calendar,
+  TrendingUp,
   Settings,
   Plus,
   Eye,
@@ -35,6 +35,7 @@ import {
 import AvailabilityCalendar from './AvailabilityCalendar';
 import DataExport from './DataExport';
 import useRealtimeUpdates from '../hooks/useRealtimeUpdates';
+import { useToast } from './UIUtils';
 
 const OwnerDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -45,6 +46,7 @@ const OwnerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState('month');
   const [selectedCarId, setSelectedCarId] = useState(null);
+  const { showToast, ToastContainer } = useToast();
 
   // Fetch dashboard data
   useEffect(() => {
@@ -55,21 +57,22 @@ const OwnerDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
+
       const response = await fetch(`/api/owner/dashboard?timeframe=${selectedTimeframe}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setDashboardData(data.dashboard);
       }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
+      showToast('Failed to fetch dashboard data', 'error');
     } finally {
       setLoading(false);
     }
@@ -84,13 +87,14 @@ const OwnerDashboard = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       const data = await response.json();
       if (data.success) {
         setCars(data.cars);
       }
     } catch (error) {
       console.error('Failed to fetch cars:', error);
+      showToast('Failed to fetch cars', 'error');
     }
   };
 
@@ -103,7 +107,7 @@ const OwnerDashboard = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       const data = await response.json();
       if (data.success) {
         // Add sample chart data if not present
@@ -128,6 +132,7 @@ const OwnerDashboard = () => {
       }
     } catch (error) {
       console.error('Failed to fetch earnings:', error);
+      showToast('Failed to fetch earnings', 'error');
     }
   };
 
@@ -140,13 +145,14 @@ const OwnerDashboard = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       const data = await response.json();
       if (data.success) {
         setMaintenance(data.maintenance);
       }
     } catch (error) {
       console.error('Failed to fetch maintenance:', error);
+      showToast('Failed to fetch maintenance', 'error');
     }
   };
 
@@ -161,14 +167,15 @@ const OwnerDashboard = () => {
         },
         body: JSON.stringify({ available })
       });
-      
+
       const data = await response.json();
       if (data.success) {
-        alert('Car availability updated successfully!');
+        showToast('Car availability updated successfully!', 'success');
         fetchCars();
       }
     } catch (error) {
       console.error('Failed to update car availability:', error);
+      showToast('Failed to update car availability', 'error');
     }
   };
 
@@ -183,14 +190,15 @@ const OwnerDashboard = () => {
         },
         body: JSON.stringify(maintenanceData)
       });
-      
+
       const data = await response.json();
       if (data.success) {
-        alert('Maintenance scheduled successfully!');
+        showToast('Maintenance scheduled successfully!', 'success');
         fetchMaintenance();
       }
     } catch (error) {
       console.error('Failed to schedule maintenance:', error);
+      showToast('Failed to schedule maintenance', 'error');
     }
   };
 
@@ -234,11 +242,10 @@ const OwnerDashboard = () => {
   const TabButton = ({ id, label, icon: Icon, active, onClick }) => (
     <button
       onClick={() => onClick(id)}
-      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-        active
-          ? 'bg-blue-600 text-white'
-          : 'text-gray-600 hover:bg-gray-100'
-      }`}
+      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${active
+        ? 'bg-blue-600 text-white'
+        : 'text-gray-600 hover:bg-gray-100'
+        }`}
     >
       <Icon size={20} />
       <span>{label}</span>
@@ -258,6 +265,7 @@ const OwnerDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
+      <ToastContainer />
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -396,13 +404,12 @@ const OwnerDashboard = () => {
                 <div className="space-y-4">
                   {dashboardData.recentBookings.map((booking, index) => (
                     <div key={booking.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <div className={`p-2 rounded-full ${
-                        booking.status === 'confirmed' ? 'bg-green-100' :
+                      <div className={`p-2 rounded-full ${booking.status === 'confirmed' ? 'bg-green-100' :
                         booking.status === 'pending' ? 'bg-yellow-100' : 'bg-gray-100'
-                      }`}>
+                        }`}>
                         <Calendar size={16} className={
                           booking.status === 'confirmed' ? 'text-green-600' :
-                          booking.status === 'pending' ? 'text-yellow-600' : 'text-gray-600'
+                            booking.status === 'pending' ? 'text-yellow-600' : 'text-gray-600'
                         } />
                       </div>
                       <div className="flex-1">
@@ -417,10 +424,9 @@ const OwnerDashboard = () => {
                         <p className="text-sm font-semibold text-gray-900">
                           ${booking.amount}
                         </p>
-                        <p className={`text-xs ${
-                          booking.status === 'confirmed' ? 'text-green-600' :
+                        <p className={`text-xs ${booking.status === 'confirmed' ? 'text-green-600' :
                           booking.status === 'pending' ? 'text-yellow-600' : 'text-gray-600'
-                        }`}>
+                          }`}>
                           {booking.status}
                         </p>
                       </div>
@@ -477,15 +483,14 @@ const OwnerDashboard = () => {
                         </h3>
                         <p className="text-gray-600 text-sm">{car.year}</p>
                       </div>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        car.status === 'active' && car.available
-                          ? 'bg-green-100 text-green-800'
-                          : car.status === 'maintenance'
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${car.status === 'active' && car.available
+                        ? 'bg-green-100 text-green-800'
+                        : car.status === 'maintenance'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-gray-100 text-gray-800'
-                      }`}>
+                        }`}>
                         {car.status === 'active' && car.available ? 'Available' :
-                         car.status === 'maintenance' ? 'Maintenance' : 'Unavailable'}
+                          car.status === 'maintenance' ? 'Maintenance' : 'Unavailable'}
                       </span>
                     </div>
 
@@ -523,11 +528,10 @@ const OwnerDashboard = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => toggleCarAvailability(car.id, !car.available)}
-                          className={`flex-1 px-4 py-2 rounded text-sm font-medium ${
-                            car.available
-                              ? 'bg-red-600 text-white hover:bg-red-700'
-                              : 'bg-green-600 text-white hover:bg-green-700'
-                          }`}
+                          className={`flex-1 px-4 py-2 rounded text-sm font-medium ${car.available
+                            ? 'bg-red-600 text-white hover:bg-red-700'
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
                         >
                           {car.available ? 'Set Unavailable' : 'Set Available'}
                         </button>
@@ -535,14 +539,14 @@ const OwnerDashboard = () => {
                           Edit Details
                         </button>
                       </div>
-                      
-                      <button 
+
+                      <button
                         onClick={() => {
                           // Open maintenance scheduling modal
                           const type = prompt('Maintenance type (oil_change, tire_rotation, brake_service, general_inspection, repair, other):');
                           const scheduledDate = prompt('Scheduled date (YYYY-MM-DD):');
                           const description = prompt('Description:');
-                          
+
                           if (type && scheduledDate) {
                             scheduleMaintenance(car.id, {
                               type,
@@ -605,34 +609,34 @@ const OwnerDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="period" />
                     <YAxis />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value, name) => [
-                        `$${value}`, 
-                        name === 'gross' ? 'Gross Earnings' : 
-                        name === 'net' ? 'Net Earnings' : 'Platform Fees'
-                      ]} 
+                        `$${value}`,
+                        name === 'gross' ? 'Gross Earnings' :
+                          name === 'net' ? 'Net Earnings' : 'Platform Fees'
+                      ]}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="gross" 
+                    <Area
+                      type="monotone"
+                      dataKey="gross"
                       stackId="1"
-                      stroke="#10b981" 
-                      fill="#10b981" 
-                      fillOpacity={0.6} 
+                      stroke="#10b981"
+                      fill="#10b981"
+                      fillOpacity={0.6}
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="fees" 
+                    <Area
+                      type="monotone"
+                      dataKey="fees"
                       stackId="2"
-                      stroke="#ef4444" 
-                      fill="#ef4444" 
-                      fillOpacity={0.6} 
+                      stroke="#ef4444"
+                      fill="#ef4444"
+                      fillOpacity={0.6}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="net" 
-                      stroke="#3b82f6" 
-                      strokeWidth={3} 
+                    <Line
+                      type="monotone"
+                      dataKey="net"
+                      stroke="#3b82f6"
+                      strokeWidth={3}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -695,12 +699,12 @@ const OwnerDashboard = () => {
                         </td>
                       </tr>
                     )) || (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                          No earnings data available
-                        </td>
-                      </tr>
-                    )}
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                            No earnings data available
+                          </td>
+                        </tr>
+                      )}
                   </tbody>
                 </table>
               </div>
@@ -772,12 +776,11 @@ const OwnerDashboard = () => {
                           {new Date(item.scheduled_date).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            item.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.status === 'completed' ? 'bg-green-100 text-green-800' :
                             item.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                            item.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                              item.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                            }`}>
                             {item.status.replace('_', ' ').toUpperCase()}
                           </span>
                         </td>
@@ -802,7 +805,7 @@ const OwnerDashboard = () => {
             </div>
           </div>
         )}
-        
+
         {/* Calendar Tab */}
         {activeTab === 'calendar' && (
           <div className="space-y-6">
@@ -811,7 +814,7 @@ const OwnerDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Car for Calendar Management
                 </label>
-                <select 
+                <select
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   onChange={(e) => setSelectedCarId(e.target.value)}
                   value={selectedCarId || ''}
@@ -825,9 +828,9 @@ const OwnerDashboard = () => {
                 </select>
               </div>
             )}
-            
+
             {selectedCarId && (
-              <AvailabilityCalendar 
+              <AvailabilityCalendar
                 carId={selectedCarId}
                 onAvailabilityChange={() => {
                   // Refresh dashboard data when availability changes
@@ -835,7 +838,7 @@ const OwnerDashboard = () => {
                 }}
               />
             )}
-            
+
             {!selectedCarId && cars.length === 0 && (
               <div className="text-center py-8">
                 <Car size={48} className="mx-auto text-gray-400 mb-4" />

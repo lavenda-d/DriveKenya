@@ -1,4 +1,4 @@
-import { api, authStorage } from './api';
+import { genericAPI as api, authStorage } from './api';
 import { Car } from '../types/car';
 
 interface ApiResponse<T> {

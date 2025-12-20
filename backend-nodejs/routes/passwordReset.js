@@ -23,33 +23,41 @@ if (!emailPassword || !emailUser) {
 }
 
 // Email transporter configuration for Gmail
-const mailTransporter = nodemailer.createTransport({
-  host: emailHost,
-  port: emailPort,
-  secure: false,
-  auth: {
-    user: emailUser,
-    pass: emailPassword,
-  },
-  tls: {
-    rejectUnauthorized: false
+// Email transporter configuration for Gmail
+const mailTransporter = (() => {
+  if (emailUser && emailPassword) {
+    return nodemailer.createTransport({
+      host: emailHost,
+      port: emailPort,
+      secure: false,
+      auth: {
+        user: emailUser,
+        pass: emailPassword,
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
   }
-});
+  return nodemailer.createTransport({ jsonTransport: true });
+})();
 
 // Verify transporter configuration on startup
-mailTransporter.verify(function (error, success) {
-  if (error) {
-    console.error('❌ SMTP configuration error:', error);
-  } else {
-    console.log('✅ SMTP server is ready to send emails');
-  }
-});
+if (emailUser && emailPassword) {
+  mailTransporter.verify(function (error, success) {
+    if (error) {
+      console.error('❌ SMTP configuration error:', error);
+    } else {
+      console.log('✅ SMTP server is ready to send emails');
+    }
+  });
+}
 
 // Request password reset
 router.post('/forgot-password', async (req, res, next) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -122,7 +130,7 @@ router.post('/forgot-password', async (req, res, next) => {
 router.post('/reset-password', async (req, res, next) => {
   try {
     const { token, newPassword } = req.body;
-    
+
     if (!token || !newPassword) {
       return res.status(400).json({
         success: false,

@@ -626,30 +626,4 @@ router.delete('/cars/:carId/availability-blocks/:blockId', authenticateToken, re
   }
 });
 
-// Get all maintenance records for owner
-router.get('/maintenance', authenticateToken, requireHost, async (req, res, next) => {
-  try {
-    const hostId = req.user.id;
-    console.log('Owner dashboard: fetching all maintenance for hostId=', hostId);
-
-    const maintenanceRecords = query(`
-      SELECT 
-        cm.*, 
-        c.make || ' ' || c.model as car_name,
-        c.license_plate
-      FROM car_maintenance cm 
-      JOIN cars c ON cm.car_id = c.id
-      WHERE c.host_id = ? 
-      ORDER BY cm.scheduled_date DESC
-    `, [hostId]);
-
-    res.json({
-      success: true,
-      maintenance: maintenanceRecords.rows
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
 export default router;

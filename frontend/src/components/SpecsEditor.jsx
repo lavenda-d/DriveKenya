@@ -1,11 +1,20 @@
 import { useState, useEffect } from 'react';
 import enhancedCarsAPI from '../services/enhancedCarsAPI';
-import { LoadingSpinner } from './UIUtils';
+import { LoadingSpinner, useToast, ConfirmDialog } from './UIUtils';
 
 const SpecsEditor = ({ carId, token, onUpdate }) => {
     const [specs, setSpecs] = useState({});
     const [loading, setLoading] = useState(true);
     const [editMode, setEditMode] = useState(false);
+    const { showToast, ToastContainer } = useToast();
+    const [confirmDialog, setConfirmDialog] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: null,
+        danger: false
+    });
+
     const [newSpec, setNewSpec] = useState({
         category: 'engine',
         spec_key: '',
@@ -32,6 +41,7 @@ const SpecsEditor = ({ carId, token, onUpdate }) => {
             setSpecs(response.data.grouped);
         } catch (error) {
             console.error('Failed to load specs:', error);
+            showToast('Failed to load specifications', 'error');
         } finally {
             setLoading(false);
         }
@@ -41,32 +51,40 @@ const SpecsEditor = ({ carId, token, onUpdate }) => {
         e.preventDefault();
 
         if (!newSpec.spec_key || !newSpec.spec_value) {
-            alert('Please fill in all fields');
+            showToast('Please fill in all fields', 'error');
             return;
         }
 
         try {
             await enhancedCarsAPI.addCarSpecs(carId, [newSpec], token);
-            alert('✅ Specification added successfully');
+            showToast('✅ Specification added successfully', 'success');
             setNewSpec({ category: 'engine', spec_key: '', spec_value: '' });
             loadSpecs();
             if (onUpdate) onUpdate();
         } catch (error) {
-            alert('❌ Failed to add specification: ' + error.message);
+            showToast('❌ Failed to add specification: ' + error.message, 'error');
         }
     };
 
-    const handleDeleteSpec = async (specId) => {
-        if (!confirm('Are you sure you want to delete this specification?')) return;
-
-        try {
-            await enhancedCarsAPI.deleteCarSpec(carId, specId, token);
-            alert('✅ Specification deleted successfully');
-            loadSpecs();
-            if (onUpdate) onUpdate();
-        } catch (error) {
-            alert('❌ Failed to delete specification: ' + error.message);
-        }
+    const handleDeleteSpec = (specId) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Delete Specification',
+            message: 'Are you sure you want to delete this specification? This action cannot be undone.',
+            danger: true,
+            onConfirm: async () => {
+                try {
+                    await enhancedCarsAPI.deleteCarSpec(carId, specId, token);
+                    showToast('✅ Specification deleted successfully', 'success');
+                    loadSpecs();
+                    if (onUpdate) onUpdate();
+                } catch (error) {
+                    showToast('❌ Failed to delete specification: ' + error.message, 'error');
+                } finally {
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                }
+            }
+        });
     };
 
     const handleBulkAdd = async () => {
@@ -97,7 +115,7 @@ const SpecsEditor = ({ carId, token, onUpdate }) => {
 
         const category = prompt('Enter category (engine/dimensions/features/safety):');
         if (!category || !commonSpecs[category]) {
-            alert('Invalid category');
+            showToast('Invalid category', 'error');
             return;
         }
 
@@ -108,11 +126,11 @@ const SpecsEditor = ({ carId, token, onUpdate }) => {
 
         try {
             await enhancedCarsAPI.addCarSpecs(carId, specsToAdd, token);
-            alert(`✅ Added ${specsToAdd.length} specifications template`);
+            showToast(`✅ Added ${specsToAdd.length} specifications template`, 'success');
             loadSpecs();
             if (onUpdate) onUpdate();
         } catch (error) {
-            alert('❌ Failed to add specifications: ' + error.message);
+            showToast('❌ Failed to add specifications: ' + error.message, 'error');
         }
     };
 
@@ -122,6 +140,16 @@ const SpecsEditor = ({ carId, token, onUpdate }) => {
 
     return (
         <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
+            <ToastContainer />
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                danger={confirmDialog.danger}
+                confirmText={confirmDialog.danger ? 'Delete' : 'Confirm'}
+                onConfirm={confirmDialog.onConfirm}
+                onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+            />
             <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-800">📝 Edit Specifications</h3>
                 <div className="flex space-x-2">
