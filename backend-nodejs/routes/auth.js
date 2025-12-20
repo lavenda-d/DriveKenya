@@ -6,6 +6,7 @@ import { body, validationResult } from 'express-validator';
 import { query } from '../config/database-sqlite.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { emailUser, emailPassword, emailHost, emailPort } from '../config/env.js';
+// Using native fetch from Node 18+
 
 const router = express.Router();
 
@@ -388,24 +389,110 @@ router.get('/verify', async (req, res, next) => {
   }
 });
 
-// Google Sign-Up endpoint (placeholder for future OAuth integration)
+// Google Sign-Up endpoint
 router.post('/google-signup', async (req, res, next) => {
+  console.log('🚀 [AUTH] /google-signup endpoint hit!');
   try {
     const { googleToken, role, accountType } = req.body;
+    console.log('📦 [AUTH] Request body:', JSON.stringify({ googleToken: googleToken ? '***' : 'missing', role, accountType }));
 
-    // TODO: Verify Google token with Google OAuth API
-    // For now, return a placeholder response
+    if (!googleToken) {
+      console.warn('⚠️ [AUTH] Missing googleToken');
+      return res.status(400).json({ success: false, message: 'Google token is required' });
+    }
+
+    console.log('🔍 Verifying Google token with userinfo API...');
+    // 1. Verify Google token and get user info
+    const googleResponse = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${googleToken}`);
+
+    if (!googleResponse.ok) {
+      const errorData = await googleResponse.json();
+      console.error('❌ Google token verification failed:', errorData);
+      return res.status(401).json({ success: false, message: 'Invalid Google token', details: errorData });
+    }
+
+    const googleUser = await googleResponse.json();
+    console.log('✅ Google user info retrieved:', { email: googleUser.email, name: googleUser.name });
+    const { email, given_name, family_name, picture, sub: googleId } = googleUser;
+
+    if (!email) {
+      console.error('❌ Google account missing email');
+      return res.status(400).json({ success: false, message: 'Google account missing email' });
+    }
+
+    // 2. Check if user already exists
+    console.log(`🔎 Checking if user exists in DB: ${email}`);
+    const users = await query('SELECT * FROM users WHERE email = ?', [email]);
+    let user;
+
+    if (users.rows.length > 0) {
+      // User exists - log them in
+      user = users.rows[0];
+      console.log(`👤 User already exists. Logging in: ${email}`);
+
+      // Update last login
+      await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+    } else {
+      // User doesn't exist - create new account
+      console.log(`🆕 Creating new user via Google: ${email}`);
+
+      const desiredRole = role || accountType || 'customer';
+      const firstName = given_name || 'Google';
+      const lastName = family_name || 'User';
+
+      const placeholderPassword = await bcrypt.hash(`google_${googleId}_${Date.now()}`, 10);
+
+      const result = await query(
+        `INSERT INTO users (
+          email, password, first_name, last_name, role, 
+          email_verified, avatar_url, is_verified, profile_completed, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [
+          email,
+          placeholderPassword,
+          firstName,
+          lastName,
+          desiredRole,
+          1, // email_verified = true
+          picture,
+          desiredRole === 'host' ? 0 : 1,
+          1 // profile_completed = true
+        ]
+      );
+
+      const newUserId = result.insertId;
+      console.log(`✅ New user created in DB with ID: ${newUserId}`);
+      const newUserRows = await query('SELECT * FROM users WHERE id = ?', [newUserId]);
+      user = newUserRows.rows[0];
+    }
+
+    // 3. Generate JWT
+    console.log('🔑 Generating JWT for user:', user.id);
+    const token = generateToken(user.id);
+
+    // 4. Return user and token
+    const { password: _, ...userWithoutPassword } = user;
+
+    // Normalize for frontend (both snake_case and camelCase)
+    const normalizedUser = {
+      ...userWithoutPassword,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      name: `${user.first_name} ${user.last_name}`.trim(),
+      avatar: user.avatar_url // Some parts might expect avatar
+    };
+
+    console.log('✨ Google authentication successful for:', email);
+    console.log('📦 Sending user to frontend:', JSON.stringify(normalizedUser));
+
     res.status(200).json({
-      success: false,
-      message: 'Google Sign-Up is coming soon! Please use regular registration for now.',
-      data: {
-        isPlaceholder: true,
-        selectedRole: role || accountType || 'customer',
-        instructions: 'This feature will be implemented with Google OAuth 2.0 integration.'
-      }
+      success: true,
+      user: normalizedUser,
+      token
     });
 
   } catch (error) {
+    console.error('💥 Google Sign-Up intensive error:', error);
     next(error);
   }
 });

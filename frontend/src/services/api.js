@@ -38,6 +38,50 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
+// Lightweight adapter that mimics an axios-like `api` object used elsewhere
+export const api = {
+  get: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'GET' }),
+  post: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'POST' }),
+  put: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PUT' }),
+  patch: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PATCH' }),
+  delete: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
+};
+
+// Also export as genericAPI for transition period
+export const genericAPI = api;
+
+// Local storage helpers
+export const authStorage = {
+  setToken: (token) => localStorage.setItem('driveKenya_token', token),
+  getToken: () => {
+    const token = localStorage.getItem('driveKenya_token');
+    return token && token !== 'undefined' ? token : null;
+  },
+  setUser: (user) => localStorage.setItem('driveKenya_user', JSON.stringify(user)),
+  getUser: () => {
+    try {
+      const user = localStorage.getItem('driveKenya_user');
+      return user && user !== 'undefined' ? JSON.parse(user) : null;
+    } catch (error) {
+      console.warn('Error parsing user data from localStorage:', error);
+      return null;
+    }
+  },
+  clearAuth: () => {
+    localStorage.removeItem('driveKenya_token');
+    localStorage.removeItem('driveKenya_user');
+    // Clear any old token storage keys to prevent conflicts
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
+
+  // Function to clear all auth data and force fresh login
+  clearAllAuthData: () => {
+    authStorage.clearAuth();
+    console.log('🗑️ Cleared all authentication data - please login again');
+  }
+};
+
 // Cars API
 export const carsAPI = {
   // Get all cars
@@ -384,47 +428,6 @@ export const checkAPIConnection = async () => {
   }
 };
 
-// Local storage helpers
-export const authStorage = {
-  setToken: (token) => localStorage.setItem('driveKenya_token', token),
-  getToken: () => {
-    const token = localStorage.getItem('driveKenya_token');
-    return token && token !== 'undefined' ? token : null;
-  },
-  setUser: (user) => localStorage.setItem('driveKenya_user', JSON.stringify(user)),
-  getUser: () => {
-    try {
-      const user = localStorage.getItem('driveKenya_user');
-      return user && user !== 'undefined' ? JSON.parse(user) : null;
-    } catch (error) {
-      console.warn('Error parsing user data from localStorage:', error);
-      return null;
-    }
-  },
-  clearAuth: () => {
-    localStorage.removeItem('driveKenya_token');
-    localStorage.removeItem('driveKenya_user');
-    // Clear any old token storage keys to prevent conflicts
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  },
-
-  // Function to clear all auth data and force fresh login
-  clearAllAuthData: () => {
-    authStorage.clearAuth();
-    console.log('🗑️ Cleared all authentication data - please login again');
-  }
-};
-
-// Lightweight adapter that mimics an axios-like `api` object used elsewhere
-export const genericAPI = {
-  get: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'GET' }),
-  post: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'POST' }),
-  put: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PUT' }),
-  patch: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PATCH' }),
-  delete: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
-};
-
 export default {
   carsAPI,
   authAPI,
@@ -436,5 +439,6 @@ export default {
   checkAPIConnection,
   mockCarsData,
   authStorage,
-  api: genericAPI
+  api,
+  genericAPI
 };

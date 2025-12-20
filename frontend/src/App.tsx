@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useTranslation } from 'react-i18next';
 import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
 import ChatModal from './components/ChatModal';
@@ -928,134 +929,136 @@ const App: React.FC = () => {
               <span>Drive<span className="text-blue-400">Kenya</span></span>
             </div>
 
-            <div className="hidden md:flex items-center space-x-2">
-              <ScaleInteraction>
-                <button
-                  onClick={() => setCurrentPage('home')}
-                  className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${currentPage === 'home'
-                    ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
-                    : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  Home
-                </button>
-              </ScaleInteraction>
-
-              <div className="relative">
+            {user && (
+              <div className="hidden md:flex items-center space-x-2">
                 <ScaleInteraction>
                   <button
-                    onClick={() => setShowVehiclesMenu(!showVehiclesMenu)}
-                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${currentPage === 'cars'
+                    onClick={() => setCurrentPage('home')}
+                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${currentPage === 'home'
                       ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
                       : 'text-white/40 hover:text-white hover:bg-white/5'
                       }`}
                   >
-                    Vehicles
-                    <span className="ml-2 text-[8px]">▼</span>
+                    Home
                   </button>
                 </ScaleInteraction>
 
-                {showVehiclesMenu && (
-                  <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl py-4 min-w-[220px] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="px-6 py-2 border-b border-white/5 mb-2">
-                      <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Select Type</span>
+                <div className="relative">
+                  <ScaleInteraction>
+                    <button
+                      onClick={() => setShowVehiclesMenu(!showVehiclesMenu)}
+                      className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${currentPage === 'cars'
+                        ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
+                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      Vehicles
+                      <span className="ml-2 text-[8px]">▼</span>
+                    </button>
+                  </ScaleInteraction>
+
+                  {showVehiclesMenu && (
+                    <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl py-4 min-w-[220px] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
+                      <div className="px-6 py-2 border-b border-white/5 mb-2">
+                        <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Select Type</span>
+                      </div>
+                      {vehicleTypes.map((type) => (
+                        <button
+                          key={type.value}
+                          onClick={() => handleVehicleTypeClick(type.value)}
+                          className="w-full px-6 py-3 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
+                        >
+                          <span className="mr-4 text-xl group-hover:scale-125 transition-transform">{type.icon}</span>
+                          <span className="text-xs font-black uppercase tracking-widest">{type.label}</span>
+                        </button>
+                      ))}
                     </div>
-                    {vehicleTypes.map((type) => (
+                  )}
+                </div>
+
+                <div className="relative">
+                  <ScaleInteraction>
+                    <button
+                      onClick={() => setShowServicesMenu(!showServicesMenu)}
+                      className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['listcar', 'bookings', 'mycars'].includes(currentPage)
+                        ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
+                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      {t('nav.services', 'Services')}
+                      <span className="ml-2 text-[8px]">▼</span>
+                    </button>
+                  </ScaleInteraction>
+
+                  {showServicesMenu && (
+                    <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl py-6 min-w-[240px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
                       <button
-                        key={type.value}
-                        onClick={() => handleVehicleTypeClick(type.value)}
-                        className="w-full px-6 py-3 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
+                        onClick={() => { setCurrentPage('listcar'); setShowServicesMenu(false); }}
+                        className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
                       >
-                        <span className="mr-4 text-xl group-hover:scale-125 transition-transform">{type.icon}</span>
-                        <span className="text-xs font-black uppercase tracking-widest">{type.label}</span>
+                        <span className="mr-4 text-blue-400 group-hover:scale-125 transition-transform">➕</span>
+                        <span className="text-xs font-black uppercase tracking-widest">List Vehicle</span>
                       </button>
-                    ))}
-                  </div>
-                )}
+                      <button
+                        onClick={() => { setCurrentPage('bookings'); setShowServicesMenu(false); }}
+                        className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
+                      >
+                        <span className="mr-4 text-purple-400 group-hover:scale-125 transition-transform">📋</span>
+                        <span className="text-xs font-black uppercase tracking-widest">Bookings</span>
+                      </button>
+                      <button
+                        onClick={() => { setCurrentPage('mycars'); setShowServicesMenu(false); }}
+                        className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
+                      >
+                        <span className="mr-4 text-emerald-400 group-hover:scale-125 transition-transform">🚙</span>
+                        <span className="text-xs font-black uppercase tracking-widest">My Vehicles</span>
+                      </button>
+                      <button
+                        onClick={() => { setCurrentPage('pricing'); setShowServicesMenu(false); }}
+                        className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group border-t border-white/5 mt-2"
+                      >
+                        <span className="mr-4 text-amber-400 group-hover:scale-125 transition-transform">📊</span>
+                        <span className="text-xs font-black uppercase tracking-widest">Pricing Calculator</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <ScaleInteraction>
+                    <button
+                      onClick={() => setShowMoreMenu(!showMoreMenu)}
+                      className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['about', 'contact'].includes(currentPage)
+                        ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
+                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      {t('nav.more', 'More')}
+                      <span className="ml-2 text-[8px]">▼</span>
+                    </button>
+                  </ScaleInteraction>
+
+                  {showMoreMenu && (
+                    <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl py-4 min-w-[180px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
+                      <button
+                        onClick={() => { setCurrentPage('about'); setShowMoreMenu(false); }}
+                        className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
+                      >
+                        <span className="mr-4 text-xl group-hover:scale-125 transition-transform">ℹ️</span>
+                        <span className="text-xs font-black uppercase tracking-widest">About</span>
+                      </button>
+                      <button
+                        onClick={() => { setCurrentPage('contact'); setShowMoreMenu(false); }}
+                        className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
+                      >
+                        <span className="mr-4 text-xl group-hover:scale-125 transition-transform">📞</span>
+                        <span className="text-xs font-black uppercase tracking-widest">Contact</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              <div className="relative">
-                <ScaleInteraction>
-                  <button
-                    onClick={() => setShowServicesMenu(!showServicesMenu)}
-                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['listcar', 'bookings', 'mycars'].includes(currentPage)
-                      ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
-                      : 'text-white/40 hover:text-white hover:bg-white/5'
-                      }`}
-                  >
-                    {t('nav.services', 'Services')}
-                    <span className="ml-2 text-[8px]">▼</span>
-                  </button>
-                </ScaleInteraction>
-
-                {showServicesMenu && (
-                  <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl py-6 min-w-[240px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
-                    <button
-                      onClick={() => { setCurrentPage('listcar'); setShowServicesMenu(false); }}
-                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
-                    >
-                      <span className="mr-4 text-blue-400 group-hover:scale-125 transition-transform">➕</span>
-                      <span className="text-xs font-black uppercase tracking-widest">List Vehicle</span>
-                    </button>
-                    <button
-                      onClick={() => { setCurrentPage('bookings'); setShowServicesMenu(false); }}
-                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
-                    >
-                      <span className="mr-4 text-purple-400 group-hover:scale-125 transition-transform">📋</span>
-                      <span className="text-xs font-black uppercase tracking-widest">Bookings</span>
-                    </button>
-                    <button
-                      onClick={() => { setCurrentPage('mycars'); setShowServicesMenu(false); }}
-                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
-                    >
-                      <span className="mr-4 text-emerald-400 group-hover:scale-125 transition-transform">🚙</span>
-                      <span className="text-xs font-black uppercase tracking-widest">My Vehicles</span>
-                    </button>
-                    <button
-                      onClick={() => { setCurrentPage('pricing'); setShowServicesMenu(false); }}
-                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group border-t border-white/5 mt-2"
-                    >
-                      <span className="mr-4 text-amber-400 group-hover:scale-125 transition-transform">📊</span>
-                      <span className="text-xs font-black uppercase tracking-widest">Pricing Calculator</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="relative">
-                <ScaleInteraction>
-                  <button
-                    onClick={() => setShowMoreMenu(!showMoreMenu)}
-                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['about', 'contact'].includes(currentPage)
-                      ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20'
-                      : 'text-white/40 hover:text-white hover:bg-white/5'
-                      }`}
-                  >
-                    {t('nav.more', 'More')}
-                    <span className="ml-2 text-[8px]">▼</span>
-                  </button>
-                </ScaleInteraction>
-
-                {showMoreMenu && (
-                  <div className="absolute top-full mt-4 right-0 bg-gray-900/95 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl py-4 min-w-[180px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
-                    <button
-                      onClick={() => { setCurrentPage('about'); setShowMoreMenu(false); }}
-                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
-                    >
-                      <span className="mr-4 text-xl group-hover:scale-125 transition-transform">ℹ️</span>
-                      <span className="text-xs font-black uppercase tracking-widest">About</span>
-                    </button>
-                    <button
-                      onClick={() => { setCurrentPage('contact'); setShowMoreMenu(false); }}
-                      className="w-full px-8 py-4 text-left text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center group"
-                    >
-                      <span className="mr-4 text-xl group-hover:scale-125 transition-transform">📞</span>
-                      <span className="text-xs font-black uppercase tracking-widest">Contact</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
 
             <div className="flex items-center space-x-4">
               {user ? (
@@ -1130,40 +1133,70 @@ const App: React.FC = () => {
     );
   };
 
-  // Google Sign-Up handler
-  const handleGoogleSignUp = async () => {
-    try {
-      setAuthLoading(true);
-      // For now, call the placeholder endpoint with basic data
-      const response = await fetch('http://localhost:5000/api/auth/google-signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          googleToken: 'placeholder-token',
-          role: 'customer', // Default role for Google sign-up
-          accountType: 'customer'
-        })
-      });
-      const data = await response.json();
-      if (data.success) {
-        showToast('Google Sign-Up successful!', 'success');
-        if (data.user && data.token) {
-          setUser(data.user);
-          setToken(data.token);
+  // Google Login hook for both sign-up and sign-in
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        setAuthLoading(true);
+        console.log('Google Login Success:', tokenResponse);
+
+        // Extract the access token
+        const accessToken = tokenResponse.access_token;
+
+        // Send to backend
+        console.log('📡 Sending Google token to backend at http://localhost:5000/api/auth/google-signup');
+        const response = await fetch('http://localhost:5000/api/auth/google-signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            googleToken: accessToken,
+            role: 'customer', // Default role - can be adjusted if needed
+            accountType: 'customer'
+          })
+        });
+
+        console.log('📬 Backend response status:', response.status);
+
+        const data = await response.json();
+        console.log('📦 [DEBUG] Backend response data:', JSON.stringify(data));
+
+        if (data.success) {
+          console.log('✅ [DEBUG] Auth successful, setting state...');
+          showToast('Successfully authenticated with Google!', 'success');
+          if (data.user && data.token) {
+            console.log('👤 [DEBUG] Setting user:', data.user.email);
+            setUser(data.user);
+            console.log('🔑 [DEBUG] Setting token');
+            setToken(data.token);
+
+            // Persist to localStorage
+            authStorage.setUser(data.user);
+            authStorage.setToken(data.token);
+            console.log('💾 [DEBUG] Persisted to localStorage');
+          }
+          setShowAuthModal(false);
+        } else {
+          console.warn('⚠️ [DEBUG] Auth failed:', data.message);
+          showToast(data.message || 'Google Auth failed', 'error');
         }
-        setShowAuthModal(false);
-      } else {
-        console.error('Google Sign-Up failed:', data.message);
-        showToast(`🚀 ${data.message}\nGoogle Sign-Up is coming soon!\n${data.data?.instructions || 'Please use regular registration for now.'}`, 'info');
+      } catch (error) {
+        console.error('Google Backend integration error:', error);
+        showToast('Integration error. Please try regular login.', 'error');
+      } finally {
+        setAuthLoading(false);
       }
-    } catch (error) {
-      console.error('Google Sign-Up error:', error);
-      showToast('Google Sign-Up is temporarily unavailable. Please use regular registration.', 'error');
-    } finally {
-      setAuthLoading(false);
+    },
+    onError: (error) => {
+      console.error('Google Login Error:', error);
+      showToast('Google login failed. Please try again.', 'error');
     }
+  });
+
+  // Google Sign-Up handler
+  const handleGoogleSignUp = () => {
+    loginWithGoogle();
   };
 
   // Authentication Modal
@@ -2029,6 +2062,29 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+          {/* Back Button */}
+          <div className="mb-4">
+            <button
+              onClick={() => setCurrentPage('home')}
+              className="flex items-center text-white/80 hover:text-white transition-colors mb-6"
+            >
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Back to Home
+            </button>
           </div>
           {/* View Mode Toggle */}
           <div className="mb-8">

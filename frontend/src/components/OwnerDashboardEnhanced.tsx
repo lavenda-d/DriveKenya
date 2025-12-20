@@ -21,7 +21,7 @@ import {
 } from 'recharts';
 import { useToast, AnimatedSection, StaggerContainer, StaggerItem, ScaleInteraction, CustomDropdown } from './UIUtils';
 import { User } from '../types/dashboard';
-import { genericAPI as api, authStorage } from '../services/api';
+import { genericAPI, authStorage } from '../services/api';
 
 interface OwnerDashboardProps {
   user: User;
