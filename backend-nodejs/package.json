@@ -1,5 +1,5 @@
 {
-  "name": "driveKenya-backend",
+  "name": "drivekenya-backend",
   "version": "1.0.0",
   "description": "Backend API for DriveKenya - Premium Car Rental Platform with real-time chat, booking system, and location services",
   "main": "server.js",

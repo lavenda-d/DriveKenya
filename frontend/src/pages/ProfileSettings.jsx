@@ -416,7 +416,7 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                                     return;
                                                 }
                                                 const payload = { primary: primaryContact, secondary: secondaryContact };
-                                                const res = await fetch('http://localhost:5000/api/users/emergency-contacts', {
+                                                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/emergency-contacts`, {
                                                     method: 'PUT',
                                                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                                                     body: JSON.stringify(payload)

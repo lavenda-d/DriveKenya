@@ -8,7 +8,7 @@ const useRealtimeUpdates = (userId, onUpdate) => {
     if (!userId) return;
 
     // Initialize socket connection - use Vite env variable
-    const socketUrl = import.meta.env?.VITE_SOCKET_URL || 'http://localhost:5000';
+    const socketUrl = import.meta.env?.VITE_WEBSOCKET_URL || import.meta.env?.VITE_SOCKET_URL || 'http://localhost:5000';
     socketRef.current = io(socketUrl, {
       auth: {
         token: localStorage.getItem('token')

@@ -16,23 +16,62 @@ export const emailHost = process.env.EMAIL_HOST || 'smtp.gmail.com';
 export const emailPort = parseInt(process.env.EMAIL_PORT || '587');
 export const emailFrom = process.env.EMAIL_FROM || 'drivekenyaorg@gmail.com';
 
-// Debug: Log if EMAIL_PASSWORD is loaded
-console.log('🔍 Environment check:', {
-  EMAIL_PASSWORD: emailPassword ? '✅ Loaded' : '❌ Missing',
-  EMAIL_USER: emailUser || '❌ Missing',
-  NODE_ENV: process.env.NODE_ENV
-});
+const isProduction = process.env.NODE_ENV === 'production';
 
-// Set JWT_SECRET with fallback if not in .env
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = 'driveKenya-secret-2024';
-  console.log('⚠️  Using default JWT_SECRET. Set JWT_SECRET in .env for production!');
+// Database Configuration
+export const dbType = (process.env.DB_TYPE || 'sqlite').toLowerCase();
+export const dbHost = process.env.DB_HOST || 'localhost';
+export const dbPort = parseInt(process.env.DB_PORT || '5432');
+export const dbName = process.env.DB_NAME || 'drivekenya';
+export const dbUser = process.env.DB_USER || 'postgres';
+export const dbPassword = process.env.DB_PASSWORD || '';
+
+// Critical Environment Variables Validation
+const criticalEnvVars = [
+  'JWT_SECRET',
+  'FRONTEND_URL'
+];
+
+if (dbType === 'postgres' && isProduction) {
+  criticalEnvVars.push('DB_PASSWORD');
 }
+
+if (isProduction) {
+  const missingVars = criticalEnvVars.filter(v => !process.env[v]);
+  if (missingVars.length > 0) {
+    console.error('❌ CRITICAL ERROR: Missing required environment variables for production:');
+    missingVars.forEach(v => console.error(`   - ${v}`));
+    process.exit(1);
+  }
+} else {
+  // Set fallback JWT_SECRET ONLY in development
+  if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'driveKenya-dev-secret-key-2025';
+    console.warn('⚠️  WARNING: JWT_SECRET not set. Using development placeholder. DO NOT USE IN PRODUCTION!');
+  }
+}
+
+// Debug: Log environment status (avoid logging sensitive values directly)
+console.log('🔍 Environment Initialization:', {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  DB_TYPE: dbType,
+  DB_HOST: dbHost,
+  JWT_SECRET: process.env.JWT_SECRET ? '✅ Configured' : '❌ NOT SET',
+  EMAIL_CONFIG: emailUser && emailPassword ? '✅ Configured' : '⚠️ Partial',
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000 (Default)'
+});
 
 export default {
   emailUser,
   emailPassword,
   emailHost,
   emailPort,
-  emailFrom
+  emailFrom,
+  isProduction,
+  dbType,
+  dbHost,
+  dbPort,
+  dbName,
+  dbUser,
+  dbPassword
 };

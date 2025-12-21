@@ -52,7 +52,7 @@ router.get('/rules', authenticateToken, async (req, res) => {
     }
 
     const rules = await PricingService.getPricingRules();
-    
+
     res.json({
       success: true,
       rules
@@ -315,14 +315,14 @@ router.get('/analytics', authenticateToken, async (req, res) => {
     }
 
     const { startDate, endDate } = req.query;
-    
+
     // Default to last 30 days if no dates provided
     const end = endDate ? new Date(endDate) : new Date();
     const start = startDate ? new Date(startDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Get pricing analytics from bookings
-    const { query } = await import('../config/database-sqlite.js');
-    
+    const { query } = await import('../config/database.js');
+
     const analyticsResult = await query(`
       SELECT 
         COUNT(*) as totalBookings,
@@ -355,7 +355,7 @@ router.get('/analytics', authenticateToken, async (req, res) => {
     `, [start.toISOString(), end.toISOString()]);
 
     const analytics = analyticsResult.rows[0];
-    
+
     res.json({
       success: true,
       analytics: {

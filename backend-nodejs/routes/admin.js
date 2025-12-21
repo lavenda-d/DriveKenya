@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 
 const router = express.Router();
 
@@ -22,16 +22,16 @@ router.get('/dashboard', authenticateToken, requireAdmin, async (req, res, next)
     const userStats = query('SELECT COUNT(*) as total, role FROM users GROUP BY role');
     const totalCars = query('SELECT COUNT(*) as total FROM cars');
     const availableCars = query('SELECT COUNT(*) as total FROM cars WHERE available = 1');
-    
+
     // Get support ticket counts
     const openTickets = query("SELECT COUNT(*) as count FROM support_tickets WHERE status = 'open'");
     const pendingSupportCount = openTickets.rows[0]?.count || 0;
-    
+
     // Try to get bookings data safely
     let bookingStats = { total: 0, active: 0, completed: 0, cancelled: 0 };
     let revenueStats = { revenue: 0, bookings: 0 };
     let recentActivity = [];
-    
+
     try {
       const bookingResult = query(`
         SELECT 
@@ -42,7 +42,7 @@ router.get('/dashboard', authenticateToken, requireAdmin, async (req, res, next)
         FROM bookings 
       `);
       bookingStats = bookingResult.rows[0] || bookingStats;
-      
+
       const revenue = query(`
         SELECT 
           COALESCE(SUM(total_price), 0) as revenue,
@@ -84,15 +84,16 @@ router.get('/dashboard', authenticateToken, requireAdmin, async (req, res, next)
         GROUP BY status
       `);
 
-      revenueStats = { ...revenueStats, 
+      revenueStats = {
+        ...revenueStats,
         revenueChart: chartData.rows,
         userGrowthChart: userGrowthData.rows,
         bookingStatusChart: bookingStatusData.rows.map(row => ({
           name: row.status,
           value: row.count,
-          color: row.status === 'confirmed' ? '#10b981' : 
-                row.status === 'pending' ? '#f59e0b' : 
-                row.status === 'cancelled' ? '#ef4444' : '#3b82f6'
+          color: row.status === 'confirmed' ? '#10b981' :
+            row.status === 'pending' ? '#f59e0b' :
+              row.status === 'cancelled' ? '#ef4444' : '#3b82f6'
         }))
       };
     } catch (bookingError) {

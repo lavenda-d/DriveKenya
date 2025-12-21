@@ -24,13 +24,13 @@ const EmergencyButton = ({ bookingId, currentLocation }) => {
 
   const fetchEmergencyContacts = async () => {
     try {
-      const API_BASE_URL = 'http://localhost:5000';
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await fetch(`${API_BASE_URL}/api/emergency/contacts`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (!response.ok) {
         // Use default contacts if API fails
         setEmergencyContacts([
@@ -40,7 +40,7 @@ const EmergencyButton = ({ bookingId, currentLocation }) => {
         ]);
         return;
       }
-      
+
       const data = await response.json();
       setEmergencyContacts(data.contacts || []);
     } catch (error) {
@@ -67,7 +67,7 @@ const EmergencyButton = ({ bookingId, currentLocation }) => {
   const triggerEmergency = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/emergency/trigger', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/emergency/trigger`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ const EmergencyButton = ({ bookingId, currentLocation }) => {
       if (response.ok) {
         // Show confirmation
         alert('Emergency alert sent! Authorities and emergency contacts have been notified.');
-        
+
         // Auto-call emergency services after 10 seconds
         setTimeout(() => {
           window.location.href = 'tel:+254911'; // Kenya emergency number

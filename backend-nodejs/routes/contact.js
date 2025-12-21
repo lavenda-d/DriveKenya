@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import nodemailer from 'nodemailer';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 import { emailUser, emailPassword, emailHost, emailPort } from '../config/env.js';
 
 const router = express.Router();

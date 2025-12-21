@@ -1,5 +1,5 @@
 {
-  "name": "driveKenya-frontend",
+  "name": "drivekenya-frontend",
   "private": true,
   "version": "1.0.0",
   "description": "DriveKenya - Premium Car Rental Platform with real-time features, Google Maps integration, and modern UI",
@@ -20,7 +20,6 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@react-oauth/google": "^0.13.0",
     "@simplewebauthn/browser": "^13.2.2",
-    "@simplewebauthn/typescript-types": "^8.3.4",
     "@tanstack/react-query": "^4.36.1",
     "@tanstack/react-router": "^1.0.0",
     "browser-image-compression": "^2.0.2",

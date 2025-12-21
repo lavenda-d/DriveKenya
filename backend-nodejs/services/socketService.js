@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 
 let io;
 
@@ -8,11 +8,9 @@ let io;
 export const initializeSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: [
-        'http://localhost:3000', 
-        'http://localhost:3001',
-        process.env.FRONTEND_URL
-      ].filter(Boolean),
+      origin: process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+        : [process.env.FRONTEND_URL || 'http://localhost:3000'],
       credentials: true,
     }
   });
@@ -26,10 +24,10 @@ export const initializeSocket = (server) => {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+
       // Get user details from database
       const userResult = query('SELECT id, first_name, last_name, email, role FROM users WHERE id = ?', [decoded.userId]);
-      
+
       if (userResult.rows.length === 0) {
         return next(new Error('User not found'));
       }
@@ -54,7 +52,7 @@ export const initializeSocket = (server) => {
 
     // Join user to their personal room
     socket.join(`user_${socket.user.id}`);
-    
+
     // Send any pending notifications for this user
     loadPendingNotifications(socket);
 
@@ -65,24 +63,24 @@ export const initializeSocket = (server) => {
         const { carId, ownerId } = data;
         const userId = socket.user.id;
         const userRole = socket.user.role; // Get user role from socket
-        
+
         console.log(`🚗 Join chat request: Car ${carId}, Other User ${ownerId}, Current User ${userId} (Role: ${userRole})`);
-        
+
         // Verify car exists
         const carResult = query('SELECT * FROM cars WHERE id = ?', [carId]);
-        
+
         if (carResult.rows.length === 0) {
           socket.emit('error', { message: 'Car not found' });
           return;
         }
-        
+
         const car = carResult.rows[0];
         const isCarOwner = car.host_id === userId;
-        
+
         // Determine the correct participants for the chat room
         let customerId, carOwnerId;
         let chatContext = '';
-        
+
         if (isCarOwner) {
           // Current user is the car owner, ownerId is actually the customer
           carOwnerId = userId;
@@ -96,26 +94,26 @@ export const initializeSocket = (server) => {
           chatContext = 'customer-inquiring';
           console.log(`🚗 Customer (ID: ${userId}) joining chat with car owner (ID: ${carOwnerId})`);
         }
-        
+
         // Generate consistent room name using min/max to match frontend logic
         const minId = Math.min(customerId, carOwnerId);
         const maxId = Math.max(customerId, carOwnerId);
         const chatRoom = `chat_${carId}_${minId}_${maxId}`;
-        
+
         // Leave any previous chat room
         if (socket.currentChatRoom) {
           socket.leave(socket.currentChatRoom);
         }
-        
+
         socket.join(chatRoom);
         socket.currentChatRoom = chatRoom;
         socket.chatContext = chatContext;
-        
+
         console.log(`📱 User ${socket.user.first_name} joined chat room: ${chatRoom}`);
         console.log(`📋 Chat context: ${chatContext}`);
         console.log(`🔍 Room participants: Customer ${customerId} and Car Owner ${carOwnerId}`);
         console.log(`🔗 Socket.currentChatRoom set to: ${socket.currentChatRoom}`);
-        
+
         // Load and send recent chat history
         const messagesResult = query(`
           SELECT m.*, u.first_name, u.last_name 
@@ -125,21 +123,21 @@ export const initializeSocket = (server) => {
           ORDER BY m.created_at DESC
           LIMIT 50
         `, [chatRoom]);
-        
+
         socket.emit('chat_history', {
           messages: messagesResult.rows.reverse(),
           room: chatRoom
         });
-        
+
         // Mark all messages in this chat room as read for the current user
         query(`
           UPDATE chat_messages 
           SET is_read = 1 
           WHERE chat_room = ? AND sender_id != ?
         `, [chatRoom, userId]);
-        
+
         console.log(`📖 Marked messages as read for user ${userId} in room ${chatRoom}`);
-        
+
         // Emit success event to confirm chat joined
         socket.emit('chat_joined', {
           success: true,
@@ -158,13 +156,13 @@ export const initializeSocket = (server) => {
       try {
         const { message, chatRoom } = data;
         const senderId = socket.user.id;
-        
+
         console.log(`🔍 Send message debug:`);
         console.log(`   - User ID: ${senderId}`);
         console.log(`   - Socket current room: ${socket.currentChatRoom}`);
         console.log(`   - Requested chat room: ${chatRoom}`);
         console.log(`   - Message: ${message}`);
-        
+
         if (!socket.currentChatRoom || socket.currentChatRoom !== chatRoom) {
           console.log(`❌ Authorization failed for chat room`);
           console.log(`   - Has current room: ${!!socket.currentChatRoom}`);
@@ -198,12 +196,12 @@ export const initializeSocket = (server) => {
         const carId = roomParts[1];
         const participant1 = parseInt(roomParts[2]);
         const participant2 = parseInt(roomParts[3]);
-        
+
         // Determine the recipient (the other participant in the chat)
         const recipientId = senderId === participant1 ? participant2 : participant1;
-        
+
         console.log(`🎯 Targeted notification: Car ${carId}, Sender ${senderId}, Recipient ${recipientId}`);
-        
+
         // Update notification counts for the specific recipient only with EAT timestamp
         query(`
           INSERT OR REPLACE INTO chat_notifications (user_id, chat_room, unread_count, last_message_id, last_updated)
@@ -220,24 +218,24 @@ export const initializeSocket = (server) => {
         const recipientSocket = Array.from(io.sockets.sockets.values()).find(
           s => s.user && s.user.id === recipientId
         );
-        
+
         let notificationsSent = 0;
         if (recipientSocket) {
           // Get recipient details for context
           const recipientResult = query('SELECT first_name, last_name, role FROM users WHERE id = ?', [recipientId]);
           const recipient = recipientResult.rows[0];
-          
+
           // Get car details for context
           const carResult = query('SELECT make, model FROM cars WHERE id = ?', [carId]);
           const car = carResult.rows[0];
-          
+
           const senderRole = socket.user.role;
           const recipientRole = recipient.role;
-          
+
           // Create specific notification message with car context
           let notificationTitle = `${socket.user.first_name} ${socket.user.last_name}`;
           let contextMessage = message;
-          
+
           if (senderRole === 'host' && recipientRole === 'customer') {
             notificationTitle = `🔑 Car Owner: ${socket.user.first_name}`;
             contextMessage = `About ${car.make} ${car.model}: ${message}`;
@@ -245,7 +243,7 @@ export const initializeSocket = (server) => {
             notificationTitle = `🚗 Customer: ${socket.user.first_name}`;
             contextMessage = `About ${car.make} ${car.model}: ${message}`;
           }
-          
+
           recipientSocket.emit('new_notification', {
             type: 'new_message',
             chatRoom: chatRoom,
@@ -258,7 +256,7 @@ export const initializeSocket = (server) => {
             messageId: messageResult.insertId,
             chatContext: socket.chatContext || 'general'
           });
-          
+
           notificationsSent = 1;
           console.log(`📤 Targeted notification sent to ${recipient.first_name} about ${car.make} ${car.model}`);
         } else {
@@ -270,18 +268,18 @@ export const initializeSocket = (server) => {
           // Get recipient and car details for database storage
           const recipientResult = query('SELECT first_name, last_name, role FROM users WHERE id = ?', [recipientId]);
           const recipient = recipientResult.rows[0];
-          
+
           const carResult = query('SELECT make, model FROM cars WHERE id = ?', [carId]);
           const car = carResult.rows[0];
-          
+
           if (recipient && car) {
             const senderRole = socket.user.role;
             const recipientRole = recipient.role;
-            
+
             // Create notification title and message
             let notificationTitle = `New message from ${socket.user.first_name} ${socket.user.last_name}`;
             let contextMessage = message;
-            
+
             if (senderRole === 'host' && recipientRole === 'customer') {
               notificationTitle = `🔑 New message from Car Owner: ${socket.user.first_name}`;
               contextMessage = `About ${car.make} ${car.model}: ${message}`;
@@ -315,10 +313,10 @@ export const initializeSocket = (server) => {
 
         // Send message to all users in the chat room
         io.to(chatRoom).emit('new_message', messageData);
-        
+
         console.log(`💬 Message sent in ${chatRoom}: ${message}`);
         console.log(`🔔 Notifications sent to ${notificationsSent} other participants`);
-        
+
       } catch (error) {
         console.error('Send message error:', error);
         socket.emit('error', { message: 'Failed to send message' });
@@ -350,12 +348,12 @@ export const initializeSocket = (server) => {
     socket.on('request-video-call', async (data) => {
       try {
         const { userId, userEmail, userName } = data;
-        
+
         console.log(`📹 Video call requested by: ${userName} (${userEmail})`);
-        
+
         // Create a notification for admins
         const adminUsers = query('SELECT id FROM users WHERE role = ?', ['admin']);
-        
+
         adminUsers.rows.forEach(admin => {
           query(`
             INSERT INTO notifications (user_id, type, title, message, created_at)
@@ -367,7 +365,7 @@ export const initializeSocket = (server) => {
             `${userName} (${userEmail}) has requested a video call support session.`,
             new Date().toISOString()
           ]);
-          
+
           // Send real-time notification to admin if online
           io.to(`user_${admin.id}`).emit('notification', {
             type: 'video_call_request',
@@ -377,13 +375,13 @@ export const initializeSocket = (server) => {
             userId
           });
         });
-        
+
         // Confirm to user
         socket.emit('video_call_requested', {
           success: true,
           message: 'Video call request sent. Our support team will contact you shortly.'
         });
-        
+
       } catch (error) {
         console.error('Video call request error:', error);
         socket.emit('error', { message: 'Failed to request video call' });
@@ -431,7 +429,7 @@ export const emitBookingNotification = (userId, bookingData, action) => {
   if (io) {
     const title = `Booking ${action}`;
     let message = '';
-    
+
     switch (action) {
       case 'created':
         message = `New booking for ${bookingData.carName || 'vehicle'} created successfully`;
@@ -501,7 +499,7 @@ export const emitSystemNotification = (userId, title, message, priority = 'norma
 const loadPendingNotifications = (socket) => {
   try {
     const userId = socket.user.id;
-    
+
     // Get all unread chat notifications for this user
     const notificationsResult = query(`
       SELECT cn.*, c.make, c.model, u.first_name, u.last_name, u.role as sender_role
@@ -512,14 +510,14 @@ const loadPendingNotifications = (socket) => {
       WHERE cn.user_id = ? AND cn.unread_count > 0
       ORDER BY cn.last_updated DESC
     `, [userId]);
-    
+
     if (notificationsResult.rows.length > 0) {
       console.log(`📬 Loading ${notificationsResult.rows.length} pending notifications for ${socket.user.first_name}`);
-      
+
       notificationsResult.rows.forEach(notification => {
         const carDetails = `${notification.make} ${notification.model}`;
         const senderName = `${notification.first_name} ${notification.last_name}`;
-        
+
         socket.emit('new_notification', {
           type: 'missed_message',
           chatRoom: notification.chat_room,

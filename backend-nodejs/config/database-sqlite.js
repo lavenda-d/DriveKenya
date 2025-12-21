@@ -7,15 +7,15 @@ const __dirname = path.dirname(__filename);
 
 // Create SQLite database file in the project directory
 const dbPath = path.join(__dirname, '..', 'driveKenya.db');
-const db = new Database(dbPath);
+const sqliteInstance = new Database(dbPath);
 
 // Enable foreign keys
-db.pragma('foreign_keys = ON');
+sqliteInstance.pragma('foreign_keys = ON');
 
 console.log(`🗄️  Connected to SQLite database at: ${dbPath}`);
 
 // Create tables if they don't exist
-const createTables = (db) => {
+const createTables = (db = sqliteInstance) => {
   // Users table
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -539,7 +539,7 @@ const createTables = (db) => {
 };
 
 // Initialize tables
-createTables(db);
+createTables(sqliteInstance);
 
 export { createTables };
 
@@ -547,11 +547,11 @@ export { createTables };
 export const query = (sql, params = []) => {
   try {
     if (sql.trim().toLowerCase().startsWith('select')) {
-      const stmt = db.prepare(sql);
+      const stmt = sqliteInstance.prepare(sql);
       const result = stmt.all(...params);
       return { rows: result, rowCount: result.length };
     } else {
-      const stmt = db.prepare(sql);
+      const stmt = sqliteInstance.prepare(sql);
       const result = stmt.run(...params);
       return {
         rows: [],
@@ -567,8 +567,8 @@ export const query = (sql, params = []) => {
 
 // Transaction support
 export const transaction = (callback) => {
-  const trans = db.transaction(callback);
+  const trans = sqliteInstance.transaction(callback);
   return trans;
 };
 
-export default db;
+export default sqliteInstance;

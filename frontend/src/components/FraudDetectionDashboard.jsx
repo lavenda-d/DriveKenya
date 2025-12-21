@@ -19,7 +19,7 @@ const FraudDetectionDashboard = () => {
   const fetchFraudData = async () => {
     setLoading(true);
     try {
-      const API_BASE_URL = 'http://localhost:5000';
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const [alertsRes, statsRes, trendsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/fraud/alerts?filter=${filter}&range=${timeRange}`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -57,7 +57,7 @@ const FraudDetectionDashboard = () => {
 
   const handleAlertAction = async (alertId, action) => {
     try {
-      await fetch(`/api/admin/fraud/alerts/${alertId}/action`, {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/fraud/alerts/${alertId}/action`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ const FraudDetectionDashboard = () => {
         },
         body: JSON.stringify({ action })
       });
-      
+
       fetchFraudData(); // Refresh data
     } catch (error) {
       console.error('Failed to handle alert action:', error);
@@ -103,7 +103,7 @@ const FraudDetectionDashboard = () => {
           <Shield className="text-red-500" size={24} />
           <h2 className="text-2xl font-bold">{t('security.fraudDetection')}</h2>
         </div>
-        
+
         <div className="flex items-center space-x-4">
           <select
             value={timeRange}
@@ -115,7 +115,7 @@ const FraudDetectionDashboard = () => {
             <option value="7d">Last 7 Days</option>
             <option value="30d">Last 30 Days</option>
           </select>
-          
+
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -223,7 +223,7 @@ const FraudDetectionDashboard = () => {
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold">Recent Fraud Alerts</h3>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -277,11 +277,10 @@ const FraudDetectionDashboard = () => {
                     {new Date(alert.created_at).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      alert.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${alert.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
                       alert.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        'bg-red-100 text-red-800'
+                      }`}>
                       {alert.status}
                     </span>
                   </td>

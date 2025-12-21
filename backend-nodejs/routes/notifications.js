@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();

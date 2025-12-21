@@ -5,12 +5,12 @@ import io from 'socket.io-client';
 
 const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone = true }) => {
   const { t } = useTranslation();
-  
+
   // Use internal state for standalone mode, or props for controlled mode
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = standalone ? internalOpen : (isOpenProp ?? false);
-  const handleClose = standalone ? () => setInternalOpen(false) : (onCloseProp || (() => {}));
-  
+  const handleClose = standalone ? () => setInternalOpen(false) : (onCloseProp || (() => { }));
+
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -161,7 +161,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
         id: Date.now()
       };
       setMessages(prev => [...prev, fileMessage]);
-      
+
       setTimeout(() => {
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
@@ -198,7 +198,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
     const token = localStorage.getItem('driveKenya_token');
 
     try {
-      const response = await fetch('http://localhost:5000/api/support/tickets', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/support/tickets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +208,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
       });
 
       const data = await response.json();
-      
+
       if (response.status === 401) {
         // Token is invalid or expired - need to log in
         const errorMessage = {
@@ -227,7 +227,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
         }, 1000);
         return;
       }
-      
+
       if (response.status === 403) {
         // Token invalid - suggest logout/login
         const errorMessage = {
@@ -240,7 +240,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
         setShowTicketForm(false);
         return;
       }
-      
+
       if (data.success) {
         const confirmMessage = {
           text: `✅ Support ticket #${data.ticketId} created successfully! We'll respond within 24 hours. Check your email for updates.`,
@@ -268,7 +268,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
   };
 
   if (!isOpen && !standalone) return null;
-  
+
   // Standalone floating button
   if (standalone && !isOpen) {
     return (
@@ -334,7 +334,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
                   <input
                     type="text"
                     value={ticketData.subject}
-                    onChange={(e) => setTicketData({...ticketData, subject: e.target.value})}
+                    onChange={(e) => setTicketData({ ...ticketData, subject: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                     placeholder="Brief summary of your issue"
                   />
@@ -343,7 +343,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
                     value={ticketData.description}
-                    onChange={(e) => setTicketData({...ticketData, description: e.target.value})}
+                    onChange={(e) => setTicketData({ ...ticketData, description: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 min-h-[100px]"
                     placeholder="Describe your issue in detail..."
                   />
@@ -352,7 +352,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select
                     value={ticketData.category}
-                    onChange={(e) => setTicketData({...ticketData, category: e.target.value})}
+                    onChange={(e) => setTicketData({ ...ticketData, category: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
                     <option value="general">General</option>
@@ -366,7 +366,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
                   <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                   <select
                     value={ticketData.priority}
-                    onChange={(e) => setTicketData({...ticketData, priority: e.target.value})}
+                    onChange={(e) => setTicketData({ ...ticketData, priority: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
                     <option value="low">Low</option>
@@ -404,23 +404,20 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
             </div>
           ) : (
             messages.map((message, index) => (
-              <div key={index} className={`flex ${
-                message.sender === 'user' ? 'justify-end' : 'justify-start'
-              }`}>
+              <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'
+                }`}>
                 {message.type === 'system' ? (
                   <div className="text-center text-sm text-gray-500 italic">
                     {message.message}
                   </div>
                 ) : (
-                  <div className={`max-w-xs px-3 py-2 rounded-lg ${
-                    message.sender === 'user'
+                  <div className={`max-w-xs px-3 py-2 rounded-lg ${message.sender === 'user'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-900'
-                  }`}>
-                    <div className="text-sm">{message.text}</div>
-                    <div className={`text-xs mt-1 flex items-center ${
-                      message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
                     }`}>
+                    <div className="text-sm">{message.text}</div>
+                    <div className={`text-xs mt-1 flex items-center ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
                       <Clock size={10} className="mr-1" />
                       {new Date(message.timestamp).toLocaleTimeString()}
                       {message.sender === 'user' && (
@@ -432,19 +429,19 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
               </div>
             ))
           )}
-          
+
           {isTyping && (
             <div className="flex justify-start">
               <div className="bg-gray-100 px-3 py-2 rounded-lg">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -475,7 +472,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
                 placeholder={t('support.typeMessage')}
                 className="w-full px-3 py-2 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
               />
-              
+
               {/* Emoji Picker */}
               {showEmojiPicker && (
                 <div className="absolute bottom-12 right-0 bg-white border border-gray-300 rounded-lg shadow-lg p-2 grid grid-cols-8 gap-1 z-50">
@@ -490,7 +487,7 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
                   ))}
                 </div>
               )}
-              
+
               <div className="absolute right-2 top-2 flex space-x-1">
                 <input
                   ref={fileInputRef}
@@ -499,14 +496,14 @@ const LiveChatSupport = ({ isOpen: isOpenProp, onClose: onCloseProp, standalone 
                   className="hidden"
                   accept="image/*,.pdf,.doc,.docx"
                 />
-                <button 
+                <button
                   onClick={() => fileInputRef.current?.click()}
                   className="text-gray-400 hover:text-gray-600"
                   title="Attach file"
                 >
                   <Paperclip size={16} />
                 </button>
-                <button 
+                <button
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   className="text-gray-400 hover:text-gray-600"
                   title="Add emoji"
@@ -542,9 +539,9 @@ export const SupportButton = () => {
         <MessageSquare size={24} />
       </button>
 
-      <LiveChatSupport 
-        isOpen={isChatOpen} 
-        onClose={() => setIsChatOpen(false)} 
+      <LiveChatSupport
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
       />
     </>
   );

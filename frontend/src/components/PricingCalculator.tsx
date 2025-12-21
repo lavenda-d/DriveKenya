@@ -55,7 +55,7 @@ const PricingCalculator: React.FC<PricingCalculatorProps> = ({ carId, onPriceCal
 
     const fetchCars = useCallback(async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/cars');
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars`);
             const data = await response.json();
             if (data.success) {
                 setAvailableCars(data.data?.cars || []);
@@ -76,7 +76,7 @@ const PricingCalculator: React.FC<PricingCalculatorProps> = ({ carId, onPriceCal
             setLoading(true);
             setError('');
 
-            const response = await fetch('http://localhost:5000/api/pricing/preview', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/pricing/preview`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

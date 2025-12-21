@@ -17,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/lavenda-d/DriveKenya/issues"
   },
-  "homepage": "https://github.com/lavenda-d/DriveKenya#readme"
+  "homepage": "https://github.com/lavenda-d/DriveKenya#readme",
+  "dependencies": {
+    "@simplewebauthn/types": "^12.0.0"
+  }
 }

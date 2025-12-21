@@ -26,7 +26,7 @@ class ChatService {
       this.disconnect();
     }
 
-    this.socket = io('http://localhost:5000', {
+    this.socket = io(import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:5000', {
       auth: {
         token: token
       }
@@ -91,10 +91,10 @@ class ChatService {
     // Listen for new message notifications
     this.socket.on('new_notification', (notification) => {
       console.log('🔔 Received notification:', notification);
-      
+
       // Update notification service count
       notificationService.incrementNotificationCount();
-      
+
       // Show browser notification if permission granted
       if (Notification.permission === 'granted') {
         new Notification(`New message from ${notification.senderName}`, {
@@ -138,7 +138,7 @@ class ChatService {
     console.log('📡 Socket connected:', !!this.socket);
     console.log('🔗 Is connected:', this.isConnected);
     console.log('🏠 Chat room:', chatRoom);
-    
+
     if (!this.socket) {
       console.error('❌ No socket connection');
       return;

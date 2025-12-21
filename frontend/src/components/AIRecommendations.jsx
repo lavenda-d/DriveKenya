@@ -16,7 +16,7 @@ const AIRecommendations = ({ userId, context = {} }) => {
   const fetchRecommendations = async () => {
     setLoading(true);
     try {
-      const API_BASE_URL = 'http://localhost:5000';
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await fetch(`${API_BASE_URL}/api/recommendations`, {
         method: 'POST',
         headers: {
@@ -143,7 +143,7 @@ const AIRecommendations = ({ userId, context = {} }) => {
 
   const handleLike = async (carId) => {
     try {
-      await fetch('/api/recommendations/feedback', {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/recommendations/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,7 +220,7 @@ const AIRecommendations = ({ userId, context = {} }) => {
           {recommendations.filter(rec => rec && rec.car).map((recommendation) => {
             const { car, score = 0.85, reason = 'Recommended for you' } = recommendation;
             if (!car || !car.id) return null;
-            
+
             const isLiked = liked.has(car.id);
 
             return (
@@ -231,7 +231,7 @@ const AIRecommendations = ({ userId, context = {} }) => {
                     alt={car.name}
                     className="w-full h-48 object-cover"
                   />
-                  
+
                   {/* Recommendation Score Badge */}
                   <div className="absolute top-3 left-3">
                     <div className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
@@ -242,11 +242,10 @@ const AIRecommendations = ({ userId, context = {} }) => {
                   {/* Like Button */}
                   <button
                     onClick={() => handleLike(car.id)}
-                    className={`absolute top-3 right-3 p-2 rounded-full transition-colors ${
-                      isLiked 
-                        ? 'bg-pink-500 text-white' 
-                        : 'bg-white text-gray-400 hover:text-pink-500'
-                    }`}
+                    className={`absolute top-3 right-3 p-2 rounded-full transition-colors ${isLiked
+                      ? 'bg-pink-500 text-white'
+                      : 'bg-white text-gray-400 hover:text-pink-500'
+                      }`}
                   >
                     <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
                   </button>
@@ -286,7 +285,7 @@ const AIRecommendations = ({ userId, context = {} }) => {
                   {/* Car Features */}
                   <div className="flex flex-wrap gap-1 mb-3">
                     {car.features?.slice(0, 3).map((feature, index) => (
-                      <span 
+                      <span
                         key={index}
                         className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs"
                       >
@@ -340,7 +339,7 @@ const AIRecommendations = ({ userId, context = {} }) => {
           <div>
             <h4 className="font-medium text-blue-900">AI Learning in Progress</h4>
             <p className="text-sm text-blue-700">
-              Our AI is learning your preferences to provide better recommendations. 
+              Our AI is learning your preferences to provide better recommendations.
               Like cars you're interested in to improve suggestions.
             </p>
           </div>

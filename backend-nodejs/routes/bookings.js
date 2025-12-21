@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -9,7 +9,7 @@ const router = express.Router();
 const authenticateToken = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    
+
     if (!token) {
       return res.status(401).json({
         success: false,

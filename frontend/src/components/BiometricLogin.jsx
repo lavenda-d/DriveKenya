@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Fingerprint, Eye, Shield, CheckCircle, AlertCircle, Smartphone } from 'lucide-react';
-import { 
-  startRegistration, 
+import {
+  startRegistration,
   startAuthentication,
   browserSupportsWebAuthn,
   platformAuthenticatorIsAvailable
@@ -25,20 +25,20 @@ const BiometricLogin = ({ onSuccess, onError }) => {
   const checkSupport = async () => {
     const supported = browserSupportsWebAuthn();
     const platformAvailable = await platformAuthenticatorIsAvailable();
-    
+
     setIsSupported(supported);
     setIsPlatformAvailable(platformAvailable);
   };
 
   const checkRegistration = async () => {
     try {
-      const API_BASE_URL = 'http://localhost:5000';
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await fetch(`${API_BASE_URL}/api/auth/biometric/status`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setIsRegistered(data.isRegistered);
@@ -54,7 +54,7 @@ const BiometricLogin = ({ onSuccess, onError }) => {
   const registerBiometric = async () => {
     setLoading(true);
     setError('');
-    
+
     try {
       // Get registration options from server
       const optionsResponse = await fetch('/api/auth/biometric/register/begin', {
@@ -64,16 +64,16 @@ const BiometricLogin = ({ onSuccess, onError }) => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       const options = await optionsResponse.json();
-      
+
       if (!options.success) {
         throw new Error(options.message);
       }
 
       // Start WebAuthn registration
       const attResp = await startRegistration(options.options);
-      
+
       // Send response to server for verification
       const verificationResponse = await fetch('/api/auth/biometric/register/finish', {
         method: 'POST',
@@ -85,9 +85,9 @@ const BiometricLogin = ({ onSuccess, onError }) => {
           credential: attResp
         })
       });
-      
+
       const verificationData = await verificationResponse.json();
-      
+
       if (verificationData.success) {
         setSuccess('Biometric authentication registered successfully!');
         setIsRegistered(true);
@@ -100,14 +100,14 @@ const BiometricLogin = ({ onSuccess, onError }) => {
       setError(err.message || 'Failed to register biometric authentication');
       onError?.(err.message);
     }
-    
+
     setLoading(false);
   };
 
   const authenticateWithBiometric = async () => {
     setLoading(true);
     setError('');
-    
+
     try {
       // Get authentication options from server
       const optionsResponse = await fetch('/api/auth/biometric/authenticate/begin', {
@@ -116,16 +116,16 @@ const BiometricLogin = ({ onSuccess, onError }) => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       const options = await optionsResponse.json();
-      
+
       if (!options.success) {
         throw new Error(options.message);
       }
 
       // Start WebAuthn authentication
       const asseResp = await startAuthentication(options.options);
-      
+
       // Send response to server for verification
       const verificationResponse = await fetch('/api/auth/biometric/authenticate/finish', {
         method: 'POST',
@@ -136,9 +136,9 @@ const BiometricLogin = ({ onSuccess, onError }) => {
           credential: asseResp
         })
       });
-      
+
       const verificationData = await verificationResponse.json();
-      
+
       if (verificationData.success) {
         setSuccess('Authentication successful!');
         onSuccess?.(verificationData);
@@ -150,14 +150,14 @@ const BiometricLogin = ({ onSuccess, onError }) => {
       setError(err.message || 'Authentication failed');
       onError?.(err.message);
     }
-    
+
     setLoading(false);
   };
 
   const removeBiometric = async () => {
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await fetch('/api/auth/biometric/remove', {
         method: 'POST',
@@ -165,9 +165,9 @@ const BiometricLogin = ({ onSuccess, onError }) => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setSuccess('Biometric authentication removed');
         setIsRegistered(false);
@@ -177,7 +177,7 @@ const BiometricLogin = ({ onSuccess, onError }) => {
     } catch (err) {
       setError(err.message || 'Failed to remove biometric authentication');
     }
-    
+
     setLoading(false);
   };
 
@@ -188,7 +188,7 @@ const BiometricLogin = ({ onSuccess, onError }) => {
           <Fingerprint className="text-gray-400" size={24} />
           <h3 className="text-lg font-semibold">{t('auth.fingerprintLogin')}</h3>
         </div>
-        
+
         <div className="text-center py-8">
           <Smartphone className="mx-auto text-gray-300 mb-4" size={48} />
           <h4 className="text-gray-600 font-medium mb-2">Not Supported</h4>
@@ -237,7 +237,7 @@ const BiometricLogin = ({ onSuccess, onError }) => {
                 <div className="text-sm font-medium">Fingerprint</div>
                 <div className="text-xs text-gray-500">Touch sensor</div>
               </div>
-              
+
               <div className="p-4 border border-gray-200 rounded-lg">
                 <Eye className="mx-auto mb-2" size={24} />
                 <div className="text-sm font-medium">Face ID</div>

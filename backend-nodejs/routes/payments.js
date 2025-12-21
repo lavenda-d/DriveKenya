@@ -1,6 +1,6 @@
 import express from 'express';
 import Stripe from 'stripe';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 
 const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -133,7 +133,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
   switch (event.type) {
     case 'payment_intent.succeeded':
       const paymentIntent = event.data.object;
-      
+
       // Update rental status
       await query(`
         UPDATE rentals SET 
@@ -142,13 +142,13 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           updated_at = CURRENT_TIMESTAMP
         WHERE stripe_session_id = $1
       `, [paymentIntent.id]);
-      
+
       console.log('Payment succeeded:', paymentIntent.id);
       break;
 
     case 'payment_intent.payment_failed':
       const failedPayment = event.data.object;
-      
+
       // Update rental status
       await query(`
         UPDATE rentals SET 
@@ -156,7 +156,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           updated_at = CURRENT_TIMESTAMP
         WHERE stripe_session_id = $1
       `, [failedPayment.id]);
-      
+
       console.log('Payment failed:', failedPayment.id);
       break;
 

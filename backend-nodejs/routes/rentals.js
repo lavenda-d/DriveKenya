@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 
 const router = express.Router();
 
@@ -36,7 +36,7 @@ router.post('/', [
     // Validate dates
     const start = new Date(startTime);
     const end = new Date(endTime);
-    
+
     if (end <= start) {
       return res.status(400).json({
         success: false,
@@ -88,7 +88,7 @@ router.post('/', [
     const diffMs = end.getTime() - start.getTime();
     const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
     const diffDays = Math.ceil(diffHours / 24);
-    
+
     let totalAmount = 0;
     if (diffDays >= 7) {
       const weeks = Math.floor(diffDays / 7);

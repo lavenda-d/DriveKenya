@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { uploadReviewMultiple } from '../middleware/uploadReview.js';
 
@@ -9,7 +9,7 @@ const router = express.Router();
 // Create review (public, but authenticated)
 router.post('/', authenticateToken, uploadReviewMultiple, [
   body('carId').isInt().withMessage('Valid car ID is required'),
-  body('rentalId').isInt().withMessage('Valid rental ID is required'), 
+  body('rentalId').isInt().withMessage('Valid rental ID is required'),
   body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
   body('rating_vehicle').optional().isInt({ min: 1, max: 5 }),
   body('rating_cleanliness').optional().isInt({ min: 1, max: 5 }),

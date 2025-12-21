@@ -1,4 +1,4 @@
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 
 /**
  * Dynamic Pricing Engine for Car Rental System
@@ -24,12 +24,12 @@ export class PricingService {
       }
 
       const basePricePerDay = parseFloat(carResult.rows[0].price_per_day);
-      
+
       // Calculate rental duration
       const start = new Date(startDate);
       const end = new Date(endDate);
       const durationInDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-      
+
       if (durationInDays <= 0) {
         throw new Error('Invalid date range');
       }
@@ -98,7 +98,7 @@ export class PricingService {
 
       // Platform fee (5% of base price)
       const platformFee = basePrice * 0.05;
-      
+
       // Insurance fee (10% of total price)
       const adjustedPrice = basePrice * totalMultiplier;
       const insuranceFee = adjustedPrice * 0.10;
@@ -135,22 +135,22 @@ export class PricingService {
   static async evaluateRule(rule, context) {
     try {
       const conditions = JSON.parse(rule.conditions || '{}');
-      
+
       switch (rule.rule_type) {
         case 'time_based':
           return this.evaluateTimeBasedRule(conditions, context);
-        
+
         case 'seasonal':
           return this.evaluateSeasonalRule(conditions, context);
-        
+
         case 'demand_based':
           // Handled separately in calculateDemandMultiplier
           return 1.0;
-        
+
         case 'distance_based':
           // Handled separately in calculateDistanceMultiplier
           return 1.0;
-        
+
         default:
           return 1.0;
       }
@@ -247,12 +247,12 @@ export class PricingService {
       // Simple distance calculation based on location names
       // In a real app, you'd use Google Maps Distance Matrix API
       const distance = this.calculateSimpleDistance(pickupLocation, dropoffLocation);
-      
+
       // Apply multiplier based on distance
       if (distance > 50) return 1.3;   // >50km
       if (distance > 30) return 1.2;   // 30-50km  
       if (distance > 15) return 1.1;   // 15-30km
-      
+
       return 1.0; // <15km no extra charge
     } catch (error) {
       console.error('❌ Distance calculation error:', error);

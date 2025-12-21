@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 import { uploadAvatar, uploadDocument } from '../middleware/uploadUser.js';
 import fs from 'fs/promises';
 
@@ -40,17 +40,17 @@ router.get('/profile', async (req, res, next) => {
 router.get('/emergency-contacts', async (req, res, next) => {
   try {
     const userId = req.user.id;
-    
+
     const contacts = await query(
       `SELECT * FROM user_emergency_contacts WHERE user_id = ? ORDER BY type`,
       [userId]
     );
-    
+
     const result = {
       primary: null,
       secondary: null
     };
-    
+
     contacts.forEach(contact => {
       result[contact.type] = {
         name: contact.name,
@@ -58,7 +58,7 @@ router.get('/emergency-contacts', async (req, res, next) => {
         phone: contact.phone
       };
     });
-    
+
     res.json({
       success: true,
       data: result

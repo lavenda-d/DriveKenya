@@ -6,17 +6,17 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
   const [loading, setLoading] = useState(true);
   const [car, setCar] = useState(null);
   const [activeTab, setActiveTab] = useState('specs'); // specs | media | availability
-  
+
   // Specs state
   const [fuelType, setFuelType] = useState('');
   const [transmission, setTransmission] = useState('');
   const [category, setCategory] = useState('');
-  
+
   // Media state
   const [mainImage, setMainImage] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [galleryImages, setGalleryImages] = useState([]);
-  
+
   // Availability state
   const [availabilityStatus, setAvailabilityStatus] = useState('available');
   const [availabilityBlocks, setAvailabilityBlocks] = useState([]);
@@ -33,7 +33,7 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
     try {
       setLoading(true);
       const token = authStorage.getToken();
-      const response = await fetch(`http://localhost:5000/api/cars/${carId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/${carId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await response.json();
@@ -66,7 +66,7 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
 
   const loadAvailability = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/cars/${carId}/availability`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/${carId}/availability`);
       const data = await response.json();
       if (data.success) {
         setAvailabilityBlocks(data.blocks || []);
@@ -79,7 +79,7 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
   const updateSpecs = async () => {
     try {
       const token = authStorage.getToken();
-      const response = await fetch(`http://localhost:5000/api/cars/${carId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/${carId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
   const updateMedia = async () => {
     try {
       const token = authStorage.getToken();
-      const response = await fetch(`http://localhost:5000/api/cars/${carId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/${carId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
   const updateStatus = async (status) => {
     try {
       const token = authStorage.getToken();
-      const response = await fetch(`http://localhost:5000/api/cars/${carId}/status`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/${carId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
     }
     try {
       const token = authStorage.getToken();
-      const response = await fetch(`http://localhost:5000/api/cars/${carId}/availability`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/${carId}/availability`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +196,7 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
   const deleteAvailabilityBlock = async (blockId) => {
     try {
       const token = authStorage.getToken();
-      const response = await fetch(`http://localhost:5000/api/cars/${carId}/availability/${blockId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/${carId}/availability/${blockId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -245,31 +245,28 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
         <div className="flex border-b border-gray-200 bg-gray-50">
           <button
             onClick={() => setActiveTab('specs')}
-            className={`flex-1 py-3 px-4 font-medium transition-colors ${
-              activeTab === 'specs'
-                ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            className={`flex-1 py-3 px-4 font-medium transition-colors ${activeTab === 'specs'
+              ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
+              : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             ⚙️ Specs
           </button>
           <button
             onClick={() => setActiveTab('media')}
-            className={`flex-1 py-3 px-4 font-medium transition-colors ${
-              activeTab === 'media'
-                ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            className={`flex-1 py-3 px-4 font-medium transition-colors ${activeTab === 'media'
+              ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
+              : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             📸 Media
           </button>
           <button
             onClick={() => setActiveTab('availability')}
-            className={`flex-1 py-3 px-4 font-medium transition-colors ${
-              activeTab === 'availability'
-                ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            className={`flex-1 py-3 px-4 font-medium transition-colors ${activeTab === 'availability'
+              ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
+              : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             📅 Availability
           </button>
@@ -374,11 +371,10 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
                     <button
                       key={status}
                       onClick={() => updateStatus(status)}
-                      className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-                        availabilityStatus === status
-                          ? 'bg-blue-600 text-white shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                      className={`flex-1 py-3 rounded-lg font-medium transition-all ${availabilityStatus === status
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
                     >
                       {status.charAt(0).toUpperCase() + status.slice(1)}
                     </button>
@@ -448,11 +444,10 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              block.status === 'available' ? 'bg-green-100 text-green-700' :
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${block.status === 'available' ? 'bg-green-100 text-green-700' :
                               block.status === 'booked' ? 'bg-blue-100 text-blue-700' :
-                              'bg-orange-100 text-orange-700'
-                            }`}>
+                                'bg-orange-100 text-orange-700'
+                              }`}>
                               {block.status}
                             </span>
                             <span className="text-sm text-gray-700 font-medium">

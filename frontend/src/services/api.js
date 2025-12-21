@@ -1,5 +1,5 @@
 // API Configuration and Service Functions
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'http://localhost:5000/api';
 
 // API Helper function with error handling
 const apiRequest = async (endpoint, options = {}) => {

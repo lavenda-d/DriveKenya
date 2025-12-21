@@ -36,26 +36,31 @@ import { uploadAvatar, uploadDocument } from './middleware/uploadUser.js';
 // Import WebSocket service
 import { initializeSocket } from './services/socketService.js';
 
+// Import database gateway
+import { query, createTables } from './config/database.js';
+
 const app = express();
 
-// Universal CORS middleware - MUST be the ABSOLUTE FIRST middleware
+// Universal CORS middleware
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  console.log(`🌍 CORS: ${req.method} ${req.path} from origin: ${origin || 'no origin'}`);
-  
-  // Allow all origins for development
-  res.header('Access-Control-Allow-Origin', origin || '*');
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : [process.env.FRONTEND_URL || 'http://localhost:3000'];
+
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH,HEAD');
   res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization,Cache-Control,X-HTTP-Method-Override');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight requests
+
   if (req.method === 'OPTIONS') {
-    console.log(`🔍 Handling OPTIONS preflight for ${req.path}`);
     return res.sendStatus(200);
   }
-  
+
   next();
 });
 
@@ -71,23 +76,38 @@ app.get('/api/test-cors', (req, res) => {
   res.json({ success: true, message: 'CORS is working!', origin: req.headers.origin });
 });
 
-// Security middleware with CORS-friendly configuration
+// Security middleware
 app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  crossOriginOpenerPolicy: false,
-  crossOriginResourcePolicy: false
+  crossOriginEmbedderPolicy: true,
+  crossOriginOpenerPolicy: { policy: "same-origin" },
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "https://*.google.com", "http://localhost:*"],
+      imgSrc: ["'self'", "data:", "https:", "http:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://maps.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
 }));
 app.use(compression());
 
-// Rate limiting - DISABLED for development to prevent 429 errors
-// const limiter = rateLimit({
-//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000, // 15 minutes
-//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS), // limit each IP to 100 requests per windowMs
-//   message: 'Too many requests from this IP, please try again later.',
-// });
-// app.use(limiter);
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW) || 15) * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: { success: false, message: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.NODE_ENV !== 'production' && req.ip === '127.0.0.1'
+});
+app.use('/api/', limiter);
 
-console.log('⚠️ Rate limiting disabled for development');
+console.log(`✅ Rate limiting enabled for /api/ routes (${process.env.NODE_ENV === 'production' ? 'Strict' : 'Relaxed for localhost'})`);
 
 // Enhanced CORS configuration is now handled by universal middleware above
 // This is kept for reference but not needed
@@ -136,7 +156,6 @@ app.post('/api/bookings/simple-test', (req, res) => {
 // Get user bookings endpoint
 app.get('/api/bookings/my-bookings', authenticateToken, async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
     const result = query(`
       SELECT r.*, c.make, c.model, c.year, c.location as car_location,
              u.first_name || ' ' || u.last_name as host_name, u.phone as host_phone
@@ -146,7 +165,7 @@ app.get('/api/bookings/my-bookings', authenticateToken, async (req, res) => {
       WHERE r.renter_id = ?
       ORDER BY r.created_at DESC
     `, [req.user.id]);
-    
+
     const bookings = result.rows.map(booking => ({
       id: booking.id,
       car: {
@@ -175,10 +194,10 @@ app.get('/api/bookings/my-bookings', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get bookings error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to fetch bookings',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -186,41 +205,40 @@ app.get('/api/bookings/my-bookings', authenticateToken, async (req, res) => {
 // Cancel booking endpoint
 app.put('/api/bookings/:id/cancel', authenticateToken, async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
     const bookingId = req.params.id;
-    
+
     // Check if booking exists and belongs to the user
     const bookingCheck = query(`
       SELECT * FROM rentals 
       WHERE id = ? AND renter_id = ?
     `, [bookingId, req.user.id]);
-    
+
     if (bookingCheck.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Booking not found or unauthorized'
       });
     }
-    
+
     // Update booking status to cancelled
     query(`
       UPDATE rentals 
       SET status = 'cancelled' 
       WHERE id = ? AND renter_id = ?
     `, [bookingId, req.user.id]);
-    
+
     console.log(`✅ Booking ${bookingId} cancelled successfully`);
-    
+
     res.json({
       success: true,
       message: 'Booking cancelled successfully'
     });
   } catch (error) {
     console.error('Cancel booking error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to cancel booking',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -235,22 +253,12 @@ app.options('/api/bookings/create', (req, res) => {
 });
 
 // Create booking endpoint - conflict-checked
-app.post('/api/bookings/create', async (req, res) => {
+app.post('/api/bookings/create', authenticateToken, async (req, res) => {
   try {
-    // Manual auth check since middleware has issues with body parsing
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'Access token required' });
-    }
-    
-    const token = authHeader.substring(7);
-    const jwt = (await import('jsonwebtoken')).default;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const authenticatedUser = decoded;
+    const authenticatedUser = req.user;
     console.log('🎯 Booking request received:', req.body);
     console.log('👤 Authenticated user:', authenticatedUser);
-    
-    const { query } = await import('./config/database-sqlite.js');
+
     const {
       carId,
       startDate,
@@ -266,7 +274,7 @@ app.post('/api/bookings/create', async (req, res) => {
     // Check if car exists first
     const carExistsResult = query('SELECT * FROM cars WHERE id = ?', [carId]);
     console.log('🔍 Car exists query result:', carExistsResult.rows.length, 'cars found');
-    
+
     if (carExistsResult.rows.length === 0) {
       console.log('❌ Car not found in database');
       return res.status(404).json({
@@ -278,7 +286,7 @@ app.post('/api/bookings/create', async (req, res) => {
     // Check if car is available
     const carResult = query('SELECT * FROM cars WHERE id = ? AND available = 1', [carId]);
     console.log('🔍 Available car query result:', carResult.rows.length, 'available cars found');
-    
+
     if (carResult.rows.length === 0) {
       console.log('❌ Car exists but not available');
       return res.status(400).json({
@@ -339,7 +347,7 @@ app.post('/api/bookings/create', async (req, res) => {
         car_id, renter_id, start_date, end_date, total_price,
         pickup_location, dropoff_location, special_requests, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-    `, [carId, authenticatedUser.userId, startDate, endDate, finalTotalPrice, pickupLocation, dropoffLocation, specialRequests]);
+    `, [carId, authenticatedUser.id, startDate, endDate, finalTotalPrice, pickupLocation, dropoffLocation, specialRequests]);
 
     console.log('✅ Booking created successfully with ID:', result.insertId);
 
@@ -350,10 +358,10 @@ app.post('/api/bookings/create', async (req, res) => {
     });
   } catch (error) {
     console.error('Create booking error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to create booking',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -361,9 +369,8 @@ app.post('/api/bookings/create', async (req, res) => {
 // Get booking by ID
 app.get('/api/bookings/:id', authenticateToken, async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
     const { id } = req.params;
-    
+
     const result = query(`
       SELECT r.*, c.make, c.model, c.year, c.location as car_location,
              u.first_name || ' ' || u.last_name as host_name, u.phone as host_phone, u.email as host_email
@@ -408,37 +415,37 @@ app.get('/api/bookings/:id', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get booking error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to fetch booking',
-      message: error.message 
+      message: error.message
     });
   }
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     message: 'Nairobi Car Hire API is running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV 
+    environment: process.env.NODE_ENV
   });
 });
 
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     message: 'Nairobi Car Hire API is running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV 
+    environment: process.env.NODE_ENV
   });
 });
 
 // Status endpoint for frontend connection check
 app.get('/api/status', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     message: 'Nairobi Car Hire API is operational',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
@@ -449,9 +456,8 @@ app.get('/api/status', (req, res) => {
 // Get user's own cars
 app.get('/api/cars/my/cars', authenticateToken, async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
     const result = query('SELECT * FROM cars WHERE host_id = ? ORDER BY created_at DESC', [req.user.id]);
-    
+
     const cars = result.rows.map(car => ({
       id: car.id,
       make: car.make,
@@ -477,10 +483,10 @@ app.get('/api/cars/my/cars', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get my cars error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to fetch user cars',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -488,9 +494,8 @@ app.get('/api/cars/my/cars', authenticateToken, async (req, res) => {
 // Get current user info
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
     const result = query('SELECT id, email, first_name, last_name, phone, role, email_verified, avatar_url, is_verified, created_at FROM users WHERE id = ?', [req.user.id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -517,10 +522,10 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get current user error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to fetch user info',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -528,9 +533,8 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 // User profile endpoints
 app.get('/api/users/profile', authenticateToken, async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
     const result = query('SELECT id, email, first_name, last_name, phone, role, email_verified, avatar_url, is_verified, created_at FROM users WHERE id = ?', [req.user.id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -556,17 +560,16 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Get profile error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to fetch profile',
-      message: error.message 
+      message: error.message
     });
   }
 });
 
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
     let { first_name, last_name, name, phone } = req.body;
     // Accept either combined name or separate fields
     if (!first_name && !last_name && name) {
@@ -577,7 +580,7 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
     // Ensure non-null to satisfy NOT NULL constraints
     first_name = (first_name ?? '').toString();
     last_name = (last_name ?? '').toString();
-    
+
     const result = query(`
       UPDATE users SET 
         first_name = ?, 
@@ -600,10 +603,10 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to update profile',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -611,13 +614,12 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
 // Simple cars endpoint for frontend
 app.get('/api/cars-simple', async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
     const result = query(`
       SELECT * FROM cars
       WHERE available = 1 
       ORDER BY created_at DESC
     `);
-    
+
     const cars = result.rows.map(car => ({
       id: car.id,
       make: car.make,
@@ -638,7 +640,7 @@ app.get('/api/cars-simple', async (req, res) => {
       owner_phone: car.owner_phone, // Owner phone from cars table
       name: `${car.make} ${car.model}` // Add name property for chat modal
     }));
-    
+
     res.json({
       success: true,
       count: cars.length,
@@ -646,10 +648,10 @@ app.get('/api/cars-simple', async (req, res) => {
     });
   } catch (error) {
     console.error('Cars API error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       error: 'Failed to fetch cars',
-      message: error.message 
+      message: error.message
     });
   }
 });
@@ -657,8 +659,7 @@ app.get('/api/cars-simple', async (req, res) => {
 // Get chat notification counts for authenticated user
 app.get('/api/chat/notifications', authenticateToken, async (req, res) => {
   try {
-    const { query } = await import('./config/database-sqlite.js');
-    
+
     // Get total unread count across all chat rooms for this user
     const result = query(`
       SELECT 
@@ -730,14 +731,14 @@ try {
   const performanceRoutes = await import('./routes/performance.js');
   const fraudRoutes = await import('./routes/fraud.js');
   const supportRoutes = await import('./routes/support.js');
-  
+
   app.use('/api/recommendations', authenticateToken, recommendationRoutes.default);
   app.use('/api/tracking', authenticateToken, trackingRoutes.default);
   app.use('/api/emergency', authenticateToken, emergencyRoutes.default);
   app.use('/api/performance', performanceRoutes.default);
   app.use('/api/fraud', authenticateToken, fraudRoutes.default);
   app.use('/api/support', authenticateToken, supportRoutes.default);
-  
+
   console.log('✅ Phase 4 advanced feature routes loaded');
 } catch (error) {
   console.warn('⚠️ Some Phase 4 routes not available:', error.message);
@@ -755,9 +756,9 @@ app.post('/api/bookings/test-create', (req, res) => {
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: `Route ${req.originalUrl} not found` 
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`
   });
 });
 
@@ -765,11 +766,23 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 // Start server with WebSocket support
-server.listen(PORT, () => {
-  console.log(`🚗 Nairobi Car Hire API server running on port ${PORT}`);
-  console.log(`🔌 WebSocket server initialized for real-time chat`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-});
+const startServer = async () => {
+  try {
+    // Initialize database tables
+    await createTables();
+
+    server.listen(PORT, () => {
+      console.log(`🚗 Nairobi Car Hire API server running on port ${PORT}`);
+      console.log(`🔌 WebSocket server initialized for real-time chat`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/health`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 export default app;

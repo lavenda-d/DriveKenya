@@ -2,7 +2,7 @@
 // This file extends the carsAPI with new methods for image management and specifications
 // Import this in your components or merge with existing api.js
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
 // Enhanced Cars API Methods
 export const enhancedCarsAPI = {

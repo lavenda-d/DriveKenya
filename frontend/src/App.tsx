@@ -602,7 +602,7 @@ const App: React.FC = () => {
         formData.append('images', file);
       });
 
-      const response = await fetch('http://localhost:5000/api/cars/upload-images', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/upload-images`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -613,7 +613,7 @@ const App: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        const newImageUrls = data.data.imageUrls.map(url => `http://localhost:5000${url}`);
+        const newImageUrls = data.data.imageUrls.map(url => `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${url}`);
         setUploadedCarImages(prev => [...prev, ...newImageUrls]);
         setSelectedCarImages([]);
         showToast(`${newImageUrls.length} image(s) uploaded successfully!`, 'success');
@@ -637,7 +637,7 @@ const App: React.FC = () => {
   const fetchCarInquiries = async (carId: string) => {
     setLoadingInquiries(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/messages/car-inquiries/${carId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/messages/car-inquiries/${carId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -1147,8 +1147,8 @@ const App: React.FC = () => {
         const accessToken = tokenResponse.access_token;
 
         // Send to backend
-        console.log('📡 Sending Google token to backend at http://localhost:5000/api/auth/google-signup');
-        const response = await fetch('http://localhost:5000/api/auth/google-signup', {
+        console.log(`📡 Sending Google token to backend at ${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google-signup`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google-signup`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1427,7 +1427,7 @@ const App: React.FC = () => {
       setAuthLoading(true);
       setResetMessage('');
       try {
-        const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/forgot-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: resetEmail })
@@ -1519,7 +1519,7 @@ const App: React.FC = () => {
       setAuthLoading(true);
       setResetMessage('');
       try {
-        const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/reset-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: resetToken, newPassword })
@@ -2626,7 +2626,7 @@ const App: React.FC = () => {
                               formData.append('images', file);
                             });
 
-                            const response = await fetch('http://localhost:5000/api/cars/upload-images', {
+                            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/upload-images`, {
                               method: 'POST',
                               headers: {
                                 'Authorization': `Bearer ${token}`
@@ -2636,7 +2636,7 @@ const App: React.FC = () => {
 
                             if (response.ok) {
                               const data = await response.json();
-                              const newImages = data.data.imageUrls.map(url => `http://localhost:5000${url}`);
+                              const newImages = data.data.imageUrls.map(url => `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${url}`);
                               setUploadedCarImages(prev => [...prev, ...newImages]);
                               setCarSubmitMessage(`✅ ${files.length} image(s) uploaded successfully!`);
                               setTimeout(() => setCarSubmitMessage(''), 3000);

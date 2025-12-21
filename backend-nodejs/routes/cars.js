@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, query as expressQuery, validationResult } from 'express-validator';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 import { authenticateToken, requireVerified } from '../middleware/auth.js';
 import { uploadCarImages } from '../middleware/upload.js';
 
@@ -86,7 +86,7 @@ router.get('/', async (req, res, next) => {
     }
 
     if (availability && availability !== 'any') {
-      const valid = ['available','booked','maintenance'];
+      const valid = ['available', 'booked', 'maintenance'];
       if (valid.includes(String(availability).toLowerCase())) {
         paramCount++;
         queryText += ` AND LOWER(c.availability_status) = LOWER(?)`;
@@ -162,7 +162,7 @@ router.get('/', async (req, res, next) => {
     }
 
     if (availability && availability !== 'any') {
-      const valid = ['available','booked','maintenance'];
+      const valid = ['available', 'booked', 'maintenance'];
       if (valid.includes(String(availability).toLowerCase())) {
         countParamCount++;
         countQuery += ` AND LOWER(c.availability_status) = LOWER(?)`;
@@ -443,11 +443,11 @@ router.post('/', authenticateToken, requireVerified, validateCar, async (req, re
     res.status(201).json({
       success: true,
       message: 'Car created successfully',
-      data: { 
-        car: { 
+      data: {
+        car: {
           id: result.lastInsertRowid,
-          ...req.body 
-        } 
+          ...req.body
+        }
       }
     });
 

@@ -46,7 +46,7 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
 
     // Fetch initial data
     fetchTrackingData();
-    
+
     return () => {
       newSocket.disconnect();
       stopTracking();
@@ -55,13 +55,13 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
 
   const fetchTrackingData = async () => {
     try {
-      const response = await fetch(`/api/tracking/${bookingId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/tracking/${bookingId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       const data = await response.json();
-      
+
       if (data.success) {
         setCurrentLocation(data.currentLocation);
         setDestination(data.destination);
@@ -80,7 +80,7 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
     }
 
     setIsTracking(true);
-    
+
     const options = {
       enableHighAccuracy: true,
       timeout: 5000,
@@ -113,7 +113,7 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
     };
 
     setCurrentLocation(newLocation);
-    
+
     // Send location update via WebSocket
     if (socket) {
       socket.emit('location-update', {
@@ -134,7 +134,7 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
 
   const handlePositionError = (error) => {
     console.error('Geolocation error:', error);
-    switch(error.code) {
+    switch (error.code) {
       case error.PERMISSION_DENIED:
         alert('Location access denied by user');
         break;
@@ -156,7 +156,7 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
 
   const handleGeofenceAlert = (alert) => {
     setAlerts(prev => [...prev, alert]);
-    
+
     // Show notification
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Geofence Alert', {
@@ -221,7 +221,7 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
     if (!currentLocation) return;
 
     try {
-      await fetch('/api/tracking/share-location', {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/tracking/share-location`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,11 +247,11 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
     const R = 6371; // Earth's radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
 
@@ -279,9 +279,8 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
         <div className="flex items-center space-x-3">
           <Navigation className="text-blue-500" size={24} />
           <h2 className="text-2xl font-bold">{t('tracking.title')}</h2>
-          <div className={`px-2 py-1 rounded-full text-xs ${
-            isTracking ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-          }`}>
+          <div className={`px-2 py-1 rounded-full text-xs ${isTracking ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+            }`}>
             {isTracking ? 'Live' : 'Inactive'}
           </div>
         </div>
@@ -294,7 +293,7 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
             <Share2 size={16} />
             <span>Share Location</span>
           </button>
-          
+
           <button
             onClick={emergencyCall}
             className="flex items-center space-x-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
@@ -420,14 +419,14 @@ const GPSLiveTracking = ({ bookingId, userRole = 'user' }) => {
               Stop Tracking
             </button>
           )}
-          
+
           <button
             onClick={fetchTrackingData}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Refresh Data
           </button>
-          
+
           <button
             onClick={() => setAlerts([])}
             className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"

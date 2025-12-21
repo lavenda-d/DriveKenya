@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { body, validationResult } from 'express-validator';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { emailUser, emailPassword, emailHost, emailPort } from '../config/env.js';
 // Using native fetch from Node 18+

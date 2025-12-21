@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../config/database-sqlite.js';
+import { query } from '../config/database.js';
 
 const router = express.Router();
 
@@ -34,15 +34,15 @@ router.get('/tickets', async (req, res) => {
   try {
     const userId = req.user?.id;
     const { status, category } = req.query;
-    
+
     let whereClause = 'WHERE user_id = ?';
     const params = [userId];
-    
+
     if (status) {
       whereClause += ' AND status = ?';
       params.push(status);
     }
-    
+
     if (category) {
       whereClause += ' AND category = ?';
       params.push(category);
@@ -113,20 +113,20 @@ router.get('/tickets/:id', async (req, res) => {
 router.get('/admin/tickets', async (req, res) => {
   try {
     const { status, category, priority } = req.query;
-    
+
     let whereClause = 'WHERE 1=1';
     const params = [];
-    
+
     if (status) {
       whereClause += ' AND st.status = ?';
       params.push(status);
     }
-    
+
     if (category) {
       whereClause += ' AND st.category = ?';
       params.push(category);
     }
-    
+
     if (priority) {
       whereClause += ' AND st.priority = ?';
       params.push(priority);
@@ -373,7 +373,7 @@ router.post('/tickets/:id/messages', async (req, res) => {
 router.post('/chat/start', async (req, res) => {
   try {
     const userId = req.user?.id;
-    
+
     // Check for existing active chat session
     const existingSession = await req.db.get(`
       SELECT * FROM chat_sessions
@@ -452,15 +452,15 @@ router.get('/chat/:sessionId/messages', async (req, res) => {
 router.get('/faq', async (req, res) => {
   try {
     const { category, search } = req.query;
-    
+
     let whereClause = 'WHERE published = 1';
     const params = [];
-    
+
     if (category) {
       whereClause += ' AND category = ?';
       params.push(category);
     }
-    
+
     if (search) {
       whereClause += ' AND (question LIKE ? OR answer LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
@@ -498,7 +498,7 @@ router.get('/faq', async (req, res) => {
 router.get('/search', async (req, res) => {
   try {
     const { q: query, limit = 10 } = req.query;
-    
+
     if (!query) {
       return res.status(400).json({
         success: false,
@@ -549,7 +549,7 @@ router.get('/search', async (req, res) => {
 router.get('/stats', async (req, res) => {
   try {
     const { range = '30d' } = req.query;
-    
+
     let timeFilter = "datetime('now', '-30 days')";
     if (range === '7d') timeFilter = "datetime('now', '-7 days')";
     else if (range === '24h') timeFilter = "datetime('now', '-1 day')";
@@ -592,13 +592,13 @@ router.get('/stats', async (req, res) => {
 function calculateRelevance(text, query) {
   const words = query.toLowerCase().split(' ');
   const content = text.toLowerCase();
-  
+
   let score = 0;
   words.forEach(word => {
     const count = (content.match(new RegExp(word, 'g')) || []).length;
     score += count;
   });
-  
+
   return score;
 }
 
