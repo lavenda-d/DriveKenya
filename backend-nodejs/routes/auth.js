@@ -1,4 +1,5 @@
 import express from 'express';
+import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
@@ -437,6 +438,7 @@ router.post('/google-signup', async (req, res, next) => {
       console.log(`🆕 Creating new user via Google: ${email}`);
 
       const desiredRole = role || accountType || 'customer';
+      const finalRole = desiredRole === 'owner' ? 'host' : desiredRole;
       const firstName = given_name || 'Google';
       const lastName = family_name || 'User';
 
@@ -452,10 +454,10 @@ router.post('/google-signup', async (req, res, next) => {
           placeholderPassword,
           firstName,
           lastName,
-          desiredRole,
+          finalRole,
           1, // email_verified = true
           picture,
-          desiredRole === 'host' ? 0 : 1,
+          finalRole === 'host' ? 0 : 1,
           1 // profile_completed = true
         ]
       );

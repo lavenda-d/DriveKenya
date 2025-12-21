@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useTranslation } from 'react-i18next';
 import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
@@ -178,6 +178,9 @@ const App: React.FC = () => {
 
   // Notification state
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+
+  // Ref to store the role during Google Auth
+  const googleAuthRole = useRef('customer');
 
   // Initialize auth from localStorage
   useEffect(() => {
@@ -1152,8 +1155,8 @@ const App: React.FC = () => {
           },
           body: JSON.stringify({
             googleToken: accessToken,
-            role: 'customer', // Default role - can be adjusted if needed
-            accountType: 'customer'
+            role: googleAuthRole.current,
+            accountType: googleAuthRole.current
           })
         });
 
@@ -1195,7 +1198,8 @@ const App: React.FC = () => {
   });
 
   // Google Sign-Up handler
-  const handleGoogleSignUp = () => {
+  const handleGoogleSignUp = (selectedRole: string = 'customer') => {
+    googleAuthRole.current = selectedRole;
     loginWithGoogle();
   };
 
@@ -1292,7 +1296,7 @@ const App: React.FC = () => {
                 <ScaleInteraction>
                   <button
                     type="button"
-                    onClick={() => handleGoogleSignUp()}
+                    onClick={() => handleGoogleSignUp(formData.role)}
                     className="w-full bg-white/5 hover:bg-white/10 text-white py-4 px-6 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center space-x-4 border border-white/10 shadow-xl"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
