@@ -60,8 +60,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                                 <p className="text-sm font-semibold text-foreground truncate">
                                     {user?.name || 'Guest User'}
                                 </p>
-                                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                                    {user?.role === 'host' ? 'Car Owner' : user?.role || 'Visitor'}
+                                <p className="text-xs text-foreground/70 uppercase tracking-wider font-medium">
+                                    {user?.role?.toLowerCase() === 'host' ? 'Owner' : user?.role || 'Visitor'}
                                 </p>
                             </div>
                         </div>

@@ -225,29 +225,29 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-card border border-border rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex justify-between items-center">
+        <div className="bg-primary/10 border-b border-primary/20 p-6 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold">🚗 Manage Car</h2>
-            <p className="text-white/80">{car?.make} {car?.model} ({car?.year})</p>
+            <h2 className="text-2xl font-bold text-foreground">🚗 Manage Car</h2>
+            <p className="text-muted-foreground">{car?.make} {car?.model} ({car?.year})</p>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full p-2 transition-colors"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full p-2 transition-colors"
           >
             ✕
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 bg-gray-50">
+        <div className="flex border-b border-border bg-muted/20">
           <button
             onClick={() => setActiveTab('specs')}
             className={`flex-1 py-3 px-4 font-medium transition-colors ${activeTab === 'specs'
-              ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'border-b-2 border-primary text-primary bg-card'
+              : 'text-muted-foreground hover:text-foreground'
               }`}
           >
             ⚙️ Specs
@@ -255,8 +255,8 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
           <button
             onClick={() => setActiveTab('media')}
             className={`flex-1 py-3 px-4 font-medium transition-colors ${activeTab === 'media'
-              ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'border-b-2 border-primary text-primary bg-card'
+              : 'text-muted-foreground hover:text-foreground'
               }`}
           >
             📸 Media
@@ -264,8 +264,8 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
           <button
             onClick={() => setActiveTab('availability')}
             className={`flex-1 py-3 px-4 font-medium transition-colors ${activeTab === 'availability'
-              ? 'border-b-2 border-blue-600 text-blue-600 bg-white'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'border-b-2 border-primary text-primary bg-card'
+              : 'text-muted-foreground hover:text-foreground'
               }`}
           >
             📅 Availability
@@ -277,11 +277,11 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
           {activeTab === 'specs' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Fuel Type</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Fuel Type</label>
                 <select
                   value={fuelType}
                   onChange={(e) => setFuelType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                 >
                   <option value="">Select fuel type</option>
                   <option value="petrol">Petrol</option>
@@ -291,11 +291,11 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Transmission</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Transmission</label>
                 <select
                   value={transmission}
                   onChange={(e) => setTransmission(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                 >
                   <option value="">Select transmission</option>
                   <option value="automatic">Automatic</option>
@@ -303,11 +303,11 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                 >
                   <option value="">Select category</option>
                   <option value="economy">Economy</option>
@@ -321,7 +321,7 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
               </div>
               <button
                 onClick={updateSpecs}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-medium transition-colors"
               >
                 Save Specs
               </button>
@@ -331,31 +331,31 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
           {activeTab === 'media' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Main Image URL</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Main Image URL</label>
                 <input
                   type="url"
                   value={mainImage}
                   onChange={(e) => setMainImage(e.target.value)}
                   placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                 />
                 {mainImage && (
-                  <img src={mainImage} alt="Preview" className="mt-2 w-full h-48 object-cover rounded-lg" />
+                  <img src={mainImage} alt="Preview" className="mt-2 w-full h-48 object-cover rounded-lg border border-border" />
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Video URL (optional)</label>
+                <label className="block text-sm font-medium text-foreground mb-2">Video URL (optional)</label>
                 <input
                   type="url"
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   placeholder="https://youtube.com/watch?v=..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                 />
               </div>
               <button
                 onClick={updateMedia}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-medium transition-colors"
               >
                 Save Media
               </button>
@@ -472,10 +472,10 @@ const ManageCar = ({ carId, onClose, onUpdated }) => {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
+        <div className="border-t border-border p-4 bg-muted/20">
           <button
             onClick={onClose}
-            className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-medium transition-colors"
+            className="w-full bg-secondary hover:bg-secondary/80 text-secondary-foreground py-2 rounded-lg font-medium transition-colors"
           >
             Close
           </button>

@@ -39,7 +39,7 @@ const apiRequest = async (endpoint, options = {}) => {
 };
 
 // Lightweight adapter that mimics an axios-like `api` object used elsewhere
-export const api = {
+export const genericAPI = {
   get: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'GET' }),
   post: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'POST' }),
   put: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'PUT' }),
@@ -47,8 +47,8 @@ export const api = {
   delete: (endpoint, options = {}) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
 };
 
-// Also export as genericAPI for transition period
-export const genericAPI = api;
+// Also export as api for older components
+export const api = genericAPI;
 
 // Local storage helpers
 export const authStorage = {

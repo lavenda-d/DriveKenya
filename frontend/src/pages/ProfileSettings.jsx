@@ -111,8 +111,8 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-md font-sans">
-            <div className="bg-slate-900/90 backdrop-blur-xl text-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/10 shadow-2xl flex flex-col relative">
+        <div className="fixed inset-0 bg-background/80 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-md font-sans">
+            <div className="bg-card backdrop-blur-xl text-foreground rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-border shadow-2xl flex flex-col relative">
                 <ToastContainer />
 
                 {/* Animated Background Decorations */}
@@ -120,14 +120,14 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                 <div className="absolute bottom-0 right-0 -mb-20 -mr-20 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-8 border-b border-white/10 relative z-10">
+                <div className="flex items-center justify-between p-8 border-b border-border relative z-10">
                     <div>
-                        <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">Profile & Settings</h2>
-                        <p className="text-white/50 mt-1">Manage your account preferences and security settings</p>
+                        <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Profile & Settings</h2>
+                        <p className="text-muted-foreground mt-1">Manage your account preferences and security settings</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-white/40 hover:text-white bg-white/5 hover:bg-white/10 p-3 rounded-full transition-all group"
+                        className="text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary p-3 rounded-full transition-all group"
                     >
                         <span className="text-2xl group-hover:scale-110 block leading-none">×</span>
                     </button>
@@ -136,15 +136,15 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                 {/* Main Viewport */}
                 <div className="flex flex-col md:flex-row flex-1 overflow-hidden relative z-10">
                     {/* Sidebar Tabs */}
-                    <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/10 overflow-y-auto bg-white/5 md:bg-transparent">
+                    <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border overflow-y-auto bg-muted/10 md:bg-transparent">
                         <div className="p-4 space-y-2">
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${activeTab === tab.id
-                                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-900/40 translate-x-1'
-                                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                                        ? 'bg-gradient-to-r from-primary to-purple-600 text-white shadow-lg shadow-primary/20 translate-x-1'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                                         }`}
                                 >
                                     <span>{tab.icon}</span>
@@ -155,69 +155,69 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                     </div>
 
                     {/* Content Area */}
-                    <div className="flex-1 overflow-y-auto p-8 bg-black/20">
+                    <div className="flex-1 overflow-y-auto p-8 bg-card">
                         {/* Profile Info Tab */}
                         {activeTab === 'profile' && (
                             <div className="max-w-2xl fade-in space-y-8">
                                 <div>
-                                    <h3 className="text-xl font-bold text-white mb-2">Personal Information</h3>
-                                    <p className="text-white/50 text-sm">Update your public profile and contact details</p>
+                                    <h3 className="text-xl font-bold text-foreground mb-2">Personal Information</h3>
+                                    <p className="text-muted-foreground text-sm">Update your public profile and contact details</p>
                                 </div>
                                 <form onSubmit={handleProfileUpdate} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-white/70 ml-1">Full Name</label>
+                                            <label className="text-sm font-medium text-muted-foreground ml-1">Full Name</label>
                                             <div className="relative">
-                                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+                                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50" size={18} />
                                                 <input
                                                     type="text"
                                                     value={formData.name}
                                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                                     required
                                                     placeholder="Enter your name"
-                                                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-white/20 text-white"
+                                                    className="w-full pl-12 pr-4 py-3 bg-input/20 border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder-muted-foreground text-foreground"
                                                 />
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-white/70 ml-1">Email Address</label>
+                                            <label className="text-sm font-medium text-muted-foreground ml-1">Email Address</label>
                                             <div className="relative">
-                                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+                                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50" size={18} />
                                                 <input
                                                     type="email"
                                                     value={formData.email}
                                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                                     required
-                                                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-white/50 cursor-not-allowed"
+                                                    className="w-full pl-12 pr-4 py-3 bg-muted border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-muted-foreground cursor-not-allowed"
                                                     disabled
                                                 />
                                             </div>
                                         </div>
 
                                         <div className="space-y-2 md:col-span-2">
-                                            <label className="text-sm font-medium text-white/70 ml-1">Phone Number</label>
+                                            <label className="text-sm font-medium text-muted-foreground ml-1">Phone Number</label>
                                             <div className="relative">
-                                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+                                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50" size={18} />
                                                 <input
                                                     type="tel"
                                                     value={formData.phone}
                                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                                     placeholder="+254 700 000 000"
-                                                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-white/20 text-white"
+                                                    className="w-full pl-12 pr-4 py-3 bg-input/20 border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder-muted-foreground text-foreground"
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div className="bg-muted/30 border border-border rounded-2xl p-6 mt-8 flex flex-col md:flex-row items-center justify-between gap-4">
                                         <div className="flex items-center space-x-4">
-                                            <div className="p-3 bg-blue-500/20 rounded-xl">
-                                                <Shield className="text-blue-400" size={24} />
+                                            <div className="p-3 bg-blue-500/10 rounded-xl">
+                                                <Shield className="text-blue-500" size={24} />
                                             </div>
                                             <div>
-                                                <p className="text-sm text-white/50">Account Status</p>
-                                                <p className="font-bold text-white uppercase tracking-wider text-xs">
+                                                <p className="text-sm text-muted-foreground">Account Status</p>
+                                                <p className="font-bold text-foreground uppercase tracking-wider text-xs">
                                                     Verified {user?.is_car_owner ? 'Fleet Owner' : 'Standard Renter'}
                                                 </p>
                                             </div>
@@ -226,8 +226,8 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                             type="submit"
                                             disabled={saving}
                                             className={`px-8 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg ${saving
-                                                ? 'bg-white/10 text-white/30 cursor-not-allowed'
-                                                : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-blue-900/40'
+                                                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                                                : 'bg-gradient-to-r from-primary to-purple-600 text-white hover:shadow-primary/20'
                                                 }`}
                                         >
                                             {saving ? 'Updating...' : 'Save Changes'}
@@ -248,9 +248,9 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                         onUserUpdated(updatedUser);
                                     }}
                                 />
-                                <div className="mt-8 p-6 bg-white/5 border border-white/10 rounded-2xl">
-                                    <p className="text-sm text-white/60 flex items-center">
-                                        <Camera className="mr-2 opacity-40" size={16} />
+                                <div className="mt-8 p-6 bg-muted/30 border border-border rounded-2xl">
+                                    <p className="text-sm text-muted-foreground flex items-center">
+                                        <Camera className="mr-2 opacity-50" size={16} />
                                         Your photo helps owners and renters identify you.
                                     </p>
                                 </div>
@@ -259,7 +259,7 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
 
                         {/* Verification Tab */}
                         {activeTab === 'verification' && (
-                            <div className="max-w-2xl fade-in bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-md">
+                            <div className="max-w-2xl fade-in bg-card border border-border rounded-3xl p-8 backdrop-blur-md shadow-sm">
                                 <DocumentVerification />
                             </div>
                         )}
@@ -268,16 +268,16 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                         {activeTab === 'security' && (
                             <div className="max-w-2xl fade-in space-y-10">
                                 <div>
-                                    <h3 className="text-xl font-bold text-white mb-2 flex items-center">
-                                        <Lock className="mr-2 text-purple-400" size={24} />
+                                    <h3 className="text-xl font-bold text-foreground mb-2 flex items-center">
+                                        <Lock className="mr-2 text-primary" size={24} />
                                         Security Settings
                                     </h3>
-                                    <p className="text-white/50 text-sm">Update your password and manage account security</p>
+                                    <p className="text-muted-foreground text-sm">Update your password and manage account security</p>
                                 </div>
 
                                 <form onSubmit={handlePasswordChange} className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-white/70 ml-1">Current Password</label>
+                                        <label className="text-sm font-medium text-muted-foreground ml-1">Current Password</label>
                                         <input
                                             type="password"
                                             value={passwordData.currentPassword}
@@ -285,12 +285,12 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                                 setPasswordData({ ...passwordData, currentPassword: e.target.value })
                                             }
                                             required
-                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-white"
+                                            className="w-full px-4 py-3 bg-input/20 border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-foreground"
                                         />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-white/70 ml-1">New Password</label>
+                                        <label className="text-sm font-medium text-muted-foreground ml-1">New Password</label>
                                         <input
                                             type="password"
                                             value={passwordData.newPassword}
@@ -298,15 +298,15 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                                 setPasswordData({ ...passwordData, newPassword: e.target.value })
                                             }
                                             required
-                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-white"
+                                            className="w-full px-4 py-3 bg-input/20 border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-foreground"
                                         />
-                                        <div className="mt-4 bg-white/5 p-4 rounded-xl border border-white/5">
+                                        <div className="mt-4 bg-muted/30 p-4 rounded-xl border border-border">
                                             <PasswordStrength password={passwordData.newPassword} />
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium text-white/70 ml-1">Confirm New Password</label>
+                                        <label className="text-sm font-medium text-muted-foreground ml-1">Confirm New Password</label>
                                         <input
                                             type="password"
                                             value={passwordData.confirmPassword}
@@ -314,7 +314,7 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                                 setPasswordData({ ...passwordData, confirmPassword: e.target.value })
                                             }
                                             required
-                                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-white"
+                                            className="w-full px-4 py-3 bg-input/20 border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-foreground"
                                         />
                                     </div>
 
@@ -322,21 +322,21 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                         <button
                                             type="submit"
                                             disabled={saving}
-                                            className="px-10 py-3 bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-xl font-bold transition-all shadow-xl disabled:opacity-50"
+                                            className="px-10 py-3 bg-secondary hover:bg-secondary/80 border border-border text-foreground rounded-xl font-bold transition-all shadow-xl disabled:opacity-50"
                                         >
                                             {saving ? 'Updating...' : 'Change Password'}
                                         </button>
                                     </div>
                                 </form>
 
-                                <div className="p-6 bg-blue-900/20 border border-blue-500/20 rounded-2xl">
-                                    <h4 className="font-bold text-blue-400 mb-4 flex items-center">
+                                <div className="p-6 bg-blue-500/5 border border-blue-500/20 rounded-2xl">
+                                    <h4 className="font-bold text-blue-600 mb-4 flex items-center">
                                         <Shield size={18} className="mr-2" /> Security Standards
                                     </h4>
-                                    <ul className="text-sm text-white/50 space-y-2">
-                                        <li className="flex items-center text-blue-200/60"><CheckCircle size={14} className="mr-2 text-blue-400" /> Your password is hashed and safely stored</li>
-                                        <li className="flex items-center text-blue-200/60"><CheckCircle size={14} className="mr-2 text-blue-400" /> We never share your sensitive information</li>
-                                        <li className="flex items-center text-blue-200/60"><Zap size={14} className="mr-2 text-yellow-400" /> 2FA is coming soon for all DriveKenya accounts</li>
+                                    <ul className="text-sm text-muted-foreground space-y-2">
+                                        <li className="flex items-center text-blue-600/80"><CheckCircle size={14} className="mr-2 text-blue-500" /> Your password is hashed and safely stored</li>
+                                        <li className="flex items-center text-blue-600/80"><CheckCircle size={14} className="mr-2 text-blue-500" /> We never share your sensitive information</li>
+                                        <li className="flex items-center text-blue-600/80"><Zap size={14} className="mr-2 text-yellow-500" /> 2FA is coming soon for all DriveKenya accounts</li>
                                     </ul>
                                 </div>
                             </div>
@@ -346,18 +346,18 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                         {activeTab === 'emergency' && (
                             <div className="max-w-2xl fade-in space-y-8">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-white mb-2">Emergency Contacts</h3>
-                                    <p className="text-white/50">Designated contacts for safety and assistance</p>
+                                    <h3 className="text-2xl font-bold text-foreground mb-2">Emergency Contacts</h3>
+                                    <p className="text-muted-foreground">Designated contacts for safety and assistance</p>
                                 </div>
 
                                 <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-6 backdrop-blur-sm">
                                     <div className="flex items-start space-x-4">
-                                        <div className="p-3 bg-yellow-500/20 rounded-xl text-yellow-400">
+                                        <div className="p-3 bg-yellow-500/20 rounded-xl text-yellow-600">
                                             <AlertTriangle size={24} />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-yellow-400 mb-1">Safety First</h4>
-                                            <p className="text-sm text-yellow-200/60 leading-relaxed">
+                                            <h4 className="font-bold text-yellow-600 mb-1">Safety First</h4>
+                                            <p className="text-sm text-yellow-600/80 leading-relaxed">
                                                 Your emergency contacts will only be notified in strictly defined cases like accidents, breakdowns, or critical safety alerts.
                                             </p>
                                         </div>
@@ -365,42 +365,42 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                 </div>
 
                                 <div className="space-y-6">
-                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                                        <h4 className="font-bold text-white mb-6 flex items-center uppercase tracking-widest text-xs">
-                                            <User className="mr-2 text-blue-400" size={16} /> Primary Contact
+                                    <div className="bg-muted/20 border border-border rounded-2xl p-6">
+                                        <h4 className="font-bold text-foreground mb-6 flex items-center uppercase tracking-widest text-xs">
+                                            <User className="mr-2 text-primary" size={16} /> Primary Contact
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div className="space-y-2">
-                                                <label className="text-xs font-bold text-white/40 ml-1">FULL NAME</label>
+                                                <label className="text-xs font-bold text-muted-foreground/70 ml-1">FULL NAME</label>
                                                 <input
                                                     type="text"
                                                     placeholder="John Doe"
                                                     value={primaryContact.name}
                                                     onChange={(e) => setPrimaryContact({ ...primaryContact, name: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-black/20 border border-white/5 rounded-xl text-white outline-none focus:ring-1 focus:ring-blue-500"
+                                                    className="w-full px-4 py-3 bg-input/20 border border-input rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-xs font-bold text-white/40 ml-1">RELATIONSHIP</label>
+                                                <label className="text-xs font-bold text-muted-foreground/70 ml-1">RELATIONSHIP</label>
                                                 <select
                                                     value={primaryContact.relationship}
                                                     onChange={(e) => setPrimaryContact({ ...primaryContact, relationship: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-black/20 border border-white/5 rounded-xl text-white outline-none">
-                                                    <option value="" className="text-slate-900">Select...</option>
-                                                    <option value="spouse" className="text-slate-900">Spouse</option>
-                                                    <option value="parent" className="text-slate-900">Parent</option>
-                                                    <option value="sibling" className="text-slate-900">Sibling</option>
-                                                    <option value="friend" className="text-slate-900">Friend</option>
+                                                    className="w-full px-4 py-3 bg-input/20 border border-input rounded-xl text-foreground outline-none">
+                                                    <option value="" className="text-foreground">Select...</option>
+                                                    <option value="spouse" className="text-foreground">Spouse</option>
+                                                    <option value="parent" className="text-foreground">Parent</option>
+                                                    <option value="sibling" className="text-foreground">Sibling</option>
+                                                    <option value="friend" className="text-foreground">Friend</option>
                                                 </select>
                                             </div>
                                             <div className="space-y-2 md:col-span-2">
-                                                <label className="text-xs font-bold text-white/40 ml-1">PHONE NUMBER</label>
+                                                <label className="text-xs font-bold text-muted-foreground/70 ml-1">PHONE NUMBER</label>
                                                 <input
                                                     type="tel"
                                                     placeholder="+254 700 000 000"
                                                     value={primaryContact.phone}
                                                     onChange={(e) => setPrimaryContact({ ...primaryContact, phone: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-black/20 border border-white/5 rounded-xl text-white outline-none"
+                                                    className="w-full px-4 py-3 bg-input/20 border border-input rounded-xl text-foreground outline-none"
                                                 />
                                             </div>
                                         </div>
@@ -432,7 +432,7 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                                                 showToast(e.message, 'error');
                                             }
                                         }}
-                                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl font-bold text-white shadow-lg hover:shadow-blue-500/20 active:scale-95 transition-all"
+                                        className="w-full py-4 bg-gradient-to-r from-primary to-purple-600 rounded-2xl font-bold text-white shadow-lg hover:shadow-primary/20 active:scale-95 transition-all"
                                     >
                                         Update Emergency Info
                                     </button>
@@ -444,53 +444,53 @@ const ProfileSettings = ({ user, token, onClose, onUserUpdated }) => {
                         {activeTab === 'advanced' && (
                             <div className="max-w-2xl fade-in space-y-8">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-white mb-2">Advanced Labs</h3>
-                                    <p className="text-white/50">Experimental features and power settings</p>
+                                    <h3 className="text-2xl font-bold text-foreground mb-2">Advanced Labs</h3>
+                                    <p className="text-muted-foreground">Experimental features and power settings</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">
                                     {/* Features mapping */}
-                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex items-center justify-between group hover:bg-white/10 transition-all">
+                                    <div className="bg-card border border-border rounded-2xl p-6 flex items-center justify-between group hover:shadow-md transition-all">
                                         <div className="flex items-center space-x-4">
-                                            <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
+                                            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500">
                                                 <Globe size={24} />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-white">Multilingual Experience</h4>
-                                                <p className="text-sm text-white/40">Switch between English & Swahili</p>
+                                                <h4 className="font-bold text-foreground">Multilingual Experience</h4>
+                                                <p className="text-sm text-muted-foreground">Switch between English & Swahili</p>
                                             </div>
                                         </div>
-                                        <span className="text-[10px] font-bold px-2 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded uppercase tracking-tighter">Labs</span>
+                                        <span className="text-[10px] font-bold px-2 py-1 bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 rounded uppercase tracking-tighter">Labs</span>
                                     </div>
 
-                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex items-center justify-between group hover:bg-white/10 transition-all">
+                                    <div className="bg-muted/30 border border-border rounded-2xl p-6 flex items-center justify-between group hover:bg-muted/50 transition-all">
                                         <div className="flex items-center space-x-4">
-                                            <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400">
+                                            <div className="p-3 bg-purple-500/10 rounded-xl text-purple-500">
                                                 <Fingerprint size={24} />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-white">Biometric Security</h4>
-                                                <p className="text-sm text-white/40">FaceID and Fingerprint unlock</p>
+                                                <h4 className="font-bold text-foreground">Biometric Security</h4>
+                                                <p className="text-sm text-muted-foreground">FaceID and Fingerprint unlock</p>
                                             </div>
                                         </div>
-                                        <span className="text-[10px] font-bold px-2 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 rounded uppercase tracking-tighter">Coming Soon</span>
+                                        <span className="text-[10px] font-bold px-2 py-1 bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 rounded uppercase tracking-tighter">Coming Soon</span>
                                     </div>
 
-                                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex items-center justify-between group hover:bg-white/10 transition-all">
+                                    <div className="bg-muted/30 border border-border rounded-2xl p-6 flex items-center justify-between group hover:bg-muted/50 transition-all">
                                         <div className="flex items-center space-x-4">
-                                            <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400">
+                                            <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500">
                                                 <Zap size={24} />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-white">AI Recommendations</h4>
-                                                <p className="text-sm text-white/40">Smart matching based on driving style</p>
+                                                <h4 className="font-bold text-foreground">AI Recommendations</h4>
+                                                <p className="text-sm text-muted-foreground">Smart matching based on driving style</p>
                                             </div>
                                         </div>
                                         <button
                                             onClick={() => toggleFeature('aiRecommendations')}
                                             className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${advancedFeatures.aiRecommendations
                                                 ? 'bg-emerald-500 text-white'
-                                                : 'bg-white/10 text-white/40 hover:text-white'
+                                                : 'bg-muted text-muted-foreground hover:text-foreground'
                                                 }`}
                                         >
                                             {advancedFeatures.aiRecommendations ? 'Enabled' : 'Enable'}

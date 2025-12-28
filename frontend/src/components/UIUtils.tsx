@@ -377,11 +377,11 @@ export const CustomDropdown = ({ options, value, onChange, label, className = ""
 
     return (
         <div className={`relative ${className} z-[100]`}>
-            {label && <label className="block text-white/50 text-xs font-black uppercase tracking-widest mb-2 ml-1">{label}</label>}
+            {label && <label className="block text-muted-foreground/50 text-xs font-black uppercase tracking-widest mb-2 ml-1">{label}</label>}
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between px-6 py-3 bg-white/10 border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all group shadow-inner"
+                className="w-full flex items-center justify-between px-6 py-3 bg-muted/20 border border-border rounded-xl text-foreground hover:bg-muted/40 transition-all group shadow-inner"
             >
                 <div className="flex items-center space-x-3">
                     {selectedOption?.icon}
@@ -404,7 +404,7 @@ export const CustomDropdown = ({ options, value, onChange, label, className = ""
                             animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
                             exit={{ opacity: 0, y: 10, scale: 0.95, filter: "blur(10px)" }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="absolute top-full mt-3 left-0 right-0 bg-slate-900/95 backdrop-blur-3xl border border-white/20 rounded-2xl shadow-2xl py-3 z-[1000] min-w-[160px]"
+                            className="absolute top-full mt-3 left-0 right-0 bg-popover/95 backdrop-blur-3xl border border-border rounded-2xl shadow-2xl py-3 z-[1000] min-w-[160px]"
                         >
                             <div className="max-h-[300px] overflow-y-auto hide-scrollbar">
                                 {options.map((option) => (
@@ -417,7 +417,7 @@ export const CustomDropdown = ({ options, value, onChange, label, className = ""
                                         }}
                                         className={`w-full flex items-center space-x-3 px-6 py-3 text-left transition-all ${value === option.value
                                             ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold'
-                                            : 'text-white/60 hover:text-white hover:bg-white/10'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                                             }`}
                                     >
                                         {option.icon}

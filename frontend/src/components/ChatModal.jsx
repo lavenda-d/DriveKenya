@@ -26,27 +26,27 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
       console.log('🚀 Initializing role-aware chat for car:', car.name);
       console.log('👤 Current user:', currentUser.name, '| Role:', currentUser.role, '| ID:', currentUser.id);
       console.log('🚗 Car owner ID:', car.host_id);
-      
+
       const carOwnerId = car.host_id;
       const currentUserId = currentUser.id;
       const currentUserRole = currentUser.role;
       const isCurrentUserOwner = currentUserId === carOwnerId;
-      
+
       let otherParticipantId;
       let chatContext = '';
-      
+
       if (isCurrentUserOwner && currentUserRole === 'host') {
         // Car owner opening chat - they need to see conversation with interested customers
         // Use the customer ID passed through the car object, or show a customer selection interface
         otherParticipantId = car.customerId || null;
         chatContext = 'owner-to-customer';
-        
+
         if (!otherParticipantId) {
           console.log('⚠️ No specific customer selected for car owner chat');
           setError('Please select a customer to chat with');
           return;
         }
-        
+
         console.log(`🏠 Car Owner initiated chat with customer ${otherParticipantId} about their car`);
       } else if (!isCurrentUserOwner && currentUserRole === 'customer') {
         // Customer opening chat with car owner
@@ -64,33 +64,33 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
         chatContext = 'general';
         console.log('🔄 General chat initiated');
       }
-      
+
       // Always use consistent participant order: smaller ID first, then larger ID
       const participant1 = Math.min(currentUserId, otherParticipantId);
       const participant2 = Math.max(currentUserId, otherParticipantId);
-      
+
       const roomId = `chat_${car.id}_${participant1}_${participant2}`;
       setChatRoom(roomId);
-      
+
       console.log('🎯 Generated chat room:', roomId);
       console.log('💬 Chat context:', chatContext);
       console.log('👥 Participants:', participant1, 'and', participant2);
-      
+
       console.log('🎯 Generated chat room:', roomId, 'for participants:', participant1, 'and', participant2);
-      
+
       // Connect to chat service
       chatService.connect();
-      
+
       // Set up connection listener to join chat once connected
       const unsubscribeConnection = chatService.onConnection((connected) => {
         if (connected) {
           console.log('🔗 Connection established, joining chat room...');
           console.log('🏠 Joining chat with carId:', car.id, 'participant1:', participant1, 'participant2:', participant2);
-          
+
           // Use the other participant ID (not current user)
           const chatParticipantId = currentUserId === participant1 ? participant2 : participant1;
           chatService.joinChat(car.id, chatParticipantId);
-          
+
           // Mark messages as read when opening chat
           if (roomId) {
             chatService.markMessagesAsRead(roomId);
@@ -141,12 +141,12 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
     console.log('🚀 Attempting to send message:', newMessage);
     console.log('🏠 Current chat room:', chatRoom);
     console.log('🔗 Is connected:', isConnected);
-    
+
     if (!newMessage.trim()) {
       console.warn('❌ Empty message');
       return;
     }
-    
+
     if (!chatRoom) {
       console.warn('❌ No chat room set');
       return;
@@ -160,7 +160,7 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
   // Handle typing indicators
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
-    
+
     if (!isTyping) {
       setIsTyping(true);
       chatService.startTyping();
@@ -197,31 +197,31 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
 
   // Add a state to force re-render timestamps every minute
   const [, setTimeUpdate] = useState(0);
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeUpdate(prev => prev + 1);
     }, 60000); // Update every minute
-    
+
     return () => clearInterval(interval);
   }, []);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl w-full max-w-lg h-[600px] flex flex-col">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-card border border-border rounded-xl w-full max-w-lg h-[600px] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/20">
+        <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
           <div>
-            <h3 className="text-xl font-bold text-white">
+            <h3 className="text-xl font-bold text-foreground">
               {currentUser?.role === 'host' && currentUser?.id === car?.host_id
                 ? `💬 Customer Inquiries: ${car?.name}`
                 : `💬 Chat about ${car?.name}`
               }
             </h3>
-            <div className="flex items-center space-x-2 text-sm text-white/70">
-              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></span>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-destructive'}`}></span>
               <span>{isConnected ? 'Connected' : 'Connecting...'}</span>
               {currentUser?.role === 'host' && currentUser?.id === car?.host_id ? (
                 <span className="ml-4">🔑 As Car Owner</span>
@@ -234,7 +234,7 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
           </div>
           <button
             onClick={onClose}
-            className="text-white/70 hover:text-white text-2xl font-bold"
+            className="text-muted-foreground hover:text-foreground text-2xl font-bold transition-colors"
           >
             ×
           </button>
@@ -243,7 +243,7 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
-            <div className="text-center text-white/50 py-8">
+            <div className="text-center text-muted-foreground py-8">
               <div className="text-4xl mb-4">💬</div>
               <p>Start a conversation about this car!</p>
             </div>
@@ -256,19 +256,18 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
                   className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                      isOwnMessage
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white/20 text-white'
-                    }`}
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${isOwnMessage
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-foreground'
+                      }`}
                   >
                     {!isOwnMessage && (
-                      <div className="text-xs text-white/70 mb-1">
+                      <div className="text-xs text-muted-foreground mb-1">
                         {message.first_name} {message.last_name}
                       </div>
                     )}
                     <p className="text-sm">{message.message}</p>
-                    <div className={`text-xs mt-1 ${isOwnMessage ? 'text-blue-200' : 'text-white/50'}`}>
+                    <div className={`text-xs mt-1 ${isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                       {formatTimestamp(message.created_at)}
                     </div>
                   </div>
@@ -297,7 +296,7 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
         </div>
 
         {/* Message input */}
-        <form onSubmit={handleSendMessage} className="p-4 border-t border-white/20">
+        <form onSubmit={handleSendMessage} className="p-4 border-t border-border bg-muted/20">
           <div className="flex space-x-2">
             <input
               type="text"
@@ -307,16 +306,16 @@ const ChatModal = ({ isOpen, onClose, car, currentUser }) => {
                 currentUser?.role === 'host' && currentUser?.id === car?.host_id
                   ? "Reply to customer inquiry..."
                   : currentUser?.role === 'customer'
-                  ? "Ask about availability, pricing, etc..."
-                  : "Type your message..."
+                    ? "Ask about availability, pricing, etc..."
+                    : "Type your message..."
               }
-              className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-full text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-4 py-3 bg-input/50 border border-input rounded-full text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               disabled={!isConnected}
             />
             <button
               type="submit"
               disabled={!newMessage.trim() || !isConnected}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-6 py-3 rounded-full font-semibold transition-all"
+              className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground px-6 py-3 rounded-full font-semibold transition-all"
             >
               Send
             </button>

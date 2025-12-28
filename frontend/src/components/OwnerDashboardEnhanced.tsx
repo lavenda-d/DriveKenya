@@ -57,7 +57,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/owner/dashboard?timeframe=${selectedTimeframe}`, {
+      const response = await genericAPI.get(`/owner/dashboard?timeframe=${selectedTimeframe}`, {
         headers: getAuthHeader()
       });
       if (response.success) {
@@ -72,7 +72,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
   const fetchCars = useCallback(async () => {
     try {
-      const response = await api.get('/owner/cars', {
+      const response = await genericAPI.get('/owner/cars', {
         headers: getAuthHeader()
       });
       if (response.success) {
@@ -85,7 +85,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
   const fetchEarnings = useCallback(async () => {
     try {
-      const response = await api.get(`/owner/earnings?timeframe=${selectedTimeframe}`, {
+      const response = await genericAPI.get(`/owner/earnings?timeframe=${selectedTimeframe}`, {
         headers: getAuthHeader()
       });
       if (response.success) {
@@ -107,7 +107,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
   const fetchMaintenance = useCallback(async () => {
     try {
-      const response = await api.get('/owner/maintenance', {
+      const response = await genericAPI.get('/owner/maintenance', {
         headers: getAuthHeader()
       });
       if (response.success) {
@@ -141,7 +141,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
   const toggleCarAvailability = async (carId: number, available: boolean) => {
     try {
-      const response = await api.put(`/owner/cars/${carId}/availability`, {
+      const response = await genericAPI.put(`/owner/cars/${carId}/availability`, {
         body: JSON.stringify({ available }),
         headers: getAuthHeader()
       });
@@ -185,7 +185,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
   const scheduleMaintenance = async (carId: number, data: any) => {
     try {
-      const response = await api.post(`/owner/cars/${carId}/maintenance`, {
+      const response = await genericAPI.post(`/owner/cars/${carId}/maintenance`, {
         body: JSON.stringify(data),
         headers: getAuthHeader()
       });
@@ -202,13 +202,13 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
   const StatCard = ({ title, value, icon: Icon, color, change, subtitle }: any) => (
     <StaggerItem>
-      <div className="bg-white/10 backdrop-blur-md p-6 rounded-xl shadow-lg border border-white/20 hover:bg-white/15 transition-all duration-300 group">
+      <div className="bg-card backdrop-blur-md p-6 rounded-xl shadow-lg border border-border hover:shadow-xl transition-all duration-300 group">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-white/60 text-sm font-medium uppercase tracking-wider">{title}</p>
-            <p className="text-3xl font-bold text-white mt-2 group-hover:scale-105 transition-transform origin-left">{value}</p>
+            <p className="text-muted-foreground/60 text-sm font-medium uppercase tracking-wider">{title}</p>
+            <p className="text-3xl font-bold text-foreground mt-2 group-hover:scale-105 transition-transform origin-left">{value}</p>
             {subtitle && (
-              <p className="text-sm text-white/50 mt-1">{subtitle}</p>
+              <p className="text-sm text-muted-foreground/50 mt-1">{subtitle}</p>
             )}
             {change && (
               <p className={`text-sm mt-3 font-medium flex items-center ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -216,7 +216,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
               </p>
             )}
           </div>
-          <div className={`p-4 rounded-xl ${color} bg-opacity-20 border border-white/10 group-hover:scale-110 transition-transform`}>
+          <div className={`p-4 rounded-xl ${color} bg-opacity-20 border border-border/10 group-hover:scale-110 transition-transform`}>
             <Icon size={28} className={color.replace('bg-', 'text-').replace('600', '400')} />
           </div>
         </div>
@@ -230,7 +230,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
         onClick={() => onClick(id)}
         className={`flex items-center space-x-2 px-6 py-3 rounded-full transition-all duration-300 font-medium ${active
           ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-900/50 scale-105'
-          : 'text-white/60 hover:text-white hover:bg-white/10'
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
           }`}
       >
         <Icon size={18} />
@@ -241,32 +241,32 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-24 flex items-center justify-center">
+      <div className="min-h-screen bg-background pt-24 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white/50 mx-auto"></div>
-          <p className="mt-6 text-white/70 text-lg">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary/50 mx-auto"></div>
+          <p className="mt-6 text-muted-foreground text-lg">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-800 to-slate-900 pt-24 pb-12 font-sans">
+    <div className="min-h-screen bg-background pt-24 pb-12 font-sans">
       <ToastContainer />
 
       {/* Header Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl relative z-30">
+        <div className="bg-card backdrop-blur-xl border border-border rounded-2xl p-8 shadow-2xl relative z-30">
           {/* Decorative background element */}
-          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">
+              <h1 className="text-4xl font-bold text-foreground mb-2">
                 Owner Dashboard
               </h1>
-              <p className="text-white/60 text-lg">
-                Welcome back, <span className="text-blue-400 font-bold">{user.name || user.first_name || 'Partner'}</span> • Manage your fleet and earnings
+              <p className="text-muted-foreground text-lg">
+                Welcome back, <span className="text-primary font-bold">{user.name || (user as any).first_name || 'Partner'}</span> • Manage your fleet and earnings
               </p>
             </div>
 
@@ -288,7 +288,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
               <ScaleInteraction>
                 <button
                   onClick={onLogout}
-                  className="px-4 py-3 bg-white/5 hover:bg-red-500/20 text-white/70 hover:text-red-400 border border-white/10 rounded-xl text-xs font-bold uppercase tracking-widest transition-all"
+                  className="px-4 py-3 bg-muted/50 hover:bg-destructive/10 text-muted-foreground hover:text-destructive border border-border rounded-xl text-xs font-bold uppercase tracking-widest transition-all"
                 >
                   Logout
                 </button>
@@ -379,31 +379,31 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
             {/* Quick Actions Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Fleet Performance */}
-              <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/20">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+              <div className="bg-card backdrop-blur-md p-6 rounded-2xl shadow-xl border border-border">
+                <h3 className="text-xl font-bold text-foreground mb-6 flex items-center">
                   <span className="mr-2">🚀</span> Fleet Performance
                 </h3>
                 <div className="space-y-4">
                   {dashboardData.topPerformingCars.map((car: any) => (
-                    <div key={car.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors">
+                    <div key={car.id} className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-xl hover:bg-muted/50 transition-colors">
                       <div className="flex items-center space-x-4">
                         <div className="p-2 bg-blue-500/20 rounded-lg">
                           <Car size={20} className="text-blue-400" />
                         </div>
                         <div>
-                          <p className="font-bold text-white">
+                          <p className="font-bold text-foreground">
                             {car.make} {car.model}
                           </p>
-                          <p className="text-sm text-white/50">
+                          <p className="text-sm text-muted-foreground/60">
                             {car.bookingCount} bookings
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-green-400 text-lg">
+                        <p className="font-bold text-green-500 text-lg">
                           ${car.earnings.toLocaleString()}
                         </p>
-                        <p className="text-sm text-white/50">
+                        <p className="text-sm text-muted-foreground/50">
                           {car.utilizationRate}% utilized
                         </p>
                       </div>
@@ -413,32 +413,32 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
               </div>
 
               {/* Recent Activity */}
-              <div className="bg-white/10 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-white/20">
-                <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+              <div className="bg-card backdrop-blur-md p-6 rounded-2xl shadow-xl border border-border">
+                <h3 className="text-xl font-bold text-foreground mb-6 flex items-center">
                   <span className="mr-2">⚡</span> Recent Activity
                 </h3>
                 <div className="space-y-4">
                   {dashboardData.recentBookings.map((booking: any) => (
-                    <div key={booking.id} className="flex items-center space-x-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors">
+                    <div key={booking.id} className="flex items-center space-x-4 p-4 bg-muted/20 border border-border/50 rounded-xl hover:bg-muted/30 transition-colors">
                       <div className={`p-3 rounded-full ${booking.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
-                        booking.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-white/50'
+                        booking.status === 'pending' ? 'bg-yellow-500/10 text-yellow-600' : 'bg-muted text-muted-foreground'
                         }`}>
                         <Calendar size={18} />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-sm font-semibold text-foreground">
                           {booking.carDetails}
                         </p>
-                        <p className="text-xs text-white/50 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           {booking.customerName} • {booking.dateRange}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-base font-bold text-white">
+                        <p className="text-base font-bold text-foreground">
                           ${booking.amount}
                         </p>
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${booking.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
-                          booking.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/10 text-white/50'
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${booking.status === 'confirmed' ? 'bg-green-500/20 text-green-500' :
+                          booking.status === 'pending' ? 'bg-yellow-500/20 text-yellow-600' : 'bg-muted text-muted-foreground'
                           }`}>
                           {booking.status}
                         </span>
@@ -451,25 +451,25 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
             {/* Upcoming Maintenance Alert */}
             {dashboardData.upcomingMaintenance.length > 0 && (
-              <div className="bg-gradient-to-r from-yellow-900/40 to-orange-900/40 border border-yellow-500/30 p-6 rounded-2xl backdrop-blur-md">
+              <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 p-6 rounded-2xl backdrop-blur-md">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="bg-yellow-500/20 p-2 rounded-lg">
-                    <AlertTriangle className="text-yellow-400" size={24} />
+                    <AlertTriangle className="text-yellow-600 dark:text-yellow-400" size={24} />
                   </div>
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-foreground">
                     Upcoming Maintenance
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {dashboardData.upcomingMaintenance.map((item: any) => (
-                    <div key={item.id} className="bg-black/20 p-4 rounded-xl border border-white/10 hover:border-yellow-500/30 transition-colors">
-                      <p className="font-bold text-white">
+                    <div key={item.id} className="bg-card p-4 rounded-xl border border-border hover:border-yellow-500/30 transition-colors">
+                      <p className="font-bold text-foreground">
                         {item.carDetails}
                       </p>
-                      <p className="text-sm text-white/60 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         {item.type} - {item.scheduledDate}
                       </p>
-                      <p className="text-sm text-yellow-400 font-semibold mt-2">
+                      <p className="text-sm text-yellow-600 dark:text-yellow-400 font-semibold mt-2">
                         Due in {item.daysUntil} days
                       </p>
                     </div>
@@ -486,7 +486,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
             <div className="flex justify-end">
               <button
                 onClick={() => onNavigate && onNavigate('listcar')}
-                className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                className="bg-muted hover:bg-muted/80 border border-border text-foreground px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 + Add New Vehicle
               </button>
@@ -495,8 +495,8 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
               {Array.isArray(cars) && cars.length > 0 ? (
                 cars.map((car) => (
                   <StaggerItem key={car.id}>
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl overflow-hidden border border-white/20 shadow-xl hover:transform hover:scale-105 transition-all duration-300 group h-full">
-                      <div className="h-48 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative overflow-hidden">
+                    <div className="bg-card backdrop-blur-md rounded-2xl overflow-hidden border border-border shadow-xl hover:transform hover:scale-105 transition-all duration-300 group h-full">
+                      <div className="h-48 bg-muted flex items-center justify-center relative overflow-hidden">
                         {/* Placeholder or Image */}
                         {car.image ? (
                           <img src={car.image} alt={car.model} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
@@ -523,7 +523,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                           <p className="text-white/50 text-sm">{car.year} • {car.location}</p>
                         </div>
 
-                        <div className="space-y-3 mb-6 bg-black/20 p-4 rounded-xl">
+                        <div className="space-y-3 mb-6 bg-muted/30 p-4 rounded-xl">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-white/60">Daily Rate</span>
                             <span className="font-bold text-white text-lg">
@@ -559,7 +559,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                               </button>
                             </ScaleInteraction>
                             <ScaleInteraction className="flex-1">
-                              <button className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/20 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
+                              <button className="w-full bg-secondary hover:bg-secondary/80 text-foreground border border-border px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors">
                                 Edit
                               </button>
                             </ScaleInteraction>
@@ -584,12 +584,12 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                 ))
               ) : (
                 <StaggerItem>
-                  <div className="col-span-full text-center py-20 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
-                    <div className="bg-white/5 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <Car className="text-white/30 h-10 w-10" />
+                  <div className="col-span-full text-center py-20 bg-muted/20 backdrop-blur-md border border-border rounded-2xl">
+                    <div className="bg-muted w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Car className="text-muted-foreground h-10 w-10" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">No vehicles listed</h3>
-                    <p className="text-white/60 mb-8 max-w-md mx-auto">Add your first vehicle to start earning with DriveKenya today.</p>
+                    <h3 className="text-2xl font-bold text-foreground mb-2">No vehicles listed</h3>
+                    <p className="text-muted-foreground mb-8 max-w-md mx-auto">Add your first vehicle to start earning with DriveKenya today.</p>
                     <ScaleInteraction>
                       <button
                         onClick={() => onNavigate && onNavigate('listcar')}
@@ -635,7 +635,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
               />
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-white/20">
+            <div className="bg-card backdrop-blur-md p-8 rounded-2xl shadow-xl border border-border">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-bold text-white flex items-center">
                   <span className="mr-2">📈</span> Earnings Timeline
@@ -687,8 +687,8 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                         }}
                         itemStyle={{ color: '#fff' }}
                       />
-                      <Area type="monotone" dataKey="earnings" name="Gross" stroke="#10b981" strokeWidth={3} fillUrl="url(#colorGross)" />
-                      <Area type="monotone" dataKey="net" name="Net" stroke="#3b82f6" strokeWidth={3} fillUrl="url(#colorNet)" />
+                      <Area type="monotone" dataKey="earnings" name="Gross" stroke="#10b981" strokeWidth={3} fill="url(#colorGross)" />
+                      <Area type="monotone" dataKey="net" name="Net" stroke="#3b82f6" strokeWidth={3} fill="url(#colorNet)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
@@ -734,11 +734,11 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                       </div>
                     </div>
 
-                    <div className="text-right pl-4 border-l border-white/10 md:border-l-0 md:pl-0">
-                      <p className="text-2xl font-bold text-white">${record.cost}</p>
-                      <p className="text-sm text-white/60 mb-2">{new Date(record.scheduled_date).toLocaleDateString()}</p>
-                      <span className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide ${record.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                        record.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/10 text-white/60 border border-white/10'
+                    <div className="text-right pl-4 border-l border-border md:border-l-0 md:pl-0">
+                      <p className="text-2xl font-bold text-foreground">${record.cost}</p>
+                      <p className="text-sm text-muted-foreground mb-2">{new Date(record.scheduled_date).toLocaleDateString()}</p>
+                      <span className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide ${record.status === 'completed' ? 'bg-green-500/20 text-green-500 border border-green-500/30' :
+                        record.status === 'scheduled' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' : 'bg-muted text-muted-foreground border border-border'
                         }`}>
                         {record.status}
                       </span>
@@ -747,15 +747,15 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl">
-                <div className="bg-white/5 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Wrench className="text-white/30 h-10 w-10" />
+              <div className="text-center py-20 bg-muted/20 backdrop-blur-md border border-border rounded-2xl">
+                <div className="bg-muted w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Wrench className="text-muted-foreground h-10 w-10" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">No Maintenance Records</h3>
-                <p className="text-white/60 mb-8">Keep your fleet in top condition by tracking maintenance.</p>
+                <h3 className="text-2xl font-bold text-foreground mb-2">No Maintenance Records</h3>
+                <p className="text-muted-foreground mb-8">Keep your fleet in top condition by tracking maintenance.</p>
                 <button
                   onClick={() => setShowMaintenanceModal(true)}
-                  className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-8 py-3 rounded-full font-semibold transition-all"
+                  className="bg-muted hover:bg-muted/80 border border-border text-foreground px-8 py-3 rounded-full font-semibold transition-all"
                 >
                   Log First Service
                 </button>
@@ -766,14 +766,14 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
         {/* Maintenance Modal */}
         {showMaintenanceModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-900/90 border border-white/20 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative">
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-popover border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative">
               {/* Modal Glow */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-purple-600"></div>
 
-              <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-white">Schedule Maintenance</h3>
-                <button onClick={() => setShowMaintenanceModal(false)} className="text-white/50 hover:text-white transition-colors bg-white/5 hover:bg-white/10 p-2 rounded-full">
+              <div className="p-6 border-b border-border flex justify-between items-center">
+                <h3 className="text-xl font-bold text-foreground">Schedule Maintenance</h3>
+                <button onClick={() => setShowMaintenanceModal(false)} className="text-muted-foreground hover:text-foreground transition-colors bg-muted/50 hover:bg-muted p-2 rounded-full">
                   ✕
                 </button>
               </div>

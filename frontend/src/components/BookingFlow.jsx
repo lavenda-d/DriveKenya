@@ -27,7 +27,7 @@ const BookingFlow = ({ selectedCar, onBookingComplete, onClose }) => {
       count: 4
     }
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [distance, setDistance] = useState(0);
@@ -45,22 +45,22 @@ const BookingFlow = ({ selectedCar, onBookingComplete, onClose }) => {
     const pickupDate = new Date(bookingData.pickupDate);
     const returnDate = new Date(bookingData.returnDate);
     const days = Math.ceil((returnDate - pickupDate) / (1000 * 60 * 60 * 24));
-    
+
     // Simulate distance calculation
     const mockDistance = Math.random() * 20 + 5; // 5-25 km
     setDistance(mockDistance);
-    
+
     // Calculate total cost
     let total = baseRate * days;
     if (bookingData.driverRequired) {
       total += 2000 * days; // Driver fee per day
     }
-    
+
     // Add delivery fee if pickup/dropoff are different
     if (bookingData.pickupLocation?.id !== bookingData.dropoffLocation?.id) {
       total += Math.floor(mockDistance * 50); // 50 KSH per km delivery
     }
-    
+
     setEstimatedCost(total);
   };
 
@@ -104,11 +104,11 @@ const BookingFlow = ({ selectedCar, onBookingComplete, onClose }) => {
 
   const submitBooking = async () => {
     setIsLoading(true);
-    
+
     try {
       // Simulate booking submission
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       const booking = {
         id: Date.now(),
         carId: selectedCar.id,
@@ -120,13 +120,13 @@ const BookingFlow = ({ selectedCar, onBookingComplete, onClose }) => {
         bookingDate: new Date().toISOString(),
         bookingNumber: `BK${Date.now().toString().slice(-6)}`
       };
-      
+
       console.log('✅ Booking submitted:', booking);
-      
+
       if (onBookingComplete) {
         onBookingComplete(booking);
       }
-      
+
     } catch (error) {
       console.error('❌ Booking failed:', error);
       alert('Booking failed. Please try again.');
@@ -172,11 +172,11 @@ By accepting, you agree to these terms and our privacy policy.`);
   const isStepValid = (step) => {
     switch (step) {
       case 1:
-        return bookingData.pickupLocation && bookingData.dropoffLocation && 
-               bookingData.pickupDate && bookingData.returnDate;
+        return bookingData.pickupLocation && bookingData.dropoffLocation &&
+          bookingData.pickupDate && bookingData.returnDate;
       case 2:
-        return bookingData.customerInfo.name && bookingData.customerInfo.phone && 
-               bookingData.customerInfo.email;
+        return bookingData.customerInfo.name && bookingData.customerInfo.phone &&
+          bookingData.customerInfo.email;
       case 3:
         return bookingData.paymentMethod; // Payment method selection
       case 4:
@@ -204,50 +204,48 @@ By accepting, you agree to these terms and our privacy policy.`);
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-card border border-border rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
           <div className="flex items-center space-x-4">
             <img
               src={selectedCar.image}
               alt={selectedCar.name}
-              className="w-16 h-12 object-cover rounded-lg"
+              className="w-16 h-12 object-cover rounded-lg border border-border"
             />
             <div>
-              <h2 className="text-xl font-semibold">Book {selectedCar.name}</h2>
-              <p className="text-gray-500">KSH {selectedCar.pricePerDay}/day</p>
+              <h2 className="text-xl font-semibold text-foreground">Book {selectedCar.name}</h2>
+              <p className="text-muted-foreground">KSH {selectedCar.pricePerDay}/day</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="text-muted-foreground hover:text-foreground text-2xl transition-colors"
           >
             ×
           </button>
         </div>
 
         {/* Progress Steps */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-border bg-card">
           <div className="flex items-center justify-center space-x-4">
             {[1, 2, 3, 4].map((step) => (
               <div key={step} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  currentStep >= step 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-600'
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${currentStep >= step
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground'
+                  }`}>
                   {step}
                 </div>
-                <span className={`ml-2 text-sm ${
-                  currentStep >= step ? 'text-blue-600 font-medium' : 'text-gray-500'
-                }`}>
+                <span className={`ml-2 text-sm transition-colors ${currentStep >= step ? 'text-primary font-medium' : 'text-muted-foreground'
+                  }`}>
                   {step === 1 && 'Location & Dates'}
                   {step === 2 && 'Customer Info'}
                   {step === 3 && 'Payment'}
                   {step === 4 && 'Confirmation'}
                 </span>
-                {step < 4 && <div className="w-6 h-0.5 bg-gray-200 mx-2"></div>}
+                {step < 4 && <div className="w-6 h-0.5 bg-border mx-2"></div>}
               </div>
             ))}
           </div>
@@ -259,11 +257,11 @@ By accepting, you agree to these terms and our privacy policy.`);
           {currentStep === 1 && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4">📍 Pickup & Dropoff Details</h3>
-              
+
               {/* Location Pickers */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Pickup Location
                   </label>
                   <LocationPicker
@@ -272,9 +270,9 @@ By accepting, you agree to these terms and our privacy policy.`);
                     className="w-full"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Dropoff Location
                   </label>
                   <LocationPicker
@@ -286,8 +284,8 @@ By accepting, you agree to these terms and our privacy policy.`);
               </div>
 
               {/* Interactive Map */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h4 className="text-md font-medium text-gray-700 mb-3">🗺️ Select Location on Map</h4>
+              <div className="border border-border rounded-lg p-4 bg-muted/10">
+                <h4 className="text-md font-medium text-foreground mb-3">🗺️ Select Location on Map</h4>
                 <GoogleMapEnhanced
                   cars={selectedCar ? [selectedCar] : []}
                   onLocationSelect={(location) => {
@@ -297,9 +295,9 @@ By accepting, you agree to these terms and our privacy policy.`);
                   }}
                   selectedCar={selectedCar}
                   mapHeight="300px"
-                  className="rounded-lg overflow-hidden"
+                  className="rounded-lg overflow-hidden border border-border"
                 />
-                <div className="mt-2 text-xs text-gray-500 text-center">
+                <div className="mt-2 text-xs text-muted-foreground text-center">
                   Click on the map to select {!bookingData.pickupLocation ? 'pickup' : 'dropoff'} location
                 </div>
               </div>
@@ -329,39 +327,39 @@ By accepting, you agree to these terms and our privacy policy.`);
               {/* Date & Time Pickers */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900">📅 Pickup Date & Time</h4>
+                  <h4 className="font-medium text-foreground">📅 Pickup Date & Time</h4>
                   <div className="grid grid-cols-2 gap-3">
                     <input
                       type="date"
                       value={bookingData.pickupDate}
                       onChange={(e) => handleInputChange('pickupDate', e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     />
                     <input
                       type="time"
                       value={bookingData.pickupTime}
                       onChange={(e) => handleInputChange('pickupTime', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900">📅 Return Date & Time</h4>
+                  <h4 className="font-medium text-foreground">📅 Return Date & Time</h4>
                   <div className="grid grid-cols-2 gap-3">
                     <input
                       type="date"
                       value={bookingData.returnDate}
                       onChange={(e) => handleInputChange('returnDate', e.target.value)}
                       min={bookingData.pickupDate || new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     />
                     <input
                       type="time"
                       value={bookingData.returnTime}
                       onChange={(e) => handleInputChange('returnTime', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                     />
                   </div>
                 </div>
@@ -369,20 +367,20 @@ By accepting, you agree to these terms and our privacy policy.`);
 
               {/* Additional Options */}
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">🚗 Additional Options</h4>
-                
+                <h4 className="font-medium text-foreground">🚗 Additional Options</h4>
+
                 <label className="flex items-center space-x-3">
                   <input
                     type="checkbox"
                     checked={bookingData.driverRequired}
                     onChange={(e) => handleInputChange('driverRequired', e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-primary border-input rounded focus:ring-primary"
                   />
-                  <span className="text-gray-700">Include professional driver (+KSH 2,000/day)</span>
+                  <span className="text-foreground">Include professional driver (+KSH 2,000/day)</span>
                 </label>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Additional Requests (Optional)
                   </label>
                   <textarea
@@ -390,34 +388,34 @@ By accepting, you agree to these terms and our privacy policy.`);
                     onChange={(e) => handleInputChange('additionalRequests', e.target.value)}
                     placeholder="Any special requests or requirements..."
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                    className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-muted-foreground"
                   />
                 </div>
 
                 {/* Recurrence Options */}
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 mb-2">🔁 Recurring Booking</h4>
+                <div className="border-t border-border pt-4">
+                  <h4 className="font-medium text-foreground mb-2">🔁 Recurring Booking</h4>
                   <label className="flex items-center space-x-3 mb-2">
                     <input
                       type="checkbox"
                       checked={bookingData.recurrence?.enabled}
                       onChange={(e) => handleInputChange('recurrence', { ...bookingData.recurrence, enabled: e.target.checked })}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-primary border-input rounded focus:ring-primary"
                     />
-                    <span className="text-gray-700">Repeat weekly</span>
+                    <span className="text-foreground">Repeat weekly</span>
                   </label>
                   {bookingData.recurrence?.enabled && (
                     <div className="flex items-center space-x-3">
-                      <label className="text-sm text-gray-700">Occurrences:</label>
+                      <label className="text-sm text-foreground">Occurrences:</label>
                       <input
                         type="number"
                         min="1"
                         max="26"
                         value={bookingData.recurrence.count}
                         onChange={(e) => handleInputChange('recurrence', { ...bookingData.recurrence, count: Math.max(1, parseInt(e.target.value) || 1) })}
-                        className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        className="w-24 px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground"
                       />
-                      <span className="text-xs text-gray-500">Weekly repeats on the pickup day</span>
+                      <span className="text-xs text-muted-foreground">Weekly repeats on the pickup day</span>
                     </div>
                   )}
                 </div>
@@ -429,10 +427,10 @@ By accepting, you agree to these terms and our privacy policy.`);
           {currentStep === 2 && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4">👤 Customer Information</h3>
-              
+
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Full Name *
                   </label>
                   <input
@@ -440,12 +438,12 @@ By accepting, you agree to these terms and our privacy policy.`);
                     value={bookingData.customerInfo.name}
                     onChange={(e) => handleInputChange('customerInfo.name', e.target.value)}
                     placeholder="Enter your full name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                    className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-muted-foreground"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Phone Number *
                   </label>
                   <input
@@ -453,12 +451,12 @@ By accepting, you agree to these terms and our privacy policy.`);
                     value={bookingData.customerInfo.phone}
                     onChange={(e) => handleInputChange('customerInfo.phone', e.target.value)}
                     placeholder="+254 700 000 000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                    className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-muted-foreground"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Email Address *
                   </label>
                   <input
@@ -466,12 +464,12 @@ By accepting, you agree to these terms and our privacy policy.`);
                     value={bookingData.customerInfo.email}
                     onChange={(e) => handleInputChange('customerInfo.email', e.target.value)}
                     placeholder="your.email@example.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                    className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-muted-foreground"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     ID/Passport Number
                   </label>
                   <input
@@ -479,17 +477,17 @@ By accepting, you agree to these terms and our privacy policy.`);
                     value={bookingData.customerInfo.idNumber}
                     onChange={(e) => handleInputChange('customerInfo.idNumber', e.target.value)}
                     placeholder="ID or Passport number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                    className="w-full px-3 py-2 bg-input/50 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-foreground placeholder-muted-foreground"
                   />
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
-                  <span className="text-blue-600 text-xl">ℹ️</span>
-                  <div className="text-sm text-blue-800">
+                  <span className="text-primary text-xl">ℹ️</span>
+                  <div className="text-sm text-foreground">
                     <p className="font-medium mb-1">Important Information:</p>
-                    <ul className="list-disc list-inside space-y-1">
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                       <li>Valid driving license required for car pickup</li>
                       <li>ID/Passport will be verified during pickup</li>
                       <li>Security deposit may be required</li>
@@ -516,73 +514,73 @@ By accepting, you agree to these terms and our privacy policy.`);
           {currentStep === 4 && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4">✅ Booking Confirmation</h3>
-              
+
               {/* Booking Summary */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-4">📋 Booking Summary</h4>
-                
+              <div className="bg-muted/30 border border-border rounded-lg p-6">
+                <h4 className="font-semibold text-foreground mb-4">📋 Booking Summary</h4>
+
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Car:</span>
-                    <span className="font-medium text-gray-900">{selectedCar.name}</span>
+                    <span className="text-muted-foreground">Car:</span>
+                    <span className="font-medium text-foreground">{selectedCar.name}</span>
                   </div>
-                  
+
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Pickup:</span>
-                    <span className="font-medium text-gray-900">
+                    <span className="text-muted-foreground">Pickup:</span>
+                    <span className="font-medium text-foreground">
                       {bookingData.pickupLocation?.name || bookingData.pickupLocation?.address || 'Not selected'}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Dropoff:</span>
-                    <span className="font-medium text-gray-900">
+                    <span className="text-muted-foreground">Dropoff:</span>
+                    <span className="font-medium text-foreground">
                       {bookingData.dropoffLocation?.name || bookingData.dropoffLocation?.address || 'Not selected'}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Dates:</span>
-                    <span className="font-medium text-gray-900">
+                    <span className="text-muted-foreground">Dates:</span>
+                    <span className="font-medium text-foreground">
                       {bookingData.pickupDate} to {bookingData.returnDate}
                     </span>
                   </div>
-                  
+
                   {bookingData.driverRequired && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Driver:</span>
-                      <span className="font-medium text-gray-900">Included</span>
+                      <span className="text-muted-foreground">Driver:</span>
+                      <span className="font-medium text-foreground">Included</span>
                     </div>
                   )}
-                  
+
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Payment Method:</span>
-                    <span className="font-medium text-gray-900">
+                    <span className="text-muted-foreground">Payment Method:</span>
+                    <span className="font-medium text-foreground">
                       {bookingData.paymentMethod === 'cash' && '💵 Cash Payment'}
                       {bookingData.paymentMethod === 'mpesa' && '📱 M-Pesa'}
                       {!bookingData.paymentMethod && 'Not selected'}
                     </span>
                   </div>
-                  
-                  <div className="border-t pt-3 mt-3">
+
+                  <div className="border-t border-border pt-3 mt-3">
                     <div className="flex justify-between text-lg font-semibold">
-                      <span className="text-gray-900">Total Cost:</span>
-                      <span className="text-blue-600">KSH {estimatedCost.toLocaleString()}</span>
+                      <span className="text-foreground">Total Cost:</span>
+                      <span className="text-primary">KSH {estimatedCost.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Customer Info */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h4 className="font-semibold text-gray-900 mb-4">👤 Customer Details</h4>
-                
+              <div className="bg-muted/30 border border-border rounded-lg p-6">
+                <h4 className="font-semibold text-foreground mb-4">👤 Customer Details</h4>
+
                 <div className="space-y-2">
-                  <div><span className="text-gray-600">Name:</span> <span className="font-medium text-gray-900">{bookingData.customerInfo.name}</span></div>
-                  <div><span className="text-gray-600">Phone:</span> <span className="font-medium text-gray-900">{bookingData.customerInfo.phone}</span></div>
-                  <div><span className="text-gray-600">Email:</span> <span className="font-medium text-gray-900">{bookingData.customerInfo.email}</span></div>
+                  <div><span className="text-muted-foreground">Name:</span> <span className="font-medium text-foreground">{bookingData.customerInfo.name}</span></div>
+                  <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium text-foreground">{bookingData.customerInfo.phone}</span></div>
+                  <div><span className="text-muted-foreground">Email:</span> <span className="font-medium text-foreground">{bookingData.customerInfo.email}</span></div>
                   {bookingData.customerInfo.idNumber && (
-                    <div><span className="text-gray-600">ID:</span> <span className="font-medium text-gray-900">{bookingData.customerInfo.idNumber}</span></div>
+                    <div><span className="text-muted-foreground">ID:</span> <span className="font-medium text-foreground">{bookingData.customerInfo.idNumber}</span></div>
                   )}
                 </div>
               </div>
@@ -616,28 +614,28 @@ By accepting, you agree to these terms and our privacy policy.`);
 
         {/* Footer Buttons - Hidden for payment step */}
         {currentStep !== 3 && (
-          <div className="flex items-center justify-between p-6 border-t border-gray-200">
+          <div className="flex items-center justify-between p-6 border-t border-border bg-muted/20">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 text-muted-foreground border border-input rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
-            
+
             <div className="flex space-x-3">
               <button
                 onClick={onClose}
-                className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 text-muted-foreground border border-input rounded-lg hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
-              
+
               {currentStep < 4 ? (
                 <button
                   onClick={nextStep}
                   disabled={!isStepValid(currentStep)}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>

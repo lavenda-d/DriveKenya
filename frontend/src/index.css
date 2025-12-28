@@ -6,26 +6,38 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* Purple-ish Light Mode Theme */
+    --background: 260 20% 98%;
+    --foreground: 260 20% 10%;
+
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 260 20% 10%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 260 20% 10%;
+
+    --primary: 262 83% 58%;
+    /* Purple-500 equivalent */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 260 10% 96%;
+    --secondary-foreground: 262 83% 58%;
+
+    --muted: 260 10% 96%;
+    --muted-foreground: 260 10% 50%;
+
+    --accent: 260 20% 96%;
+    --accent-foreground: 262 83% 58%;
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5% 64.9%;
+
+    --border: 262 30% 90%;
+    --input: 262 30% 90%;
+    --ring: 262 83% 58%;
+
     --radius: 0.5rem;
+
     --sidebar: 0 0% 98%;
     --sidebar-foreground: 240 3.7% 15.9%;
     --sidebar-primary: 240 5.9% 10%;
@@ -84,7 +96,13 @@
   h4,
   h5,
   h6 {
-    @apply font-heading font-semibold tracking-tight;
+    @apply font-heading font-semibold tracking-tight text-foreground;
+  }
+
+  /* Apply purple accent to main headings in Light Mode */
+  :root:not(.dark) h1,
+  :root:not(.dark) h2 {
+    @apply text-primary/90;
   }
 
   h1 {
@@ -113,12 +131,12 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors;
+    @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
   }
 
   /* Selection styling */
   ::selection {
-    @apply bg-primary/20 text-primary-foreground;
+    @apply bg-primary/20 text-primary;
   }
 
   /* Focus styles */
@@ -134,19 +152,14 @@
     @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full;
   }
 
-  /* Glass effect */
+  /* Glass effect - Updated to be dynamic */
   .glass {
     @apply bg-background/80 backdrop-blur-lg border border-border shadow-lg;
   }
 
-  /* Card */
-  .card {
-    @apply rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md;
-  }
-
   /* Gradient text */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent;
   }
 
   /* Button */
@@ -156,33 +169,33 @@
   }
 
   .btn-secondary {
-    @apply border-2 border-blue-400 text-blue-400 px-6 py-3 rounded-full font-semibold;
-    @apply hover:bg-blue-400 hover:text-white hover:shadow-lg hover:shadow-blue-400/25;
+    @apply border-2 border-primary text-primary px-6 py-3 rounded-full font-semibold;
+    @apply hover:bg-primary hover:text-primary-foreground hover:shadow-lg hover:shadow-primary/25;
     @apply transition-all duration-300 ease-out;
   }
 
   /* Card animations */
   .card {
-    @apply bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl;
-    @apply hover:bg-white/15 hover:border-white/20 hover:scale-105;
+    @apply bg-card text-card-foreground border border-border rounded-xl;
+    @apply hover:shadow-md hover:border-primary/20 hover:scale-[1.02];
     @apply transition-all duration-300 ease-out;
   }
 
   .car-card {
-    @apply bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden;
-    @apply hover:bg-white/15 hover:border-blue-400/30 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20;
+    @apply bg-card border border-border rounded-xl overflow-hidden;
+    @apply hover:border-primary/30 hover:scale-105 hover:shadow-xl hover:shadow-primary/10;
     @apply transition-all duration-300 ease-out;
   }
 
   /* Navigation styles */
   .nav-link {
-    @apply text-sm font-medium transition-all duration-300;
-    @apply hover:text-blue-400 hover:scale-110;
+    @apply text-sm font-medium transition-all duration-300 text-muted-foreground;
+    @apply hover:text-primary hover:scale-110;
     position: relative;
   }
 
   .nav-link.active {
-    @apply text-blue-400;
+    @apply text-primary;
   }
 
   .nav-link::after {
@@ -192,7 +205,7 @@
     height: 2px;
     bottom: -4px;
     left: 50%;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    @apply bg-primary;
     transition: all 0.3s ease-out;
     transform: translateX(-50%);
   }
@@ -204,9 +217,9 @@
 
   /* Input styles */
   .input-field {
-    @apply w-full bg-black/20 border border-white/20 rounded-lg px-4 py-3;
-    @apply text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none;
-    @apply focus:bg-black/30 focus:shadow-lg focus:shadow-blue-500/10;
+    @apply w-full bg-input/50 border border-input rounded-lg px-4 py-3;
+    @apply text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none;
+    @apply focus:bg-background focus:ring-1 focus:ring-primary/50 focus:shadow-lg focus:shadow-primary/10;
     @apply transition-all duration-300 ease-out;
   }
 
@@ -231,13 +244,13 @@
 
   /* Gradient borders */
   .gradient-border {
-    background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+    background: linear-gradient(45deg, transparent, hsl(var(--primary) / 0.3), transparent);
     padding: 1px;
     border-radius: 12px;
   }
 
   .gradient-border>div {
-    @apply bg-slate-900 rounded-lg;
+    @apply bg-card rounded-lg;
   }
 }
 
@@ -336,15 +349,17 @@
 
 /* Page-specific styles */
 .hero-section {
+  @apply relative;
+  /* Soft purple gradient background for light mode */
   background:
-    radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
-    radial-gradient(circle at 40% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+    radial-gradient(circle at 20% 50%, hsl(var(--primary) / 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, hsl(var(--primary) / 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
 }
 
 /* Car card specific styling */
 .car-image-container {
-  @apply relative overflow-hidden;
+  @apply relative overflow-hidden bg-muted;
 }
 
 .car-image-container::after {
@@ -356,7 +371,7 @@
   bottom: 0;
   background: linear-gradient(135deg,
       transparent 0%,
-      rgba(59, 130, 246, 0.1) 50%,
+      hsl(var(--primary) / 0.1) 50%,
       transparent 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -369,7 +384,7 @@
 /* Stats counter animation */
 .stat-number {
   @apply font-bold text-2xl md:text-3xl;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #10b981);
+  background: linear-gradient(135deg, hsl(var(--primary)), #8b5cf6, #10b981);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -385,7 +400,7 @@
 }
 
 .form-label {
-  @apply block text-white text-sm font-medium;
+  @apply block text-foreground text-sm font-medium;
 }
 
 /* Tab styling */
@@ -395,24 +410,24 @@
 }
 
 .tab-button.active {
-  @apply bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25;
+  @apply bg-gradient-to-r from-primary to-purple-600 text-white shadow-lg shadow-primary/25;
 }
 
 .tab-button:not(.active) {
-  @apply bg-white/10 text-white hover:bg-white/20;
+  @apply bg-muted text-muted-foreground hover:bg-muted/80;
 }
 
 /* Success/Error states */
 .success-state {
-  @apply bg-green-500/20 border-green-500/30 text-green-300;
+  @apply bg-green-500/10 border-green-500/20 text-green-700;
 }
 
 .error-state {
-  @apply bg-red-500/20 border-red-500/30 text-red-300;
+  @apply bg-red-500/10 border-red-500/20 text-red-700;
 }
 
 .warning-state {
-  @apply bg-yellow-500/20 border-yellow-500/30 text-yellow-300;
+  @apply bg-yellow-500/10 border-yellow-500/20 text-yellow-700;
 }
 
 /* Mobile responsive improvements */
