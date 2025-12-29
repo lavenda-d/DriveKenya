@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Sparkles } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useTranslation } from 'react-i18next';
 import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
@@ -12,6 +13,7 @@ import PWAStatus from './components/PWAStatus';
 import BookingFlow from './components/BookingFlow';
 import CustomerChatSelector from './components/CustomerChatSelector';
 import GoogleMapEnhanced from './components/GoogleMapEnhanced';
+import VehicleTypeCarousel from './components/VehicleTypeCarousel';
 import OwnerDashboard from './components/OwnerDashboardEnhanced';
 import PricingCalculator from './components/PricingCalculator';
 
@@ -919,7 +921,7 @@ const App: React.FC = () => {
     };
 
     return (
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border shadow-sm">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between h-20">
             <div
@@ -1623,11 +1625,24 @@ const App: React.FC = () => {
   // Enhanced Home Page
   const renderHome = () => (
     <div className="min-h-screen">
-      <section className="relative h-screen flex items-center justify-center text-center bg-background overflow-hidden">
-        <div className="absolute inset-0 bg-background/30"></div>
+      <section className="relative h-screen flex items-center justify-center text-center bg-black overflow-hidden pt-24">
+        {/* Background Video */}
+        <div className="absolute inset-0 overflow-hidden">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute min-w-full min-h-full object-cover opacity-60"
+          >
+            <source src="/Screen Recording 2025-12-28 200832.mp4" type="video/mp4" />
+          </video>
+          {/* Enhanced Gradient Overlay with definitive bottom edge */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/20"></div>
+        </div>
 
-        {/* Animated Background Blobs */}
-        <div className="absolute top-0 -left-20 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] animate-pulse"></div>
+        {/* Animated Background Blobs for extra depth */}
+        <div className="absolute top-0 -left-20 w-96 h-96 bg-primary/20 rounded-full blur-[120px] animate-pulse"></div>
         <div className="absolute bottom-0 -right-20 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
 
         <div className="relative z-10 max-w-4xl mx-auto px-6">
@@ -1635,22 +1650,22 @@ const App: React.FC = () => {
             <div className="mb-8">
               <div className="inline-flex items-center space-x-2 bg-muted/30 backdrop-blur-sm border border-border rounded-full px-6 py-2 mb-6">
                 <span className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></span>
-                <span className="text-muted-foreground text-sm">
-                  {apiConnected ? 'Live Database Connected' : 'Demo Mode'}  {cars.length} Vehicles Available
+                <span className="text-white/80 text-sm font-medium">
+                  {apiConnected ? '⚡ Live Database Connected' : '🚧 Demo Mode'} • {cars.length} Vehicles Available
                 </span>
               </div>
             </div>
           </AnimatedSection>
 
           <AnimatedSection delay={0.4}>
-            <h1 className="text-6xl md:text-8xl font-bold text-foreground mb-6 tracking-tight">
-              Drive<span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Kenya</span>
+            <h1 className="text-6xl md:text-8xl font-black text-white mb-6 tracking-tight drop-shadow-2xl">
+              Drive<span className="bg-gradient-to-r from-primary via-purple-400 to-primary bg-clip-text text-transparent animate-gradient-x">Kenya</span>
             </h1>
           </AnimatedSection>
 
           <AnimatedSection delay={0.6}>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed max-w-3xl mx-auto">
-              Premium vehicle rentals across Kenya - Cars, Motorcycles, Bicycles, Vans, Trucks & more with real-time booking.
+            <p className="text-xl md:text-2xl text-white/90 mb-10 leading-relaxed max-w-3xl mx-auto font-medium drop-shadow-lg">
+              Experience Kenyan roads like never before. Premium vehicle rentals - from Luxury SUVs to reliable Bicycles, all at your fingertips.
             </p>
           </AnimatedSection>
 
@@ -1662,12 +1677,12 @@ const App: React.FC = () => {
                   <span className="text-2xl">
                     {user.role === 'host' ? '🔑' : user.role === 'admin' ? '👑' : '🚗'}
                   </span>
-                  <span className="text-foreground font-medium">
+                  <span className="text-white font-bold tracking-wide">
                     {user.role === 'host' ?
-                      `Welcome back, Car Owner! Manage your ${myCars.length} listed vehicles` :
+                      `Welcome back, Owner! Manage your ${myCars.length} vehicles` :
                       user.role === 'admin' ?
-                        'Welcome back, Admin! Full system access' :
-                        `Welcome back, ${user.name?.split(' ')[0] || 'Driver'}! Ready to explore?`
+                        'Welcome Back, Administrator' :
+                        `Hello, ${user.name?.split(' ')[0] || 'Driver'}! Ready to ride?`
                     }
                   </span>
                 </div>
@@ -1729,8 +1744,26 @@ const App: React.FC = () => {
           </AnimatedSection>
         </div>
       </section>
+
+      {/* Vehicle Type Carousel */}
+      <VehicleTypeCarousel onSelectCategory={(category) => {
+        setSelectedCategory(category);
+        setCurrentPage('cars');
+        window.scrollTo(0, 0);
+      }} />
+
       {/* Stats Section */}
-      <section className="py-24 bg-muted/20 relative overflow-hidden">
+      <section className="py-24 bg-muted/20 relative overflow-hidden group">
+        {/* Dynamic Background Pattern */}
+        <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{
+          backgroundImage: `radial-gradient(circle at 2px 2px, var(--primary) 1.5px, transparent 0)`,
+          backgroundSize: '48px 48px'
+        }}></div>
+
+        {/* Animated Background Blobs for depth */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary/10 rounded-full blur-[100px] animate-pulse pointer-events-none group-hover:bg-primary/20 transition-all duration-1000"></div>
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-purple-600/10 rounded-full blur-[100px] animate-pulse pointer-events-none group-hover:bg-purple-600/20 transition-all duration-1000" style={{ animationDelay: '2s' }}></div>
+
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
@@ -1811,7 +1844,7 @@ const App: React.FC = () => {
     // Show loading state while data is being fetched
     if (loading) {
       return (
-        <div className="min-h-screen bg-background pt-20 flex items-center justify-center">
+        <div className="min-h-screen bg-background pt-28 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-foreground text-xl">Loading cars...</p>
@@ -1821,7 +1854,7 @@ const App: React.FC = () => {
     }
 
     return (
-      <div className="min-h-screen bg-background pt-20">
+      <div className="min-h-screen bg-background pt-28">
         <div className="max-w-7xl mx-auto px-6">
           <div className="mb-12">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
@@ -2236,7 +2269,7 @@ const App: React.FC = () => {
   const renderBookings = () => {
     if (!user) {
       return (
-        <div className="min-h-screen bg-background pt-20">
+        <div className="min-h-screen bg-background pt-28">
           <div className="max-w-6xl mx-auto px-6 py-20">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-8 text-center">My Bookings</h1>
             <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-12 text-center shadow-sm">
@@ -2257,7 +2290,7 @@ const App: React.FC = () => {
 
     if (userBookings.length === 0) {
       return (
-        <div className="min-h-screen bg-background pt-20">
+        <div className="min-h-screen bg-background pt-28">
           <div className="max-w-6xl mx-auto px-6 py-20">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-8 text-center">My Bookings</h1>
             <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-12 text-center shadow-sm">
@@ -2277,7 +2310,7 @@ const App: React.FC = () => {
     }
 
     return (
-      <div className="min-h-screen bg-background pt-20">
+      <div className="min-h-screen bg-background pt-28">
         <div className="max-w-6xl mx-auto px-6 py-20">
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-8 text-center">My Bookings</h1>
           <div className="space-y-6">
@@ -2338,7 +2371,7 @@ const App: React.FC = () => {
     // Handle case when user is not logged in
     if (!user) {
       return (
-        <div className="min-h-screen bg-background pt-20">
+        <div className="min-h-screen bg-background pt-28">
           <div className="max-w-6xl mx-auto px-6 py-20">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-8 text-center">My Vehicles</h1>
             <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-12 text-center">
@@ -2360,7 +2393,7 @@ const App: React.FC = () => {
     // Handle loading state
     if (myCarsLoading) {
       return (
-        <div className="min-h-screen bg-background pt-20">
+        <div className="min-h-screen bg-background pt-28">
           <div className="max-w-6xl mx-auto px-6 py-20">
             <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-8 text-center">My Vehicles</h1>
             <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-12 text-center">
@@ -2373,7 +2406,7 @@ const App: React.FC = () => {
     }
 
     return (
-      <div className="min-h-screen bg-background pt-20">
+      <div className="min-h-screen bg-background pt-28">
         <div className="max-w-6xl mx-auto px-6 py-20">
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-8 text-center">My Vehicles</h1>
           {myCars.length === 0 ? (
@@ -2446,240 +2479,245 @@ const App: React.FC = () => {
     );
   };
 
-  // List Car Form - Enhanced with proper backend integration
   const renderListCar = () => (
-    <div className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-28">
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="bg-card backdrop-blur-xl border border-border rounded-[2.5rem] p-8 md:p-12 shadow-sm">
-          <h2 className="text-3xl md:text-4xl font-black text-foreground mb-8 text-center">List Your Vehicle</h2>
+        <div className="bg-gradient-to-br from-card via-card to-purple-500/5 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 md:p-12 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-primary/20 transition-all duration-700"></div>
 
-          {carSubmitMessage && (
-            <div className={`mb-8 p-4 rounded-xl text-center font-bold ${carSubmitMessage.includes('✅') || carSubmitMessage.includes('Success') ? 'bg-green-500/20 text-green-600 border border-green-500/30' : 'bg-red-500/20 text-red-500 border border-red-500/30'}`}>
-              {carSubmitMessage}
-            </div>
-          )}
-          <form onSubmit={handleSubmitCar}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Make</label>
-                <input type="text" name="make" value={carForm.make} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. Toyota" required />
-              </div>
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Model</label>
-                <input type="text" name="model" value={carForm.model} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. Land Cruiser" required />
-              </div>
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Year</label>
-                <input type="number" name="year" value={carForm.year} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. 2020" required />
-              </div>
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">License Plate</label>
-                <input type="text" name="license_plate" value={carForm.license_plate} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. KAA 123X" required />
-              </div>
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Vehicle Type</label>
-                <select name="vehicle_type" value={carForm.vehicle_type} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all">
-                  <option value="car">Car</option>
-                  <option value="motorcycle">Motorcycle</option>
-                  <option value="van">Van</option>
-                  <option value="truck">Truck</option>
-                  <option value="bicycle">Bicycle</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Category</label>
-                <select name="category" value={carForm.category} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all">
-                  <option value="economy">Economy</option>
-                  <option value="luxury">Luxury</option>
-                  <option value="suv">SUV</option>
-                  <option value="offroad">Off-road</option>
-                  <option value="electric">Electric</option>
-                  <option value="sport">Sport</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Transmission</label>
-                <div className="flex space-x-4">
-                  {['Automatic', 'Manual'].map(type => (
-                    <label key={type} className={`flex-1 cursor-pointer border rounded-xl p-3 flex items-center justify-center space-x-2 transition-all ${carForm.transmission === type ? 'bg-primary border-primary text-primary-foreground' : 'bg-input/20 border-input text-muted-foreground hover:bg-input/30'}`}>
-                      <input type="radio" name="transmission" value={type} checked={carForm.transmission === type} onChange={handleCarFormChange} className="hidden" />
-                      <span>{type}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Fuel Type</label>
-                <div className="flex space-x-4">
-                  {['Petrol', 'Diesel', 'Hybrid', 'Electric'].map(type => (
-                    <label key={type} className={`flex-1 cursor-pointer border rounded-xl p-3 flex items-center justify-center space-x-2 transition-all ${carForm.fuel_type === type ? 'bg-primary border-primary text-primary-foreground' : 'bg-input/20 border-input text-muted-foreground hover:bg-input/30'}`}>
-                      <input type="radio" name="fuel_type" value={type} checked={carForm.fuel_type === type} onChange={handleCarFormChange} className="hidden" />
-                      <span>{type}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Color</label>
-                <input type="text" name="color" value={carForm.color} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. Black" required />
-              </div>
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Location</label>
-                <div className="relative">
-                  <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input type="text" name="location" value={carForm.location} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl pl-12 pr-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. Nairobi CBD" required />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Price Per Day (KSh)</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">KSh</span>
-                  <input type="number" name="price_per_day" value={carForm.price_per_day} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl pl-14 pr-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all font-bold text-lg" placeholder="e.g. 5000" required />
-                </div>
-              </div>
+          <div className="relative z-10">
+            <div className="flex flex-col items-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">List Your Vehicle</h2>
             </div>
 
-            {/* Image Upload Section */}
-            <div>
-              <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-4">Vehicle Images (First is Main)</label>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                {uploadedCarImages.map((url, index) => (
-                  <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border border-border">
-                    <img src={url} alt={`Vehicle ${index + 1}`} className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => setUploadedCarImages(prev => prev.filter((_, i) => i !== index))}
-                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      ×
-                    </button>
-                    {index === 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] font-bold uppercase text-center py-1">
-                        Main Image
-                      </div>
-                    )}
+            {carSubmitMessage && (
+              <div className={`mb-8 p-4 rounded-xl text-center font-bold ${carSubmitMessage.includes('✅') || carSubmitMessage.includes('Success') ? 'bg-green-500/20 text-green-600 border border-green-500/30' : 'bg-red-500/20 text-red-500 border border-red-500/30'}`}>
+                {carSubmitMessage}
+              </div>
+            )}
+            <form onSubmit={handleSubmitCar}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Make</label>
+                  <input type="text" name="make" value={carForm.make} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. Toyota" required />
+                </div>
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Model</label>
+                  <input type="text" name="model" value={carForm.model} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. Land Cruiser" required />
+                </div>
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Year</label>
+                  <input type="number" name="year" value={carForm.year} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. 2020" required />
+                </div>
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">License Plate</label>
+                  <input type="text" name="license_plate" value={carForm.license_plate} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. KAA 123X" required />
+                </div>
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Vehicle Type</label>
+                  <select name="vehicle_type" value={carForm.vehicle_type} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all">
+                    <option value="car">Car</option>
+                    <option value="motorcycle">Motorcycle</option>
+                    <option value="van">Van</option>
+                    <option value="truck">Truck</option>
+                    <option value="bicycle">Bicycle</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Category</label>
+                  <select name="category" value={carForm.category} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all">
+                    <option value="economy">Economy</option>
+                    <option value="luxury">Luxury</option>
+                    <option value="suv">SUV</option>
+                    <option value="offroad">Off-road</option>
+                    <option value="electric">Electric</option>
+                    <option value="sport">Sport</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Transmission</label>
+                  <div className="flex space-x-4">
+                    {['Automatic', 'Manual'].map(type => (
+                      <label key={type} className={`flex-1 cursor-pointer border rounded-xl p-3 flex items-center justify-center space-x-2 transition-all ${carForm.transmission === type ? 'bg-primary border-primary text-primary-foreground' : 'bg-input/20 border-input text-muted-foreground hover:bg-input/30'}`}>
+                        <input type="radio" name="transmission" value={type} checked={carForm.transmission === type} onChange={handleCarFormChange} className="hidden" />
+                        <span>{type}</span>
+                      </label>
+                    ))}
                   </div>
-                ))}
-
-                <label className="cursor-pointer border-2 border-dashed border-border rounded-xl aspect-square flex flex-col items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary hover:bg-primary/5 transition-all">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    multiple
-                    className="hidden"
-                    onChange={async (e) => {
-                      const files = e.target.files;
-                      if (!files || files.length === 0) return;
-
-                      setIsUploadingImages(true);
-                      try {
-                        const formData = new FormData();
-                        Array.from(files).forEach(file => {
-                          formData.append('images', file);
-                        });
-
-                        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/upload-images`, {
-                          method: 'POST',
-                          headers: {
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body: formData
-                        });
-
-                        if (response.ok) {
-                          const data = await response.json();
-                          const newImages = data.data.imageUrls.map(url => `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${url}`);
-                          setUploadedCarImages(prev => [...prev, ...newImages]);
-                          setCarSubmitMessage(`✅ ${files.length} image(s) uploaded successfully!`);
-                          setTimeout(() => setCarSubmitMessage(''), 3000);
-                        } else {
-                          setCarSubmitMessage('❌ Failed to upload images');
-                        }
-                      } catch (error: any) {
-                        setCarSubmitMessage('❌ Error uploading images');
-                      } finally {
-                        setIsUploadingImages(false);
-                      }
-                    }}
-                  />
-                  {isUploadingImages ? (
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  ) : (
-                    <>
-                      <span className="text-4xl mb-2">+</span>
-                      <span className="text-sm font-bold">Add Images</span>
-                    </>
-                  )}
-                </label>
-              </div>
-              {isUploadingImages && (
-                <div className="text-center text-muted-foreground py-2">
-                  <span className="ml-2">Uploading...</span>
                 </div>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Features</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {[
-                  'Air Conditioning', 'Bluetooth', 'Navigation', 'Sunroof',
-                  'Leather Seats', 'Heated Seats', 'Backup Camera', 'Cruise Control',
-                  '4x4 / AWD', 'Third Row Seating', 'Roof Rack', 'Tow Hitch'
-                ].map(feature => (
-                  <label key={feature} className={`cursor-pointer border rounded-xl p-3 flex items-center space-x-2 transition-all ${carForm.features.includes(feature) ? 'bg-primary/20 border-primary text-primary' : 'bg-input/20 border-input text-muted-foreground hover:bg-input/30'}`}>
-                    <input
-                      type="checkbox"
-                      checked={carForm.features.includes(feature)}
-                      onChange={(e) => {
-                        const newFeatures = e.target.checked
-                          ? [...carForm.features, feature]
-                          : carForm.features.filter(f => f !== feature);
-                        handleCarFormChange({ target: { name: 'features', value: newFeatures } });
-                      }}
-                      className="hidden"
-                    />
-                    <span className="text-sm font-bold">{feature}</span>
-                  </label>
-                ))}
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Fuel Type</label>
+                  <div className="flex space-x-4">
+                    {['Petrol', 'Diesel', 'Hybrid', 'Electric'].map(type => (
+                      <label key={type} className={`flex-1 cursor-pointer border rounded-xl p-3 flex items-center justify-center space-x-2 transition-all ${carForm.fuel_type === type ? 'bg-primary border-primary text-primary-foreground' : 'bg-input/20 border-input text-muted-foreground hover:bg-input/30'}`}>
+                        <input type="radio" name="fuel_type" value={type} checked={carForm.fuel_type === type} onChange={handleCarFormChange} className="hidden" />
+                        <span>{type}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Color</label>
+                  <input type="text" name="color" value={carForm.color} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. Black" required />
+                </div>
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Location</label>
+                  <div className="relative">
+                    <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input type="text" name="location" value={carForm.location} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl pl-12 pr-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all" placeholder="e.g. Nairobi CBD" required />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Price Per Day (KSh)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">KSh</span>
+                    <input type="number" name="price_per_day" value={carForm.price_per_day} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl pl-14 pr-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all font-bold text-lg" placeholder="e.g. 5000" required />
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Description</label>
-              <textarea name="description" value={carForm.description} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all h-32" placeholder="Describe your vehicle..." required></textarea>
-            </div>
+              {/* Image Upload Section */}
+              <div>
+                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-4">Vehicle Images (First is Main)</label>
 
-            <div>
-              <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Video URL (optional)</label>
-              <input
-                name="video_url"
-                value={carForm.video_url}
-                onChange={handleCarFormChange}
-                placeholder="https://youtube.com/watch?v=... or direct video URL"
-                type="url"
-                className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-              />
-              <p className="text-muted-foreground text-xs mt-1">Optional: Add a YouTube or direct video link to showcase your car</p>
-            </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  {uploadedCarImages.map((url, index) => (
+                    <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border border-border">
+                      <img src={url} alt={`Vehicle ${index + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setUploadedCarImages(prev => prev.filter((_, i) => i !== index))}
+                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                      {index === 0 && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] font-bold uppercase text-center py-1">
+                          Main Image
+                        </div>
+                      )}
+                    </div>
+                  ))}
 
-            <div className="mt-6 p-4 bg-primary/10 border border-primary/30 rounded-xl text-primary-foreground">
-              <p className="text-sm">
-                <strong>Note:</strong> After listing, you can manage availability status and set calendar blocks from "My Vehicles" → "Manage Vehicle"
-              </p>
-            </div>
+                  <label className="cursor-pointer border-2 border-dashed border-border rounded-xl aspect-square flex flex-col items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary hover:bg-primary/5 transition-all">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      multiple
+                      className="hidden"
+                      onChange={async (e) => {
+                        const files = e.target.files;
+                        if (!files || files.length === 0) return;
 
-            <button
-              type="submit"
-              disabled={isSubmittingCar}
-              className="w-full bg-foreground text-background py-5 rounded-2xl font-black uppercase tracking-widest text-lg hover:bg-primary hover:text-white transition-all shadow-xl disabled:opacity-50"
-            >
-              {isSubmittingCar ? 'Listing Vehicle...' : 'List Vehicle Now'}
-            </button>
-          </form>
+                        setIsUploadingImages(true);
+                        try {
+                          const formData = new FormData();
+                          Array.from(files).forEach(file => {
+                            formData.append('images', file);
+                          });
+
+                          const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/cars/upload-images`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: formData
+                          });
+
+                          if (response.ok) {
+                            const data = await response.json();
+                            const newImages = data.data.imageUrls.map(url => `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${url}`);
+                            setUploadedCarImages(prev => [...prev, ...newImages]);
+                            setCarSubmitMessage(`✅ ${files.length} image(s) uploaded successfully!`);
+                            setTimeout(() => setCarSubmitMessage(''), 3000);
+                          } else {
+                            setCarSubmitMessage('❌ Failed to upload images');
+                          }
+                        } catch (error: any) {
+                          setCarSubmitMessage('❌ Error uploading images');
+                        } finally {
+                          setIsUploadingImages(false);
+                        }
+                      }}
+                    />
+                    {isUploadingImages ? (
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    ) : (
+                      <>
+                        <span className="text-4xl mb-2">+</span>
+                        <span className="text-sm font-bold">Add Images</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+                {isUploadingImages && (
+                  <div className="text-center text-muted-foreground py-2">
+                    <span className="ml-2">Uploading...</span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Features</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    'Air Conditioning', 'Bluetooth', 'Navigation', 'Sunroof',
+                    'Leather Seats', 'Heated Seats', 'Backup Camera', 'Cruise Control',
+                    '4x4 / AWD', 'Third Row Seating', 'Roof Rack', 'Tow Hitch'
+                  ].map(feature => (
+                    <label key={feature} className={`cursor-pointer border rounded-xl p-3 flex items-center space-x-2 transition-all ${carForm.features.includes(feature) ? 'bg-primary/20 border-primary text-primary' : 'bg-input/20 border-input text-muted-foreground hover:bg-input/30'}`}>
+                      <input
+                        type="checkbox"
+                        checked={carForm.features.includes(feature)}
+                        onChange={(e) => {
+                          const newFeatures = e.target.checked
+                            ? [...carForm.features, feature]
+                            : carForm.features.filter(f => f !== feature);
+                          handleCarFormChange({ target: { name: 'features', value: newFeatures } });
+                        }}
+                        className="hidden"
+                      />
+                      <span className="text-sm font-bold">{feature}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Description</label>
+                <textarea name="description" value={carForm.description} onChange={handleCarFormChange} className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all h-32" placeholder="Describe your vehicle..." required></textarea>
+              </div>
+
+              <div>
+                <label className="block text-muted-foreground text-sm font-bold uppercase tracking-wider mb-2">Video URL (optional)</label>
+                <input
+                  name="video_url"
+                  value={carForm.video_url}
+                  onChange={handleCarFormChange}
+                  placeholder="https://youtube.com/watch?v=... or direct video URL"
+                  type="url"
+                  className="w-full bg-input/20 border border-input rounded-xl px-4 py-3 text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                />
+                <p className="text-muted-foreground text-xs mt-1">Optional: Add a YouTube or direct video link to showcase your car</p>
+              </div>
+
+              <div className="mt-6 p-4 bg-primary/10 border border-primary/30 rounded-xl text-primary">
+                <p className="text-sm">
+                  <strong>Note:</strong> After listing, you can manage availability status and set calendar blocks from "My Vehicles" → "Manage Vehicle"
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmittingCar}
+                className="w-full bg-foreground text-background py-5 rounded-2xl font-black uppercase tracking-widest text-lg hover:bg-primary hover:text-white transition-all shadow-xl disabled:opacity-50 mt-8"
+              >
+                {isSubmittingCar ? 'Listing Vehicle...' : 'List Vehicle Now'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
@@ -2687,7 +2725,7 @@ const App: React.FC = () => {
 
   /* About Page */
   const renderAbout = () => (
-    <div className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-28">
       <div className="max-w-7xl mx-auto px-6 py-20">
         <AnimatedSection className="text-center mb-16">
           <h1 className="text-5xl md:text-7xl font-black text-foreground mb-6 tracking-tight">
@@ -2762,7 +2800,7 @@ const App: React.FC = () => {
 
   /* Contact Page */
   const renderContact = () => (
-    <div className="min-h-screen bg-background pt-24 pb-12 px-4 sm:px-6 lg:px-8 font-['Poppins']">
+    <div className="min-h-screen bg-background pt-28 pb-12 px-4 sm:px-6 lg:px-8 font-['Poppins']">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-extrabold text-foreground sm:text-5xl">
@@ -2773,81 +2811,85 @@ const App: React.FC = () => {
           </p>
         </div>
 
-        <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-8 shadow-lg">
-          <h3 className="text-2xl font-bold text-foreground mb-6">Send Message</h3>
+        <div className="bg-gradient-to-br from-card via-card to-purple-500/5 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 md:p-12 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-primary/20 transition-all duration-700"></div>
 
-          {contactSubmitMessage && (
-            <div className={`mb-6 p-4 rounded-lg flex items-center ${contactSubmitMessage.includes('Error')
-              ? 'bg-destructive/10 border border-destructive/20 text-destructive'
-              : 'bg-green-500/10 border border-green-500/20 text-green-600'
-              }`}>
-              {contactSubmitMessage}
-            </div>
-          )}
+          <div className="relative z-10">
+            <h3 className="text-2xl md:text-3xl font-black text-foreground mb-8 text-center tracking-tight">Send a Message</h3>
 
-          <form onSubmit={handleSubmitContact} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {contactSubmitMessage && (
+              <div className={`mb-6 p-4 rounded-lg flex items-center ${contactSubmitMessage.includes('Error')
+                ? 'bg-destructive/10 border border-destructive/20 text-destructive'
+                : 'bg-green-500/10 border border-green-500/20 text-green-600'
+                }`}>
+                {contactSubmitMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitContact} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Name</label>
+                  <input
+                    name="name"
+                    value={contactForm.name}
+                    onChange={handleContactFormChange}
+                    placeholder="Your Name"
+                    className="w-full px-4 py-3 bg-muted/30 border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Email</label>
+                  <input
+                    name="email"
+                    value={contactForm.email}
+                    onChange={handleContactFormChange}
+                    placeholder="your@email.com"
+                    type="email"
+                    className="w-full px-4 py-3 bg-muted/30 border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Name</label>
+                <label className="text-sm font-medium text-foreground">Subject</label>
                 <input
-                  name="name"
-                  value={contactForm.name}
+                  name="subject"
+                  value={contactForm.subject}
                   onChange={handleContactFormChange}
-                  placeholder="Your Name"
+                  placeholder="How can we help?"
                   className="w-full px-4 py-3 bg-muted/30 border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  required
                 />
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Email</label>
-                <input
-                  name="email"
-                  value={contactForm.email}
+                <label className="text-sm font-medium text-foreground">Message</label>
+                <textarea
+                  name="message"
+                  value={contactForm.message}
                   onChange={handleContactFormChange}
-                  placeholder="your@email.com"
-                  type="email"
-                  className="w-full px-4 py-3 bg-muted/30 border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  placeholder="Tell us more about your inquiry..."
+                  rows={5}
+                  className="w-full px-4 py-3 bg-muted/30 border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
                   required
-                />
+                ></textarea>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Subject</label>
-              <input
-                name="subject"
-                value={contactForm.subject}
-                onChange={handleContactFormChange}
-                placeholder="How can we help?"
-                className="w-full px-4 py-3 bg-muted/30 border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Message</label>
-              <textarea
-                name="message"
-                value={contactForm.message}
-                onChange={handleContactFormChange}
-                placeholder="Tell us more about your inquiry..."
-                rows={5}
-                className="w-full px-4 py-3 bg-muted/30 border border-input rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
-                required
-              ></textarea>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmittingContact}
-              className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-primary/25 transition-all transform hover:-translate-y-0.5"
-            >
-              {isSubmittingContact ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin">⏳</span> Sending...
-                </span>
-              ) : 'Send Message'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={isSubmittingContact}
+                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-primary/25 transition-all transform hover:-translate-y-0.5"
+              >
+                {isSubmittingContact ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="animate-spin">⏳</span> Sending...
+                  </span>
+                ) : 'Send Message'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
