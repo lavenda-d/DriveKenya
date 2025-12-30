@@ -198,14 +198,14 @@ export const bookingsAPI = {
   }),
 
   // Get booking by ID
-  getBookingById: (id, token) => apiRequest(`/bookings/${id}`, {
+  getBookingById: (id, token) => apiRequest(`/ bookings / ${id}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   }),
 
   // Cancel booking
-  cancelBooking: (id, token) => apiRequest(`/bookings/${id}/cancel`, {
+  cancelBooking: (id, token) => apiRequest(`/ bookings / ${id} / cancel`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -220,7 +220,7 @@ export const bookingsAPI = {
   }),
 
   // Availability (public)
-  getAvailability: (carId, start, end) => apiRequest(`/availability/${carId}?start=${start}&end=${end}`),
+  getAvailability: (carId, start, end) => apiRequest(`/ availability / ${ carId } ? start = ${ start } & end=${ end }`),
 
   // Recurring bookings
   recurringPreview: (payload) => apiRequest('/bookings/recurring/preview', {
@@ -232,7 +232,7 @@ export const bookingsAPI = {
   createRecurring: (payload, token) => apiRequest('/bookings/recurring/create', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${ token }`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
@@ -244,7 +244,7 @@ export const usersAPI = {
   // Get user profile
   getProfile: (token) => apiRequest('/users/profile', {
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${ token }`,
     },
   }),
 
@@ -252,7 +252,7 @@ export const usersAPI = {
   updateProfile: (profileData, token) => apiRequest('/users/profile', {
     method: 'PUT',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${ token }`,
     },
     body: JSON.stringify(profileData),
   }),
@@ -264,7 +264,7 @@ export const usersAPI = {
     return apiRequest('/users/avatar', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${ token }`,
       },
       body: form,
     });
@@ -278,7 +278,7 @@ export const usersAPI = {
     return apiRequest('/users/documents', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${ token }`,
       },
       body: form,
     });
@@ -287,15 +287,15 @@ export const usersAPI = {
   // List user's documents
   getDocuments: (token) => apiRequest('/users/documents', {
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${ token }`,
     },
   }),
 
   // Admin: update document status
-  updateDocumentStatus: (id, status, notes, token) => apiRequest(`/users/documents/${id}/status`, {
+  updateDocumentStatus: (id, status, notes, token) => apiRequest(`/ users / documents / ${ id } / status`, {
     method: 'PATCH',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${ token }`,
     },
     body: JSON.stringify({ status, notes }),
   }),
@@ -325,23 +325,23 @@ export const reviewsAPI = {
   // Get paginated reviews for a car
   getCarReviews: (carId, { page = 1, limit = 10 } = {}) => {
     const qs = new URLSearchParams({ page: String(page), limit: String(limit) }).toString();
-    return apiRequest(`/reviews/car/${carId}?${qs}`);
+    return apiRequest(`/ reviews / car / ${ carId } ? ${ qs }`);
   },
 
   // Get ratings summary and category breakdown
-  getCarReviewSummary: (carId) => apiRequest(`/reviews/car/${carId}/summary`),
+  getCarReviewSummary: (carId) => apiRequest(`/ reviews / car / ${ carId } / summary`),
 
   // Owner response: create or update
-  upsertOwnerResponse: (reviewId, content, token) => apiRequest(`/reviews/${reviewId}/response`, {
+  upsertOwnerResponse: (reviewId, content, token) => apiRequest(`/ reviews / ${ reviewId } / response`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${ token }` },
     body: JSON.stringify({ content }),
   }),
 
   // Owner response: delete
-  deleteOwnerResponse: (reviewId, token) => apiRequest(`/reviews/${reviewId}/response`, {
+  deleteOwnerResponse: (reviewId, token) => apiRequest(`/ reviews / ${ reviewId } / response`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${ token }` },
   }),
 };
 
@@ -357,7 +357,7 @@ export const messagesAPI = {
   sendMessage: (messageData, token) => apiRequest('/messages', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${ token }`,
     },
     body: JSON.stringify(messageData),
   }),
@@ -365,7 +365,7 @@ export const messagesAPI = {
   // Get user messages (requires authentication)
   getMessages: (token) => apiRequest('/messages', {
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${ token }`,
     },
   }),
 };

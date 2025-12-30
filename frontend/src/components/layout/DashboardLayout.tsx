@@ -45,7 +45,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             {/* Sidebar */}
             <aside
                 className={`
-          fixed top-0 left-0 z-40 h-full w-64 bg-card dark:bg-zinc-950 border-r border-border transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:block pt-20
+          fixed inset-y-0 left-0 z-40 h-screen h-[100dvh] w-80 bg-card/95 backdrop-blur-xl dark:bg-zinc-950/95 border-r border-border transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:block pt-20
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
             >

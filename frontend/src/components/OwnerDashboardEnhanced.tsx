@@ -228,12 +228,12 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
     <ScaleInteraction>
       <button
         onClick={() => onClick(id)}
-        className={`flex items-center space-x-2 px-6 py-3 rounded-full transition-all duration-300 font-medium ${active
+        className={`flex items-center space-x-2 px-4 md:px-6 py-2.5 md:py-3 rounded-full transition-all duration-300 font-medium text-xs md:text-sm ${active
           ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-900/50 scale-105'
           : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
           }`}
       >
-        <Icon size={18} />
+        <Icon size={16} className="md:w-[18px] md:h-[18px]" />
         <span>{label}</span>
       </button>
     </ScaleInteraction>
@@ -262,11 +262,11 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
             <div>
-              <h1 className="text-4xl font-bold text-foreground mb-2">
+              <h1 className="text-2xl md:text-4xl font-bold text-foreground mb-2">
                 Owner Dashboard
               </h1>
-              <p className="text-muted-foreground text-lg">
-                Welcome back, <span className="text-primary font-bold">{user.name || (user as any).first_name || 'Partner'}</span> • Manage your fleet and earnings
+              <p className="text-muted-foreground text-sm md:text-lg">
+                Welcome back, <span className="text-primary font-bold">{user.name || (user as any).first_name || 'Partner'}</span><span className="hidden md:inline"> • Manage your fleet and earnings</span>
               </p>
             </div>
 
@@ -280,29 +280,32 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                   { label: 'This Quarter', value: 'quarter', icon: <Clock size={16} className="text-pink-400" /> },
                   { label: 'This Year', value: 'year', icon: <Clock size={16} className="text-green-400" /> },
                 ]}
-                className="w-48"
+                className="w-full md:w-48"
               />
 
               <div className="h-10 w-px bg-white/10 mx-2 hidden md:block"></div>
 
-              <ScaleInteraction>
-                <button
-                  onClick={onLogout}
-                  className="px-4 py-3 bg-muted/50 hover:bg-destructive/10 text-muted-foreground hover:text-destructive border border-border rounded-xl text-xs font-bold uppercase tracking-widest transition-all"
-                >
-                  Logout
-                </button>
-              </ScaleInteraction>
+              <div className="flex items-center space-x-2 w-full md:w-auto">
+                <ScaleInteraction className="flex-1 md:flex-none">
+                  <button
+                    onClick={onLogout}
+                    className="w-full md:w-auto px-4 py-3 bg-muted/50 hover:bg-destructive/10 text-muted-foreground hover:text-destructive border border-border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                  >
+                    Logout
+                  </button>
+                </ScaleInteraction>
 
-              <ScaleInteraction>
-                <button
-                  onClick={() => onNavigate && onNavigate('listcar')}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg hover:shadow-xl transition-all font-medium"
-                >
-                  <Plus size={20} />
-                  <span>Add Vehicle</span>
-                </button>
-              </ScaleInteraction>
+                <ScaleInteraction className="flex-1 md:flex-none">
+                  <button
+                    onClick={() => onNavigate && onNavigate('listcar')}
+                    className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 md:px-6 py-3 rounded-xl flex items-center justify-center md:space-x-2 shadow-lg hover:shadow-xl transition-all font-bold text-[10px] uppercase tracking-widest"
+                  >
+                    <Plus size={18} className="md:mr-2" />
+                    <span className="hidden md:inline">Add Vehicle</span>
+                    <span className="md:hidden">Add Car</span>
+                  </button>
+                </ScaleInteraction>
+              </div>
             </div>
           </div>
 
@@ -345,7 +348,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
         {activeTab === 'overview' && dashboardData && (
           <div className="space-y-8 fade-in">
             {/* Stats Cards */}
-            <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StaggerContainer className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               <StatCard
                 title="Total Earnings"
                 value={`$${(dashboardData?.totalEarnings || 0).toLocaleString()}`}
@@ -451,25 +454,25 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
 
             {/* Upcoming Maintenance Alert */}
             {dashboardData.upcomingMaintenance.length > 0 && (
-              <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 p-6 rounded-2xl backdrop-blur-md">
+              <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 p-4 md:p-6 rounded-2xl backdrop-blur-md">
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="bg-yellow-500/20 p-2 rounded-lg">
-                    <AlertTriangle className="text-yellow-600 dark:text-yellow-400" size={24} />
+                    <AlertTriangle className="text-yellow-600 dark:text-yellow-400 md:w-6 md:h-6" size={20} />
                   </div>
-                  <h3 className="text-xl font-bold text-foreground">
+                  <h3 className="text-lg md:text-xl font-bold text-foreground">
                     Upcoming Maintenance
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {dashboardData.upcomingMaintenance.map((item: any) => (
                     <div key={item.id} className="bg-card p-4 rounded-xl border border-border hover:border-yellow-500/30 transition-colors">
-                      <p className="font-bold text-foreground">
+                      <p className="font-bold text-foreground text-sm md:text-base">
                         {item.carDetails}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-xs md:text-sm text-muted-foreground mt-1">
                         {item.type} - {item.scheduledDate}
                       </p>
-                      <p className="text-sm text-yellow-600 dark:text-yellow-400 font-semibold mt-2">
+                      <p className="text-xs md:text-sm text-yellow-600 dark:text-yellow-400 font-semibold mt-2">
                         Due in {item.daysUntil} days
                       </p>
                     </div>
@@ -608,7 +611,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
         {/* Earnings Tab */}
         {activeTab === 'earnings' && (
           <div className="space-y-8 fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               <StatCard
                 title="Gross Earnings"
                 value={`$${(earnings.gross || 0).toLocaleString()}`}
@@ -635,9 +638,9 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
               />
             </div>
 
-            <div className="bg-card backdrop-blur-md p-8 rounded-2xl shadow-xl border border-border">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-bold text-white flex items-center">
+            <div className="bg-card backdrop-blur-md p-4 md:p-8 rounded-2xl shadow-xl border border-border">
+              <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                <h3 className="text-lg md:text-xl font-bold text-white flex items-center">
                   <span className="mr-2">📈</span> Earnings Timeline
                 </h3>
                 <div className="flex space-x-2">
@@ -646,7 +649,7 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                 </div>
               </div>
 
-              <div className="h-[400px] w-full">
+              <div className="h-[250px] md:h-[400px] w-full">
                 {earnings.chartData && earnings.chartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={earnings.chartData}>
@@ -705,14 +708,14 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
         {/* Maintenance Tab */}
         {activeTab === 'maintenance' && (
           <div className="space-y-6 fade-in">
-            <div className="flex justify-between items-center bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between bg-white/10 backdrop-blur-md p-5 md:p-6 rounded-2xl border border-white/20 gap-6">
               <div>
-                <h3 className="text-xl font-bold text-white">Maintenance Records</h3>
-                <p className="text-white/60 text-sm mt-1">Track service history and upcoming repairs</p>
+                <h3 className="text-lg md:text-xl font-bold text-white">Maintenance Records</h3>
+                <p className="text-white/60 text-xs md:text-sm mt-1">Track service history and upcoming repairs</p>
               </div>
               <button
                 onClick={() => setShowMaintenanceModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg transition-all transform hover:scale-105 font-medium"
+                className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center justify-center space-x-2 shadow-lg transition-all transform hover:scale-105 font-medium"
               >
                 <Plus size={20} />
                 <span>Add Record</span>
@@ -724,19 +727,19 @@ const OwnerDashboard: React.FC<OwnerDashboardProps> = ({ user, onLogout, onNavig
                 {maintenance.map((record: any) => (
                   <div key={record.id} className="bg-white/10 backdrop-blur-md p-6 rounded-xl border border-white/20 flex flex-col md:flex-row md:items-center justify-between hover:bg-white/15 transition-all group">
                     <div className="flex items-start space-x-4 mb-4 md:mb-0">
-                      <div className="bg-blue-500/20 p-3 rounded-lg">
-                        <Wrench className="text-blue-400 group-hover:rotate-12 transition-transform" size={24} />
+                      <div className="bg-blue-500/20 p-2 md:p-3 rounded-lg">
+                        <Wrench className="text-blue-400 group-hover:rotate-12 transition-transform md:w-6 md:h-6" size={20} />
                       </div>
                       <div>
-                        <p className="font-bold text-white text-lg">{record.car_name} <span className="text-white/50 text-base font-normal">({record.license_plate})</span></p>
-                        <p className="text-white/80 mt-1">{record.type} - <span className="text-white/60">{record.description}</span></p>
-                        <p className="text-xs text-white/40 mt-2 bg-black/20 inline-block px-2 py-1 rounded">Provider: {record.provider}</p>
+                        <p className="font-bold text-white text-base md:text-lg">{record.car_name} <span className="text-white/50 text-sm md:text-base font-normal">({record.license_plate})</span></p>
+                        <p className="text-sm md:text-white/80 mt-1">{record.type} - <span className="text-white/60">{record.description}</span></p>
+                        <p className="text-[10px] md:text-xs text-white/40 mt-2 bg-black/20 inline-block px-2 py-1 rounded">Provider: {record.provider}</p>
                       </div>
                     </div>
 
-                    <div className="text-right pl-4 border-l border-border md:border-l-0 md:pl-0">
-                      <p className="text-2xl font-bold text-foreground">${record.cost}</p>
-                      <p className="text-sm text-muted-foreground mb-2">{new Date(record.scheduled_date).toLocaleDateString()}</p>
+                    <div className="text-left md:text-right pl-4 border-l border-border md:border-l-0 md:pl-0">
+                      <p className="text-xl md:text-2xl font-bold text-foreground">${record.cost}</p>
+                      <p className="text-xs md:text-sm text-muted-foreground mb-2">{new Date(record.scheduled_date).toLocaleDateString()}</p>
                       <span className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide ${record.status === 'completed' ? 'bg-green-500/20 text-green-500 border border-green-500/30' :
                         record.status === 'scheduled' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' : 'bg-muted text-muted-foreground border border-border'
                         }`}>

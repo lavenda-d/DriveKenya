@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Menu, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useTranslation } from 'react-i18next';
 import { carsAPI, authAPI, bookingsAPI, messagesAPI, checkAPIConnection, mockCarsData, authStorage } from './services/api';
@@ -29,7 +29,18 @@ import CarDetailView from './components/CarDetailView';
 import PasswordStrength from './components/PasswordStrength';
 import ProfileSettings from './pages/ProfileSettings';
 import ManageCar from './pages/ManageCar';
-import { FaCar, FaStar, FaMapMarkerAlt, FaUserCircle } from 'react-icons/fa';
+import { FaCar, FaStar, FaMapMarkerAlt, FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
+const VEHICLE_TYPES = [
+  { value: 'all', label: 'All Vehicles', icon: '🚗' },
+  { value: 'car', label: 'Cars', icon: '🚗' },
+  { value: 'motorcycle', label: 'Motorcycles', icon: '🏍️' },
+  { value: 'bicycle', label: 'Bicycles', icon: '🚴' },
+  { value: 'van', label: 'Vans', icon: '🚐' },
+  { value: 'truck', label: 'Trucks', icon: '🚛' },
+  { value: 'suv', label: 'SUVs', icon: '🚙' },
+  { value: 'bus', label: 'Buses', icon: '🚌' }
+];
+
 import { Car } from '../types/car';
 
 // Helper function to get vehicle type labels
@@ -54,6 +65,414 @@ const getVehicleTypeLabel = (category: string, plural = false, titleCase = false
 };
 
 // keep the TypeScript App signature; useTranslation will be used inside the component
+const Navigation = ({
+  user,
+  currentPage,
+  setCurrentPage,
+  setShowNotificationCenter,
+  showNotificationCenter,
+  unreadCount,
+  setShowProfileSettings,
+  handleLogout,
+  showAuthModal,
+  setShowAuthModal,
+  t,
+  setSelectedCategory,
+  vehicleTypes
+}: any) => {
+  const [showServicesMenu, setShowServicesMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showVehiclesMenu, setShowVehiclesMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [mobileExpandedSection, setMobileExpandedSection] = useState<string | null>(null);
+
+  const handleVehicleTypeClick = (type: string) => {
+    setSelectedCategory(type);
+    setCurrentPage('cars');
+    setShowVehiclesMenu(false);
+  };
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
+        <div className="flex items-center justify-between h-20">
+          {/* Logo and Mobile Menu Toggle */}
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="p-2 -ml-2 text-foreground md:hidden hover:bg-muted rounded-xl transition-colors"
+              aria-label="Toggle menu"
+            >
+              {showMobileMenu ? <X size={24} /> : <Menu size={24} />}
+            </button>
+
+            <div
+              className="flex items-center space-x-3 text-xl md:text-2xl font-black text-foreground cursor-pointer group"
+              onClick={() => { setCurrentPage('home'); setShowMobileMenu(false); }}
+            >
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-xl group-hover:rotate-12 transition-transform duration-500">
+                <FaCar className="text-white text-lg md:text-xl" />
+              </div>
+              <span>Drive<span className="text-blue-400">Kenya</span></span>
+            </div>
+          </div>
+
+          {user && (
+            <div className="hidden md:flex items-center space-x-2">
+              <ScaleInteraction>
+                <button
+                  onClick={() => setCurrentPage('home')}
+                  className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${currentPage === 'home'
+                    ? 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    }`}
+                >
+                  Home
+                </button>
+              </ScaleInteraction>
+
+              <div className="relative">
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowVehiclesMenu(!showVehiclesMenu)}
+                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${currentPage === 'cars'
+                      ? 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      }`}
+                  >
+                    Vehicles
+                    <span className="ml-2 text-[8px]">▼</span>
+                  </button>
+                </ScaleInteraction>
+
+                {showVehiclesMenu && (
+                  <div className="absolute top-full mt-4 right-0 bg-popover/95 backdrop-blur-2xl border border-border rounded-[2rem] shadow-2xl py-4 min-w-[220px] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="px-6 py-2 border-b border-border mb-2">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Select Type</span>
+                    </div>
+                    {vehicleTypes.map((type: any) => (
+                      <button
+                        key={type.value}
+                        onClick={() => handleVehicleTypeClick(type.value)}
+                        className="w-full px-6 py-3 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
+                      >
+                        <span className="mr-4 text-xl group-hover:scale-125 transition-transform">{type.icon}</span>
+                        <span className="text-xs font-black uppercase tracking-widest">{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowServicesMenu(!showServicesMenu)}
+                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['listcar', 'bookings', 'mycars', 'pricing'].includes(currentPage)
+                      ? 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      }`}
+                  >
+                    {t('nav.services', 'Services')}
+                    <span className="ml-2 text-[8px]">▼</span>
+                  </button>
+                </ScaleInteraction>
+
+                {showServicesMenu && (
+                  <div className="absolute top-full mt-4 right-0 bg-popover/95 backdrop-blur-2xl border border-border rounded-[2.5rem] shadow-2xl py-6 min-w-[240px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
+                    <button
+                      onClick={() => { setCurrentPage('listcar'); setShowServicesMenu(false); }}
+                      className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
+                    >
+                      <span className="mr-4 text-blue-400 group-hover:scale-125 transition-transform">➕</span>
+                      <span className="text-xs font-black uppercase tracking-widest">List Vehicle</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('bookings'); setShowServicesMenu(false); }}
+                      className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
+                    >
+                      <span className="mr-4 text-purple-400 group-hover:scale-125 transition-transform">📋</span>
+                      <span className="text-xs font-black uppercase tracking-widest">Bookings</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('mycars'); setShowServicesMenu(false); }}
+                      className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
+                    >
+                      <span className="mr-4 text-emerald-400 group-hover:scale-125 transition-transform">🚙</span>
+                      <span className="text-xs font-black uppercase tracking-widest">My Vehicles</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('pricing'); setShowServicesMenu(false); }}
+                      className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group border-t border-border mt-2"
+                    >
+                      <span className="mr-4 text-amber-400 group-hover:scale-125 transition-transform">📊</span>
+                      <span className="text-xs font-black uppercase tracking-widest">Pricing Calculator</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowMoreMenu(!showMoreMenu)}
+                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['about', 'contact'].includes(currentPage)
+                      ? 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      }`}
+                  >
+                    {t('nav.more', 'More')}
+                    <span className="ml-2 text-[8px]">▼</span>
+                  </button>
+                </ScaleInteraction>
+
+                {showMoreMenu && (
+                  <div className="absolute top-full mt-4 right-0 bg-popover/95 backdrop-blur-2xl border border-border rounded-[2rem] shadow-2xl py-4 min-w-[180px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
+                    <button
+                      onClick={() => { setCurrentPage('about'); setShowMoreMenu(false); }}
+                      className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
+                    >
+                      <span className="mr-4 text-xl group-hover:scale-125 transition-transform">ℹ️</span>
+                      <span className="text-xs font-black uppercase tracking-widest">About</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('contact'); setShowMoreMenu(false); }}
+                      className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
+                    >
+                      <span className="mr-4 text-xl group-hover:scale-125 transition-transform">📞</span>
+                      <span className="text-xs font-black uppercase tracking-widest">Contact</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center space-x-2 md:space-x-4">
+            {user ? (
+              <div className="flex items-center space-x-2 md:space-x-4">
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                    className="relative text-muted-foreground hover:text-foreground p-2 md:p-3 bg-muted/30 rounded-2xl border border-border group"
+                    title="Notifications"
+                  >
+                    <span className="text-lg md:text-xl group-hover:scale-110 transition-transform block">🔔</span>
+                    {unreadCount > 0 && (
+                      <span className="absolute top-2 right-2 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                    )}
+                  </button>
+                </ScaleInteraction>
+
+                <ScaleInteraction>
+                  <button
+                    onClick={() => setShowProfileSettings(true)}
+                    className="flex items-center space-x-0 md:space-x-4 bg-secondary/50 hover:bg-secondary p-1 md:p-2 md:pr-6 rounded-2xl md:rounded-[1.5rem] border border-border group transition-all"
+                  >
+                    <div className="relative">
+                      {user.profile_photo ? (
+                        <img
+                          src={user.profile_photo}
+                          alt="Profile"
+                          className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl object-cover ring-2 ring-transparent group-hover:ring-blue-500/50 transition-all"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black text-xs md:text-base">
+                          {user.name?.charAt(0) || user.first_name?.charAt(0) || '?'}
+                        </div>
+                      )}
+                      <div className="absolute -bottom-0.5 -right-0.5 md:-bottom-1 md:-right-1 w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
+                    </div>
+                    <div className="text-left hidden lg:block">
+                      <div className="text-foreground text-[10px] font-black uppercase tracking-widest mb-0.5">
+                        {user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                      </div>
+                      <div className="text-[9px] text-foreground/70 font-bold uppercase tracking-widest">
+                        {user.role?.toLowerCase() === 'host' ? 'OWNER' : user.role?.toUpperCase()}
+                      </div>
+                    </div>
+                  </button>
+                </ScaleInteraction>
+
+                <button
+                  onClick={handleLogout}
+                  className="hidden md:block text-muted-foreground hover:text-destructive font-black text-[10px] uppercase tracking-widest transition-colors px-4 py-2 border border-border rounded-xl hover:bg-destructive/10"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <ScaleInteraction>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="bg-foreground text-background px-4 md:px-8 py-2 md:py-3 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest transition-all hover:bg-primary hover:text-white shadow-2xl shadow-primary/10"
+                >
+                  Sign In
+                </button>
+              </ScaleInteraction>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Sidebar Menu */}
+      {showMobileMenu && (
+        <div className="fixed inset-0 z-[60] md:hidden">
+          <div
+            className="absolute inset-0 bg-background/60 backdrop-blur-md animate-in fade-in duration-300"
+            onClick={() => setShowMobileMenu(false)}
+          ></div>
+          <div className="fixed inset-y-0 left-0 w-[320px] bg-card/95 backdrop-blur-xl border-r border-border shadow-2xl animate-in slide-in-from-left duration-500 flex flex-col h-screen h-[100dvh]">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <div className="flex items-center space-x-3 text-xl font-black text-foreground">
+                <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-xl">
+                  <FaCar className="text-white text-lg" />
+                </div>
+                <span>Drive<span className="text-blue-400">Kenya</span></span>
+              </div>
+              <button
+                onClick={() => setShowMobileMenu(false)}
+                className="p-2 text-muted-foreground hover:text-foreground rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <button
+                onClick={() => { setCurrentPage('home'); setShowMobileMenu(false); }}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${currentPage === 'home' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+              >
+                <span>Home</span>
+                <ChevronRight size={16} className={currentPage === 'home' ? 'opacity-100' : 'opacity-0'} />
+              </button>
+
+              {/* Mobile Vehicles Section */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => setMobileExpandedSection(mobileExpandedSection === 'vehicles' ? null : 'vehicles')}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${currentPage === 'cars' ? 'text-primary' : 'text-muted-foreground'}`}
+                >
+                  <span>Vehicles</span>
+                  <ChevronDown size={16} className={`transition-transform duration-300 ${mobileExpandedSection === 'vehicles' ? 'rotate-180' : ''}`} />
+                </button>
+                {mobileExpandedSection === 'vehicles' && (
+                  <div className="pl-4 space-y-1 animate-in slide-in-from-top-2 duration-300">
+                    {vehicleTypes.map((type: any) => (
+                      <button
+                        key={type.value}
+                        onClick={() => { handleVehicleTypeClick(type.value); setShowMobileMenu(false); }}
+                        className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center space-x-3"
+                      >
+                        <span className="text-lg">{type.icon}</span>
+                        <span>{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Services Section */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => setMobileExpandedSection(mobileExpandedSection === 'services' ? null : 'services')}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${['listcar', 'bookings', 'mycars', 'pricing'].includes(currentPage) ? 'text-primary' : 'text-muted-foreground'}`}
+                >
+                  <span>Services</span>
+                  <ChevronDown size={16} className={`transition-transform duration-300 ${mobileExpandedSection === 'services' ? 'rotate-180' : ''}`} />
+                </button>
+                {mobileExpandedSection === 'services' && (
+                  <div className="pl-4 space-y-1 animate-in slide-in-from-top-2 duration-300">
+                    <button
+                      onClick={() => { setCurrentPage('listcar'); setShowMobileMenu(false); }}
+                      className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center space-x-3"
+                    >
+                      <span>➕</span>
+                      <span>List Vehicle</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('bookings'); setShowMobileMenu(false); }}
+                      className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center space-x-3"
+                    >
+                      <span>📋</span>
+                      <span>Bookings</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('mycars'); setShowMobileMenu(false); }}
+                      className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center space-x-3"
+                    >
+                      <span>🚙</span>
+                      <span>My Vehicles</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('pricing'); setShowMobileMenu(false); }}
+                      className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center space-x-3"
+                    >
+                      <span>📊</span>
+                      <span>Pricing Calculator</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile More Section */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => setMobileExpandedSection(mobileExpandedSection === 'more' ? null : 'more')}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${['about', 'contact'].includes(currentPage) ? 'text-primary' : 'text-muted-foreground'}`}
+                >
+                  <span>More</span>
+                  <ChevronDown size={16} className={`transition-transform duration-300 ${mobileExpandedSection === 'more' ? 'rotate-180' : ''}`} />
+                </button>
+                {mobileExpandedSection === 'more' && (
+                  <div className="pl-4 space-y-1 animate-in slide-in-from-top-2 duration-300">
+                    <button
+                      onClick={() => { setCurrentPage('about'); setShowMobileMenu(false); }}
+                      className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center space-x-3"
+                    >
+                      <span>ℹ️</span>
+                      <span>About</span>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentPage('contact'); setShowMobileMenu(false); }}
+                      className="w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground flex items-center space-x-3"
+                    >
+                      <span>📞</span>
+                      <span>Contact</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border mt-auto">
+              {user ? (
+                <button
+                  onClick={() => { handleLogout(); setShowMobileMenu(false); }}
+                  className="w-full flex items-center px-4 py-3 text-sm font-black uppercase tracking-widest text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                >
+                  <FaSignOutAlt className="mr-3" />
+                  Logout
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setShowAuthModal(true); setShowMobileMenu(false); }}
+                  className="w-full bg-foreground text-background py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+};
+
 const App: React.FC = () => {
   const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState('home');
@@ -858,8 +1277,7 @@ const App: React.FC = () => {
       car.location?.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Vehicle type filter - check vehicle_type field for vehicle type filtering
-    const vehicleTypes = ['car', 'motorcycle', 'bicycle', 'van', 'truck', 'suv', 'bus'];
-    const isVehicleTypeFilter = vehicleTypes.includes(selectedCategory);
+    const isVehicleTypeFilter = VEHICLE_TYPES.some(t => t.value === selectedCategory);
 
     const matchesCategory = selectedCategory === 'all' ||
       (isVehicleTypeFilter
@@ -897,246 +1315,6 @@ const App: React.FC = () => {
       matchesTransmission && matchesFuelType && matchesRating && matchesFeatures;
   });
 
-  // Enhanced Navigation Component with Auth
-  const Navigation = () => {
-    const [showServicesMenu, setShowServicesMenu] = useState(false);
-    const [showMoreMenu, setShowMoreMenu] = useState(false);
-    const [showVehiclesMenu, setShowVehiclesMenu] = useState(false);
-
-    const vehicleTypes = [
-      { value: 'all', label: 'All Vehicles', icon: '🚗' },
-      { value: 'car', label: 'Cars', icon: '🚗' },
-      { value: 'motorcycle', label: 'Motorcycles', icon: '🏍️' },
-      { value: 'bicycle', label: 'Bicycles', icon: '🚴' },
-      { value: 'van', label: 'Vans', icon: '🚐' },
-      { value: 'truck', label: 'Trucks', icon: '🚛' },
-      { value: 'suv', label: 'SUVs', icon: '🚙' },
-      { value: 'bus', label: 'Buses', icon: '🚌' }
-    ];
-
-    const handleVehicleTypeClick = (type: string) => {
-      setSelectedCategory(type);
-      setCurrentPage('cars');
-      setShowVehiclesMenu(false);
-    };
-
-    return (
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border shadow-sm">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between h-20">
-            <div
-              className="flex items-center space-x-3 text-2xl font-black text-foreground cursor-pointer group"
-              onClick={() => setCurrentPage('home')}
-            >
-              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-xl group-hover:rotate-12 transition-transform duration-500">
-                <FaCar className="text-white text-xl" />
-              </div>
-              <span>Drive<span className="text-blue-400">Kenya</span></span>
-            </div>
-
-            {user && (
-              <div className="hidden md:flex items-center space-x-2">
-                <ScaleInteraction>
-                  <button
-                    onClick={() => setCurrentPage('home')}
-                    className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${currentPage === 'home'
-                      ? 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                      }`}
-                  >
-                    Home
-                  </button>
-                </ScaleInteraction>
-
-                <div className="relative">
-                  <ScaleInteraction>
-                    <button
-                      onClick={() => setShowVehiclesMenu(!showVehiclesMenu)}
-                      className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${currentPage === 'cars'
-                        ? 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                        }`}
-                    >
-                      Vehicles
-                      <span className="ml-2 text-[8px]">▼</span>
-                    </button>
-                  </ScaleInteraction>
-
-                  {showVehiclesMenu && (
-                    <div className="absolute top-full mt-4 right-0 bg-popover/95 backdrop-blur-2xl border border-border rounded-[2rem] shadow-2xl py-4 min-w-[220px] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
-                      <div className="px-6 py-2 border-b border-border mb-2">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Select Type</span>
-                      </div>
-                      {vehicleTypes.map((type) => (
-                        <button
-                          key={type.value}
-                          onClick={() => handleVehicleTypeClick(type.value)}
-                          className="w-full px-6 py-3 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
-                        >
-                          <span className="mr-4 text-xl group-hover:scale-125 transition-transform">{type.icon}</span>
-                          <span className="text-xs font-black uppercase tracking-widest">{type.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <ScaleInteraction>
-                    <button
-                      onClick={() => setShowServicesMenu(!showServicesMenu)}
-                      className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['listcar', 'bookings', 'mycars'].includes(currentPage)
-                        ? 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                        }`}
-                    >
-                      {t('nav.services', 'Services')}
-                      <span className="ml-2 text-[8px]">▼</span>
-                    </button>
-                  </ScaleInteraction>
-
-                  {showServicesMenu && (
-                    <div className="absolute top-full mt-4 right-0 bg-popover/95 backdrop-blur-2xl border border-border rounded-[2.5rem] shadow-2xl py-6 min-w-[240px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
-                      <button
-                        onClick={() => { setCurrentPage('listcar'); setShowServicesMenu(false); }}
-                        className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
-                      >
-                        <span className="mr-4 text-blue-400 group-hover:scale-125 transition-transform">➕</span>
-                        <span className="text-xs font-black uppercase tracking-widest">List Vehicle</span>
-                      </button>
-                      <button
-                        onClick={() => { setCurrentPage('bookings'); setShowServicesMenu(false); }}
-                        className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
-                      >
-                        <span className="mr-4 text-purple-400 group-hover:scale-125 transition-transform">📋</span>
-                        <span className="text-xs font-black uppercase tracking-widest">Bookings</span>
-                      </button>
-                      <button
-                        onClick={() => { setCurrentPage('mycars'); setShowServicesMenu(false); }}
-                        className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
-                      >
-                        <span className="mr-4 text-emerald-400 group-hover:scale-125 transition-transform">🚙</span>
-                        <span className="text-xs font-black uppercase tracking-widest">My Vehicles</span>
-                      </button>
-                      <button
-                        onClick={() => { setCurrentPage('pricing'); setShowServicesMenu(false); }}
-                        className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group border-t border-border mt-2"
-                      >
-                        <span className="mr-4 text-amber-400 group-hover:scale-125 transition-transform">📊</span>
-                        <span className="text-xs font-black uppercase tracking-widest">Pricing Calculator</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <ScaleInteraction>
-                    <button
-                      onClick={() => setShowMoreMenu(!showMoreMenu)}
-                      className={`px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest flex items-center transition-all ${['about', 'contact'].includes(currentPage)
-                        ? 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                        }`}
-                    >
-                      {t('nav.more', 'More')}
-                      <span className="ml-2 text-[8px]">▼</span>
-                    </button>
-                  </ScaleInteraction>
-
-                  {showMoreMenu && (
-                    <div className="absolute top-full mt-4 right-0 bg-popover/95 backdrop-blur-2xl border border-border rounded-[2rem] shadow-2xl py-4 min-w-[180px] z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
-                      <button
-                        onClick={() => { setCurrentPage('about'); setShowMoreMenu(false); }}
-                        className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
-                      >
-                        <span className="mr-4 text-xl group-hover:scale-125 transition-transform">ℹ️</span>
-                        <span className="text-xs font-black uppercase tracking-widest">About</span>
-                      </button>
-                      <button
-                        onClick={() => { setCurrentPage('contact'); setShowMoreMenu(false); }}
-                        className="w-full px-8 py-4 text-left text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex items-center group"
-                      >
-                        <span className="mr-4 text-xl group-hover:scale-125 transition-transform">📞</span>
-                        <span className="text-xs font-black uppercase tracking-widest">Contact</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <div className="flex items-center space-x-4">
-                  <ScaleInteraction>
-                    <button
-                      onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-                      className="relative text-muted-foreground hover:text-foreground p-3 bg-muted/30 rounded-2xl border border-border group"
-                      title="Notifications"
-                    >
-                      <span className="text-xl group-hover:scale-110 transition-transform block">🔔</span>
-                      {unreadCount > 0 && (
-                        <span className="absolute top-2 right-2 flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                        </span>
-                      )}
-                    </button>
-                  </ScaleInteraction>
-
-                  <ScaleInteraction>
-                    <button
-                      onClick={() => setShowProfileSettings(true)}
-                      className="flex items-center space-x-4 bg-secondary/50 hover:bg-secondary p-2 pr-6 rounded-[1.5rem] border border-border group transition-all"
-                    >
-                      <div className="relative">
-                        {user.profile_photo ? (
-                          <img
-                            src={user.profile_photo}
-                            alt="Profile"
-                            className="w-10 h-10 rounded-2xl object-cover ring-2 ring-transparent group-hover:ring-blue-500/50 transition-all"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-black">
-                            {user.name?.charAt(0) || user.first_name?.charAt(0) || '?'}
-                          </div>
-                        )}
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
-                      </div>
-                      <div className="text-left hidden lg:block">
-                        <div className="text-foreground text-[10px] font-black uppercase tracking-widest mb-0.5">
-                          {user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim()}
-                        </div>
-                        <div className="text-[9px] text-foreground/70 font-bold uppercase tracking-widest">
-                          {user.role?.toLowerCase() === 'host' ? 'OWNER' : user.role?.toUpperCase()}
-                        </div>
-                      </div>
-                    </button>
-                  </ScaleInteraction>
-
-                  <button
-                    onClick={handleLogout}
-                    className="text-muted-foreground hover:text-destructive font-black text-[10px] uppercase tracking-widest transition-colors px-4 py-2 border border-border rounded-xl hover:bg-destructive/10"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <ScaleInteraction>
-                  <button
-                    onClick={() => setShowAuthModal(true)}
-                    className="bg-foreground text-background px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-primary hover:text-white shadow-2xl shadow-primary/10"
-                  >
-                    Sign In
-                  </button>
-                </ScaleInteraction>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-    );
-  };
 
   // Google Login hook for both sign-up and sign-in
   const loginWithGoogle = useGoogleLogin({
@@ -2912,7 +3090,21 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen font-['Poppins'] bg-background text-foreground transition-colors duration-300">
-      <Navigation />
+      <Navigation
+        user={user}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        setShowNotificationCenter={setShowNotificationCenter}
+        showNotificationCenter={showNotificationCenter}
+        unreadCount={unreadCount}
+        setShowProfileSettings={setShowProfileSettings}
+        handleLogout={handleLogout}
+        showAuthModal={showAuthModal}
+        setShowAuthModal={setShowAuthModal}
+        t={t}
+        setSelectedCategory={setSelectedCategory}
+        vehicleTypes={VEHICLE_TYPES}
+      />
       {currentPage === 'home' && renderHome()}
       {currentPage === 'cars' && renderCars()}
       {currentPage === 'listcar' && renderListCar()}

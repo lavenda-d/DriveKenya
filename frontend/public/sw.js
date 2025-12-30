@@ -32,7 +32,7 @@ const NETWORK_FIRST_PATTERNS = [
 // Install event - Cache static assets
 self.addEventListener('install', (event) => {
   console.log('🔧 Service Worker: Installing');
-  
+
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
       .then((cache) => {
@@ -52,7 +52,7 @@ self.addEventListener('install', (event) => {
 // Activate event - Clean up old caches
 self.addEventListener('activate', (event) => {
   console.log('🚀 Service Worker: Activating');
-  
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
@@ -60,9 +60,9 @@ self.addEventListener('activate', (event) => {
           cacheNames
             .filter((cacheName) => {
               // Delete old caches
-              return cacheName !== STATIC_CACHE_NAME && 
-                     cacheName !== DYNAMIC_CACHE_NAME &&
-                     cacheName.startsWith('driveKenya-');
+              return cacheName !== STATIC_CACHE_NAME &&
+                cacheName !== DYNAMIC_CACHE_NAME &&
+                cacheName.startsWith('driveKenya-');
             })
             .map((cacheName) => {
               console.log('🗑️ Service Worker: Deleting old cache', cacheName);
@@ -108,52 +108,52 @@ self.addEventListener('fetch', (event) => {
 // Network first strategy for API requests
 async function handleApiRequest(request) {
   const url = new URL(request.url);
-  
+
   try {
     // Always try network first for critical API calls
     if (NETWORK_FIRST_PATTERNS.some(pattern => pattern.test(url.pathname))) {
       const networkResponse = await fetch(request);
-      
-      // Cache successful responses
-      if (networkResponse.ok) {
+
+      // Cache successful responses (excluding partial 206)
+      if (networkResponse.status === 200) {
         const cache = await caches.open(DYNAMIC_CACHE_NAME);
         cache.put(request, networkResponse.clone());
       }
-      
+
       return networkResponse;
     }
-    
+
     // For cacheable APIs, try cache first, then network
     if (API_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname))) {
       const cachedResponse = await caches.match(request);
-      
+
       if (cachedResponse) {
         // Update cache in background
         updateCacheInBackground(request);
         return cachedResponse;
       }
     }
-    
+
     // Fall back to network
     const networkResponse = await fetch(request);
-    
+
     // Cache successful API responses
-    if (networkResponse.ok && API_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname))) {
+    if (networkResponse.status === 200 && API_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname))) {
       const cache = await caches.open(DYNAMIC_CACHE_NAME);
       cache.put(request, networkResponse.clone());
     }
-    
+
     return networkResponse;
-    
+
   } catch (error) {
     console.log('🌐 Service Worker: Network failed for API, trying cache', request.url);
-    
+
     // Try to serve from cache
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     // Return offline response for failed API calls
     return new Response(
       JSON.stringify({
@@ -174,24 +174,24 @@ async function handleApiRequest(request) {
 async function handleStaticAssets(request) {
   try {
     const cachedResponse = await caches.match(request);
-    
+
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     const networkResponse = await fetch(request);
-    
-    // Cache static assets
-    if (networkResponse.ok) {
+
+    // Cache static assets (only full 200 responses)
+    if (networkResponse.status === 200) {
       const cache = await caches.open(STATIC_CACHE_NAME);
       cache.put(request, networkResponse.clone());
     }
-    
+
     return networkResponse;
-    
+
   } catch (error) {
     console.log('🌐 Service Worker: Failed to load static asset', request.url);
-    
+
     // For images, return a placeholder
     if (request.url.match(/\.(png|jpg|jpeg|gif|svg)$/)) {
       return new Response(
@@ -199,7 +199,7 @@ async function handleStaticAssets(request) {
         { headers: { 'Content-Type': 'image/svg+xml' } }
       );
     }
-    
+
     throw error;
   }
 }
@@ -209,30 +209,30 @@ async function handleNavigation(request) {
   try {
     // Try network first for navigation
     const networkResponse = await fetch(request);
-    
+
     // Cache successful HTML responses
-    if (networkResponse.ok) {
+    if (networkResponse.status === 200) {
       const cache = await caches.open(DYNAMIC_CACHE_NAME);
       cache.put(request, networkResponse.clone());
     }
-    
+
     return networkResponse;
-    
+
   } catch (error) {
     console.log('🌐 Service Worker: Network failed for navigation, serving app shell');
-    
+
     // Serve cached version or app shell
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     // Fallback to main app (SPA behavior)
     const appShell = await caches.match('/');
     if (appShell) {
       return appShell;
     }
-    
+
     // Ultimate fallback to offline page
     return caches.match('/offline.html');
   }
@@ -242,7 +242,7 @@ async function handleNavigation(request) {
 async function updateCacheInBackground(request) {
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
+    if (networkResponse.status === 200) {
       const cache = await caches.open(DYNAMIC_CACHE_NAME);
       cache.put(request, networkResponse);
     }
@@ -254,7 +254,7 @@ async function updateCacheInBackground(request) {
 // Handle background sync for offline actions
 self.addEventListener('sync', (event) => {
   console.log('🔄 Service Worker: Background sync triggered', event.tag);
-  
+
   if (event.tag === 'background-sync-bookings') {
     event.waitUntil(syncOfflineBookings());
   } else if (event.tag === 'background-sync-messages') {
@@ -267,7 +267,7 @@ async function syncOfflineBookings() {
   try {
     // Get offline booking data from IndexedDB
     const offlineBookings = await getOfflineData('bookings');
-    
+
     for (const booking of offlineBookings) {
       try {
         const response = await fetch('/api/bookings/create', {
@@ -278,7 +278,7 @@ async function syncOfflineBookings() {
           },
           body: JSON.stringify(booking.data)
         });
-        
+
         if (response.ok) {
           // Remove from offline storage
           await removeOfflineData('bookings', booking.id);
@@ -297,7 +297,7 @@ async function syncOfflineBookings() {
 async function syncOfflineMessages() {
   try {
     const offlineMessages = await getOfflineData('messages');
-    
+
     for (const message of offlineMessages) {
       try {
         const response = await fetch('/api/messages', {
@@ -308,7 +308,7 @@ async function syncOfflineMessages() {
           },
           body: JSON.stringify(message.data)
         });
-        
+
         if (response.ok) {
           await removeOfflineData('messages', message.id);
           console.log('✅ Service Worker: Synced offline message', message.id);
@@ -325,7 +325,7 @@ async function syncOfflineMessages() {
 // Push notification handling
 self.addEventListener('push', (event) => {
   console.log('🔔 Service Worker: Push notification received');
-  
+
   const options = {
     badge: '/icons/icon-72x72.png',
     icon: '/icons/icon-192x192.png',
@@ -344,7 +344,7 @@ self.addEventListener('push', (event) => {
       }
     ]
   };
-  
+
   if (event.data) {
     const payload = event.data.json();
     options.title = payload.title || 'DriveKenya';
@@ -354,7 +354,7 @@ self.addEventListener('push', (event) => {
     options.title = 'DriveKenya';
     options.body = 'You have a new notification';
   }
-  
+
   event.waitUntil(
     self.registration.showNotification(options.title, options)
   );
@@ -363,13 +363,13 @@ self.addEventListener('push', (event) => {
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
   console.log('🔔 Service Worker: Notification clicked', event.action);
-  
+
   event.notification.close();
-  
+
   if (event.action === 'view') {
     // Open the app to relevant page
     const urlToOpen = event.notification.data.url || '/';
-    
+
     event.waitUntil(
       clients.matchAll().then((clientList) => {
         // If app is already open, focus it
@@ -378,7 +378,7 @@ self.addEventListener('notificationclick', (event) => {
             return client.focus();
           }
         }
-        
+
         // Otherwise open new window
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
@@ -403,7 +403,7 @@ async function removeOfflineData(storeName, id) {
 async function limitCacheSize(cacheName, maxItems) {
   const cache = await caches.open(cacheName);
   const keys = await cache.keys();
-  
+
   if (keys.length > maxItems) {
     const keysToDelete = keys.slice(0, keys.length - maxItems);
     await Promise.all(keysToDelete.map(key => cache.delete(key)));
