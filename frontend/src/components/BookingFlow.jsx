@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import LocationPicker from './LocationPicker';
+import SimpleLocationSelector from './SimpleLocationSelector';
 import GoogleMapEnhanced from './GoogleMapEnhanced';
 import PaymentSelector from './PaymentSelector';
 
@@ -13,6 +14,7 @@ const BookingFlow = ({ selectedCar, onBookingComplete, onClose }) => {
     pickupTime: '',
     returnDate: '',
     returnTime: '',
+    rentalType: 'daily', // 'hourly' or 'daily'
     driverRequired: false,
     additionalRequests: '',
     paymentMethod: '', // Added payment method
@@ -30,36 +32,91 @@ const BookingFlow = ({ selectedCar, onBookingComplete, onClose }) => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState(0);
+  const [pricingBreakdown, setPricingBreakdown] = useState(null);
   const [distance, setDistance] = useState(0);
+
+  // Calculate hourly rate from daily rate (slightly higher for flexibility premium)
+  const calculateHourlyRate = (dailyRate) => {
+    // Hourly = (Daily * 1.25) / 24, so 24 hours = 25% more than daily
+    return Math.ceil((dailyRate * 1.25) / 24);
+  };
+
+  // Get rates from car
+  const dailyRate = selectedCar?.price_per_day || selectedCar?.pricePerDay || 280;
+  const hourlyRate = selectedCar?.price_per_hour || calculateHourlyRate(dailyRate);
+  const overtimePenalty = selectedCar?.overtime_penalty_percent || 10;
 
   // Calculate estimated cost based on distance and rental duration
   useEffect(() => {
     if (bookingData.pickupLocation && bookingData.dropoffLocation && bookingData.pickupDate && bookingData.returnDate) {
       calculateEstimate();
     }
-  }, [bookingData.pickupLocation, bookingData.dropoffLocation, bookingData.pickupDate, bookingData.returnDate]);
+  }, [bookingData.pickupLocation, bookingData.dropoffLocation, bookingData.pickupDate, bookingData.returnDate, bookingData.pickupTime, bookingData.returnTime, bookingData.rentalType, bookingData.driverRequired]);
 
   const calculateEstimate = () => {
-    // Demo calculation - in real app, this would use Google Maps Distance Matrix API
-    const baseRate = selectedCar?.pricePerDay || 3000;
-    const pickupDate = new Date(bookingData.pickupDate);
-    const returnDate = new Date(bookingData.returnDate);
-    const days = Math.ceil((returnDate - pickupDate) / (1000 * 60 * 60 * 24));
+    const pickupDateTime = new Date(`${bookingData.pickupDate}T${bookingData.pickupTime || '09:00'}`);
+    const returnDateTime = new Date(`${bookingData.returnDate}T${bookingData.returnTime || '18:00'}`);
+    
+    const diffMs = returnDateTime - pickupDateTime;
+    const totalHours = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
+    const totalDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 
     // Simulate distance calculation
     const mockDistance = Math.random() * 20 + 5; // 5-25 km
     setDistance(mockDistance);
 
-    // Calculate total cost
-    let total = baseRate * days;
-    if (bookingData.driverRequired) {
-      total += 2000 * days; // Driver fee per day
+    let basePrice, duration, rate, unitLabel;
+
+    if (bookingData.rentalType === 'hourly') {
+      rate = hourlyRate;
+      duration = totalHours;
+      unitLabel = 'hour';
+      basePrice = rate * duration;
+    } else {
+      rate = dailyRate;
+      duration = totalDays;
+      unitLabel = 'day';
+      basePrice = rate * duration;
     }
 
-    // Add delivery fee if pickup/dropoff are different
-    if (bookingData.pickupLocation?.id !== bookingData.dropoffLocation?.id) {
-      total += Math.floor(mockDistance * 50); // 50 KSH per km delivery
+    // Calculate fees
+    const platformFee = Math.round(basePrice * 0.02);
+    // const insuranceFee = Math.round(basePrice * 0.10); // DISABLED
+    const insuranceFee = 0;
+    
+    // Driver fee if required
+    let driverFee = 0;
+    if (bookingData.driverRequired) {
+      driverFee = bookingData.rentalType === 'hourly' 
+        ? 100 * totalHours  // 100 KES per hour for driver
+        : 2000 * totalDays; // 2000 KES per day for driver
     }
+
+    // Delivery fee if pickup/dropoff are different
+    let deliveryFee = 0;
+    if (bookingData.pickupLocation?.id !== bookingData.dropoffLocation?.id) {
+      deliveryFee = Math.floor(mockDistance * 50); // 50 KSH per km delivery
+    }
+
+    const total = basePrice + platformFee + driverFee + deliveryFee;
+
+    // Store pricing breakdown for display
+    setPricingBreakdown({
+      rentalType: bookingData.rentalType,
+      duration,
+      unitLabel,
+      rate,
+      basePrice,
+      platformFee,
+      // insuranceFee, // DISABLED
+      driverFee,
+      deliveryFee,
+      total,
+      overtime: {
+        penaltyPercent: overtimePenalty,
+        perExtraUnit: Math.round(rate * (1 + overtimePenalty / 100))
+      }
+    });
 
     setEstimatedCost(total);
   };
@@ -216,7 +273,11 @@ By accepting, you agree to these terms and our privacy policy.`);
             />
             <div>
               <h2 className="text-xl font-semibold text-foreground">Book {selectedCar.name}</h2>
-              <p className="text-muted-foreground">KSH {selectedCar.pricePerDay}/day</p>
+              <div className="flex items-center space-x-3 text-muted-foreground text-sm">
+                <span>💰 KES {dailyRate}/day</span>
+                <span className="text-gray-400">|</span>
+                <span>⏱️ KES {hourlyRate}/hour</span>
+              </div>
             </div>
           </div>
           <button
@@ -261,25 +322,85 @@ By accepting, you agree to these terms and our privacy policy.`);
               {/* Location Pickers */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Pickup Location
-                  </label>
-                  <LocationPicker
-                    placeholder="Where do you want to pick up the car?"
+                  <SimpleLocationSelector
+                    label="Pickup Location"
+                    placeholder="Select pickup location..."
                     onLocationSelect={(location) => handleLocationSelect('pickupLocation', location)}
                     className="w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Dropoff Location
-                  </label>
-                  <LocationPicker
-                    placeholder="Where will you return the car?"
+                  <SimpleLocationSelector
+                    label="Dropoff Location"
+                    placeholder="Select dropoff location..."
                     onLocationSelect={(location) => handleLocationSelect('dropoffLocation', location)}
                     className="w-full"
                   />
+                </div>
+              </div>
+
+              {/* Rental Type Selector */}
+              <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-xl p-5">
+                <h4 className="font-semibold text-foreground mb-3 flex items-center">
+                  ⏱️ Rental Type
+                  <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Choose how to pay</span>
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Hourly Option */}
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('rentalType', 'hourly')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      bookingData.rentalType === 'hourly'
+                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-2xl">⏰</span>
+                      {bookingData.rentalType === 'hourly' && (
+                        <span className="text-blue-500 text-lg">✓</span>
+                      )}
+                    </div>
+                    <p className="font-bold text-lg text-foreground">Hourly</p>
+                    <p className="text-primary font-semibold">KES {hourlyRate}/hour</p>
+                    <p className="text-xs text-muted-foreground mt-1">Best for short trips</p>
+                  </button>
+
+                  {/* Daily Option */}
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('rentalType', 'daily')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      bookingData.rentalType === 'daily'
+                        ? 'border-green-500 bg-green-50 shadow-md'
+                        : 'border-gray-200 bg-white hover:border-green-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-2xl">📅</span>
+                      {bookingData.rentalType === 'daily' && (
+                        <span className="text-green-500 text-lg">✓</span>
+                      )}
+                    </div>
+                    <p className="font-bold text-lg text-foreground">Daily</p>
+                    <p className="text-primary font-semibold">KES {dailyRate}/day</p>
+                    <p className="text-xs text-muted-foreground mt-1">Better value for full days</p>
+                  </button>
+                </div>
+
+                {/* Overtime Warning */}
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-800">
+                    <span className="font-semibold">⚠️ Overtime Policy:</span> Late returns are charged at 
+                    <span className="font-bold"> {overtimePenalty}% extra</span> per {bookingData.rentalType === 'hourly' ? 'hour' : 'day'}.
+                    {bookingData.rentalType === 'hourly' 
+                      ? ` (KES ${Math.round(hourlyRate * (1 + overtimePenalty / 100))}/extra hour)`
+                      : ` (KES ${Math.round(dailyRate * (1 + overtimePenalty / 100))}/extra day)`
+                    }
+                  </p>
                 </div>
               </div>
 
@@ -376,7 +497,13 @@ By accepting, you agree to these terms and our privacy policy.`);
                     onChange={(e) => handleInputChange('driverRequired', e.target.checked)}
                     className="w-4 h-4 text-primary border-input rounded focus:ring-primary"
                   />
-                  <span className="text-foreground">Include professional driver (+KSH 2,000/day)</span>
+                  <span className="text-foreground">
+                    Include professional driver 
+                    {bookingData.rentalType === 'hourly' 
+                      ? ' (+KES 100/hour)' 
+                      : ' (+KES 2,000/day)'
+                    }
+                  </span>
                 </label>
 
                 <div>
@@ -420,6 +547,67 @@ By accepting, you agree to these terms and our privacy policy.`);
                   )}
                 </div>
               </div>
+
+              {/* Pricing Breakdown */}
+              {pricingBreakdown && (
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-5">
+                  <h4 className="font-semibold text-foreground mb-4 flex items-center">
+                    💰 Price Estimate
+                    <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      {pricingBreakdown.rentalType === 'hourly' ? '⏰ Hourly' : '📅 Daily'} Pricing
+                    </span>
+                  </h4>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {pricingBreakdown.duration} {pricingBreakdown.unitLabel}{pricingBreakdown.duration > 1 ? 's' : ''} × KES {pricingBreakdown.rate}
+                      </span>
+                      <span className="font-medium">KES {pricingBreakdown.basePrice.toLocaleString()}</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Platform Fee (2%)</span>
+                      <span>KES {pricingBreakdown.platformFee.toLocaleString()}</span>
+                    </div>
+                    
+                    {/* Insurance disabled for now
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Insurance (10%)</span>
+                      <span>KES {pricingBreakdown.insuranceFee.toLocaleString()}</span>
+                    </div>
+                    */}
+                    
+                    {pricingBreakdown.driverFee > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Driver Fee</span>
+                        <span>KES {pricingBreakdown.driverFee.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {pricingBreakdown.deliveryFee > 0 && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Delivery Fee ({distance.toFixed(1)} km)</span>
+                        <span>KES {pricingBreakdown.deliveryFee.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    <div className="border-t border-green-300 pt-2 mt-2">
+                      <div className="flex justify-between text-lg font-bold">
+                        <span className="text-foreground">Total</span>
+                        <span className="text-green-600">KES {pricingBreakdown.total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comparison Note */}
+                  {pricingBreakdown.rentalType === 'hourly' && pricingBreakdown.duration >= 20 && (
+                    <div className="mt-3 p-2 bg-blue-100 rounded-lg text-xs text-blue-800">
+                      💡 <strong>Tip:</strong> For {pricingBreakdown.duration}+ hours, daily pricing may be more economical!
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -526,6 +714,13 @@ By accepting, you agree to these terms and our privacy policy.`);
                   </div>
 
                   <div className="flex justify-between">
+                    <span className="text-muted-foreground">Rental Type:</span>
+                    <span className="font-medium text-foreground">
+                      {bookingData.rentalType === 'hourly' ? '⏰ Hourly' : '📅 Daily'}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
                     <span className="text-muted-foreground">Pickup:</span>
                     <span className="font-medium text-foreground">
                       {bookingData.pickupLocation?.name || bookingData.pickupLocation?.address || 'Not selected'}
@@ -540,11 +735,22 @@ By accepting, you agree to these terms and our privacy policy.`);
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Dates:</span>
+                    <span className="text-muted-foreground">
+                      {bookingData.rentalType === 'hourly' ? 'Date & Time:' : 'Dates:'}
+                    </span>
                     <span className="font-medium text-foreground">
-                      {bookingData.pickupDate} to {bookingData.returnDate}
+                      {bookingData.pickupDate} {bookingData.pickupTime || ''} → {bookingData.returnDate} {bookingData.returnTime || ''}
                     </span>
                   </div>
+
+                  {pricingBreakdown && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="font-medium text-foreground">
+                        {pricingBreakdown.duration} {pricingBreakdown.unitLabel}{pricingBreakdown.duration > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
 
                   {bookingData.driverRequired && (
                     <div className="flex justify-between">
@@ -562,11 +768,46 @@ By accepting, you agree to these terms and our privacy policy.`);
                     </span>
                   </div>
 
+                  {/* Pricing Breakdown */}
+                  {pricingBreakdown && (
+                    <div className="border-t border-border pt-3 mt-3 space-y-2 text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Base ({pricingBreakdown.duration} × KES {pricingBreakdown.rate})</span>
+                        <span>KES {pricingBreakdown.basePrice.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Platform Fee (2%)</span>
+                        <span>KES {pricingBreakdown.platformFee.toLocaleString()}</span>
+                      </div>
+                      {/* Insurance disabled for now
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Insurance (10%)</span>
+                        <span>KES {pricingBreakdown.insuranceFee.toLocaleString()}</span>
+                      </div>
+                      */}
+                      {pricingBreakdown.driverFee > 0 && (
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Driver</span>
+                          <span>KES {pricingBreakdown.driverFee.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {pricingBreakdown.deliveryFee > 0 && (
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Delivery</span>
+                          <span>KES {pricingBreakdown.deliveryFee.toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="border-t border-border pt-3 mt-3">
                     <div className="flex justify-between text-lg font-semibold">
                       <span className="text-foreground">Total Cost:</span>
-                      <span className="text-primary">KSH {estimatedCost.toLocaleString()}</span>
+                      <span className="text-primary">KES {estimatedCost.toLocaleString()}</span>
                     </div>
+                    <p className="text-xs text-amber-600 mt-1">
+                      ⚠️ Late returns: +{overtimePenalty}% per extra {bookingData.rentalType === 'hourly' ? 'hour' : 'day'}
+                    </p>
                   </div>
                 </div>
               </div>

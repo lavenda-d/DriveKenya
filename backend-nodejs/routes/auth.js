@@ -16,7 +16,8 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 const mailTransporter = (() => {
   if (emailUser && emailPassword) {
-    return nodemailer.createTransport({
+    console.log(`📧 Email configured: ${emailUser} via ${emailHost}:${emailPort}`);
+    const transporter = nodemailer.createTransport({
       host: emailHost,
       port: emailPort,
       secure: false,
@@ -28,6 +29,17 @@ const mailTransporter = (() => {
         rejectUnauthorized: false
       }
     });
+    
+    // Verify connection on startup
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error('❌ Email transporter verification failed:', error.message);
+      } else {
+        console.log('✅ Email transporter is ready to send emails');
+      }
+    });
+    
+    return transporter;
   }
   console.warn('⚠️  Email credentials not configured, using JSON transport (emails will not be sent)');
   return nodemailer.createTransport({ jsonTransport: true });
@@ -36,10 +48,27 @@ const mailTransporter = (() => {
 const sendVerificationEmail = async (to, token, name) => {
   const verifyLink = `${BACKEND_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
   const from = process.env.EMAIL_FROM || 'no-reply@drivekenya.local';
-  const subject = 'Verify your DriveKenya email';
+  const subject = '🔐 Verify your DriveKenya email to complete registration';
   const displayName = (name || '').toString().trim();
-  const text = `Hello${displayName ? ' ' + displayName : ''},\n\nPlease verify your email by clicking the link below:\n${verifyLink}\n\nIf you did not create an account, you can ignore this email.`;
-  const html = `<p>Hello${displayName ? ' ' + displayName : ''},</p><p>Please verify your email by clicking the link below:</p><p><a href="${verifyLink}">Verify Email</a></p><p>If you did not create an account, you can ignore this email.</p>`;
+  const text = `Hello${displayName ? ' ' + displayName : ''},\n\nPlease verify your email by clicking the link below to complete your registration:\n${verifyLink}\n\nThis link expires in 24 hours.\n\nIf you did not create an account, you can ignore this email.`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0;">🚗 DriveKenya</h1>
+      </div>
+      <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+        <h2 style="color: #1f2937;">Hello${displayName ? ' ' + displayName : ''}! 👋</h2>
+        <p style="color: #4b5563; font-size: 16px;">Please verify your email to complete your registration:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verifyLink}" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 15px 40px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block;">
+            ✅ Verify My Email
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours.</p>
+        <p style="color: #9ca3af; font-size: 12px;">If you did not create an account, you can ignore this email.</p>
+      </div>
+    </div>
+  `;
   await mailTransporter.sendMail({ from, to, subject, text, html });
 };
 
@@ -85,7 +114,7 @@ const validateLogin = [
     .withMessage('Password is required'),
 ];
 
-// Register new user
+// Register new user - stores in pending_users until email verification
 router.post('/register', validateRegistration, async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -104,7 +133,7 @@ router.post('/register', validateRegistration, async (req, res, next) => {
     // Map 'owner' to 'host' for consistency with existing database
     const finalRole = userRole === 'owner' ? 'host' : userRole;
 
-    // Check if user already exists
+    // Check if user already exists in main users table
     const existingUser = query(
       'SELECT id FROM users WHERE email = ?',
       [email]
@@ -117,67 +146,108 @@ router.post('/register', validateRegistration, async (req, res, next) => {
       });
     }
 
+    // Check if there's a pending registration
+    const existingPending = query(
+      'SELECT id, token_expires_at FROM pending_users WHERE email = ?',
+      [email]
+    );
+
     // Hash password
     const saltRounds = 12;
     console.log('🔐 Hashing password with salt rounds:', saltRounds);
     const passwordHash = await bcrypt.hash(password, saltRounds);
-    console.log('✅ Password hash created:', {
-      length: passwordHash.length,
-      prefix: passwordHash.substring(0, 10)
-    });
 
-    // Create user
-    const result = query(
-      `INSERT INTO users (first_name, last_name, email, password, phone, role)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name.split(' ')[0] || name, name.split(' ').slice(1).join(' ') || '', email, passwordHash, phone || '', finalRole]
-    );
+    // Generate verification token
+    const verificationToken = uuidv4();
+    const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
 
-    const emailToken = uuidv4();
-    // Auto-verify if email service is not configured
-    const shouldVerify = emailUser && emailPassword;
-    query('UPDATE users SET email_verification_token = ?, email_verification_sent_at = CURRENT_TIMESTAMP, email_verified = ? WHERE id = ?', [emailToken, shouldVerify ? 0 : 1, result.insertId]);
+    const firstName = name.split(' ')[0] || name;
+    const lastName = name.split(' ').slice(1).join(' ') || '';
+
+    if (existingPending.rows.length > 0) {
+      // Update existing pending registration
+      query(
+        `UPDATE pending_users 
+         SET password = ?, first_name = ?, last_name = ?, phone = ?, role = ?, 
+             verification_token = ?, token_expires_at = ?, created_at = CURRENT_TIMESTAMP
+         WHERE email = ?`,
+        [passwordHash, firstName, lastName, phone || '', finalRole, verificationToken, tokenExpiresAt, email]
+      );
+      console.log('📝 Updated pending registration for:', email);
+    } else {
+      // Create new pending registration
+      query(
+        `INSERT INTO pending_users (email, password, first_name, last_name, phone, role, verification_token, token_expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [email, passwordHash, firstName, lastName, phone || '', finalRole, verificationToken, tokenExpiresAt]
+      );
+      console.log('📝 Created pending registration for:', email);
+    }
+
+    // Send verification email
     try {
-      await sendVerificationEmail(email, emailToken, name.split(' ')[0] || name);
+      await sendVerificationEmail(email, verificationToken, firstName);
       console.log('✉️ Sent verification email to', email);
     } catch (e) {
       console.error('Email send error:', e.message);
+      // If email fails but service is configured, still return success but warn
+      if (emailUser && emailPassword) {
+        return res.status(201).json({
+          success: true,
+          message: 'Registration initiated but email delivery may be delayed. Please check your inbox.',
+          requiresVerification: true,
+          email: email
+        });
+      }
     }
 
-    const token = generateToken(result.insertId);
+    // If email service is not configured, auto-verify and create user immediately
+    if (!emailUser || !emailPassword) {
+      console.log('⚠️ Email service not configured, auto-verifying user...');
+      
+      // Create user directly
+      const result = query(
+        `INSERT INTO users (first_name, last_name, email, password, phone, role, email_verified, account_status, signup_method)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [firstName, lastName, email, passwordHash, phone || '', finalRole, 1, 'complete', 'email']
+      );
 
-    // Create welcome notifications for new user
-    try {
-      query(`
-        INSERT INTO notifications (user_id, type, title, message, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `, [result.insertId, 'system', 'Welcome to DriveKenya!', 'Thank you for joining DriveKenya. Start exploring available cars and book your first ride!', 0]);
+      // Delete from pending
+      query('DELETE FROM pending_users WHERE email = ?', [email]);
 
-      query(`
-        INSERT INTO notifications (user_id, type, title, message, is_read)
-        VALUES (?, ?, ?, ?, ?)
-      `, [result.insertId, 'system', 'Enhanced Features Available', 'New features: Real-time notifications, payment options, and improved booking flow are now live!', 0]);
+      const token = generateToken(result.insertId);
 
-      console.log('✅ Created welcome notifications for user:', result.insertId);
-    } catch (notifError) {
-      console.error('Failed to create welcome notifications:', notifError.message);
+      // Create welcome notifications
+      try {
+        query(`INSERT INTO notifications (user_id, type, title, message, is_read) VALUES (?, ?, ?, ?, ?)`,
+          [result.insertId, 'system', 'Welcome to DriveKenya!', 'Thank you for joining DriveKenya. Start exploring available cars and book your first ride!', 0]);
+      } catch (notifError) {
+        console.error('Failed to create welcome notifications:', notifError.message);
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: `${finalRole === 'host' ? 'Car owner' : 'Customer'} registered successfully`,
+        data: {
+          user: {
+            id: result.insertId,
+            name: name,
+            email: email,
+            phone: phone || '',
+            role: finalRole,
+            accountType: finalRole,
+            accountStatus: 'complete'
+          },
+          token
+        }
+      });
     }
 
     res.status(201).json({
       success: true,
-      message: `${finalRole === 'host' ? 'Car owner' : 'Customer'} registered successfully`,
-      data: {
-        user: {
-          id: result.insertId,
-          name: name,
-          email: email,
-          phone: phone || '',
-          role: finalRole,
-          accountType: finalRole
-        },
-        token,
-        emailVerificationSent: true
-      }
+      message: 'Please verify your email to complete registration. Check your inbox for the verification link.',
+      requiresVerification: true,
+      email: email
     });
 
   } catch (error) {
@@ -191,6 +261,28 @@ router.post('/resend-verification', async (req, res, next) => {
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
+
+    // First check pending_users table (new flow)
+    const pendingResult = query('SELECT id, first_name, email FROM pending_users WHERE email = ?', [email]);
+    if (pendingResult.rows.length > 0) {
+      const pendingUser = pendingResult.rows[0];
+      const newToken = uuidv4();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours from now
+      
+      query('UPDATE pending_users SET verification_token = ?, token_expires_at = ? WHERE id = ?', 
+        [newToken, expiresAt, pendingUser.id]);
+      
+      try {
+        await sendVerificationEmail(email, newToken, pendingUser.first_name);
+        console.log('✉️ Resent verification email to pending user:', email);
+      } catch (e) {
+        console.error('Email resend error:', e.message);
+      }
+      
+      return res.json({ success: true, message: 'Verification email has been resent. Please check your inbox.' });
+    }
+
+    // Legacy flow: Check users table for existing unverified users
     const result = query('SELECT id, first_name, email_verified FROM users WHERE email = ?', [email]);
     if (result.rows.length > 0) {
       const user = result.rows[0];
@@ -199,12 +291,13 @@ router.post('/resend-verification', async (req, res, next) => {
         query('UPDATE users SET email_verification_token = ?, email_verification_sent_at = CURRENT_TIMESTAMP WHERE id = ?', [token, user.id]);
         try {
           await sendVerificationEmail(email, token, user.first_name);
-          console.log('✉️ Resent verification email to', email);
+          console.log('✉️ Resent verification email to:', email);
         } catch (e) {
           console.error('Email resend error:', e.message);
         }
       }
     }
+    
     res.json({ success: true, message: 'If the email exists and is unverified, a verification email has been sent.' });
   } catch (error) {
     next(error);
@@ -215,22 +308,70 @@ router.get('/verify-email', async (req, res, next) => {
   try {
     const { token } = req.query;
     if (!token || typeof token !== 'string') {
-      return res.status(400).json({ success: false, message: 'Verification token is required' });
+      return res.redirect(`${FRONTEND_URL}?verificationError=missing_token`);
     }
+
+    // First check pending_users table (new flow)
+    const pendingResult = query('SELECT * FROM pending_users WHERE verification_token = ?', [token]);
+    
+    if (pendingResult.rows.length > 0) {
+      const pendingUser = pendingResult.rows[0];
+      
+      // Check if token has expired
+      if (new Date(pendingUser.token_expires_at) < new Date()) {
+        return res.redirect(`${FRONTEND_URL}?verificationError=token_expired&email=${encodeURIComponent(pendingUser.email)}`);
+      }
+
+      // Check if user already exists (edge case - double verification)
+      const existingUser = query('SELECT id FROM users WHERE email = ?', [pendingUser.email]);
+      if (existingUser.rows.length > 0) {
+        query('DELETE FROM pending_users WHERE id = ?', [pendingUser.id]);
+        return res.redirect(`${FRONTEND_URL}?emailVerified=1&message=already_verified`);
+      }
+
+      // Create the actual user account
+      const result = query(
+        `INSERT INTO users (email, password, first_name, last_name, phone, role, email_verified, account_status, signup_method, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [pendingUser.email, pendingUser.password, pendingUser.first_name, pendingUser.last_name, 
+         pendingUser.phone, pendingUser.role, 1, 'complete', 'email']
+      );
+
+      const newUserId = result.insertId;
+      console.log(`✅ User verified and created: ${pendingUser.email} (ID: ${newUserId})`);
+
+      // Delete from pending_users
+      query('DELETE FROM pending_users WHERE id = ?', [pendingUser.id]);
+
+      // Create welcome notifications
+      try {
+        query(`INSERT INTO notifications (user_id, type, title, message, is_read) VALUES (?, ?, ?, ?, ?)`,
+          [newUserId, 'system', '🎉 Welcome to DriveKenya!', 'Your email has been verified! Start exploring available cars and book your first ride.', 0]);
+        query(`INSERT INTO notifications (user_id, type, title, message, is_read) VALUES (?, ?, ?, ?, ?)`,
+          [newUserId, 'system', '✨ Enhanced Features Available', 'Explore our new features: Real-time notifications, M-Pesa payments, and improved booking flow!', 0]);
+      } catch (notifError) {
+        console.error('Failed to create welcome notifications:', notifError.message);
+      }
+
+      return res.redirect(`${FRONTEND_URL}?emailVerified=1&newAccount=1`);
+    }
+
+    // Legacy flow: Check users table for existing users who need verification
     const result = query('SELECT id FROM users WHERE email_verification_token = ?', [token]);
     if (result.rows.length === 0) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired verification token' });
+      return res.redirect(`${FRONTEND_URL}?verificationError=invalid_token`);
     }
+    
     const userId = result.rows[0].id;
-    query('UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_sent_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [userId]);
-    const redirectUrl = `${FRONTEND_URL}?emailVerified=1`;
-    try {
-      return res.redirect(302, redirectUrl);
-    } catch (_) {
-      return res.json({ success: true, message: 'Email verified successfully' });
-    }
+    query('UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_sent_at = NULL, account_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+      ['complete', userId]);
+    
+    console.log(`✅ Existing user email verified: ID ${userId}`);
+    return res.redirect(`${FRONTEND_URL}?emailVerified=1`);
+
   } catch (error) {
-    next(error);
+    console.error('Email verification error:', error);
+    return res.redirect(`${FRONTEND_URL}?verificationError=server_error`);
   }
 });
 
@@ -251,13 +392,24 @@ router.post('/login', validateLogin, async (req, res, next) => {
 
     // Find user
     const result = query(
-      'SELECT id, first_name, last_name, email, password, phone, role, email_verified, failed_login_attempts, locked_until, avatar_url, profile_photo, is_verified FROM users WHERE email = ?',
+      'SELECT id, first_name, last_name, email, password, phone, role, email_verified, failed_login_attempts, locked_until, avatar_url, profile_photo, is_verified, account_status, signup_method FROM users WHERE email = ?',
       [email]
     );
 
     console.log('👤 User query result:', { found: result.rows.length > 0, email });
 
     if (result.rows.length === 0) {
+      // Check if there's a pending registration
+      const pendingResult = query('SELECT email FROM pending_users WHERE email = ?', [email]);
+      if (pendingResult.rows.length > 0) {
+        return res.status(403).json({
+          success: false,
+          message: 'Please verify your email to complete registration. Check your inbox for the verification link.',
+          needs_verification: true,
+          pending_registration: true
+        });
+      }
+      
       console.log('❌ User not found for email:', email);
       return res.status(401).json({
         success: false,
@@ -312,6 +464,9 @@ router.post('/login', validateLogin, async (req, res, next) => {
 
     query('UPDATE users SET failed_login_attempts = 0, locked_until = NULL, last_login_at = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
 
+    // Check if profile needs completion (Google users without phone)
+    const needsProfileCompletion = user.signup_method === 'google' && (!user.phone || user.phone.trim() === '');
+
     res.json({
       success: true,
       message: 'Login successful',
@@ -325,9 +480,13 @@ router.post('/login', validateLogin, async (req, res, next) => {
           isVerified: user.email_verified,
           avatar_url: user.avatar_url,
           profile_photo: user.profile_photo,
-          is_profile_verified: user.is_verified
+          is_profile_verified: user.is_verified,
+          accountStatus: user.account_status || 'complete',
+          signupMethod: user.signup_method || 'email',
+          needsProfileCompletion
         },
-        token
+        token,
+        needsProfileCompletion
       }
     });
 
@@ -425,17 +584,30 @@ router.post('/google-signup', async (req, res, next) => {
     console.log(`🔎 Checking if user exists in DB: ${email}`);
     const users = await query('SELECT * FROM users WHERE email = ?', [email]);
     let user;
+    let isNewAccount = false;
+    let needsProfileCompletion = false;
 
     if (users.rows.length > 0) {
       // User exists - log them in
       user = users.rows[0];
       console.log(`👤 User already exists. Logging in: ${email}`);
 
+      // Check if profile is incomplete (missing phone for Google users)
+      if (user.signup_method === 'google' && (!user.phone || user.phone.trim() === '')) {
+        needsProfileCompletion = true;
+        // Update account status if needed
+        if (user.account_status !== 'incomplete') {
+          await query('UPDATE users SET account_status = ? WHERE id = ?', ['incomplete', user.id]);
+          user.account_status = 'incomplete';
+        }
+      }
+
       // Update last login
       await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
     } else {
       // User doesn't exist - create new account
       console.log(`🆕 Creating new user via Google: ${email}`);
+      isNewAccount = true;
 
       const desiredRole = role || accountType || 'customer';
       const finalRole = desiredRole === 'owner' ? 'host' : desiredRole;
@@ -444,26 +616,43 @@ router.post('/google-signup', async (req, res, next) => {
 
       const placeholderPassword = await bcrypt.hash(`google_${googleId}_${Date.now()}`, 10);
 
+      // Google accounts are created immediately but marked as incomplete (missing phone)
+      const accountStatus = 'incomplete'; // Phone number is required
+      needsProfileCompletion = true;
+
       const result = await query(
         `INSERT INTO users (
           email, password, first_name, last_name, role, 
-          email_verified, avatar_url, is_verified, profile_completed, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          email_verified, avatar_url, is_verified, profile_completed, 
+          account_status, signup_method, google_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [
           email,
           placeholderPassword,
           firstName,
           lastName,
           finalRole,
-          1, // email_verified = true
+          1, // email_verified = true (Google verified)
           picture,
           finalRole === 'host' ? 0 : 1,
-          1 // profile_completed = true
+          0, // profile_completed = false (needs phone)
+          accountStatus,
+          'google',
+          googleId
         ]
       );
 
       const newUserId = result.insertId;
-      console.log(`✅ New user created in DB with ID: ${newUserId}`);
+      console.log(`✅ New Google user created in DB with ID: ${newUserId} (status: incomplete)`);
+      
+      // Create welcome notification
+      try {
+        await query(`INSERT INTO notifications (user_id, type, title, message, is_read) VALUES (?, ?, ?, ?, ?)`,
+          [newUserId, 'system', '🎉 Welcome to DriveKenya!', 'Complete your profile by adding your phone number to start booking cars.', 0]);
+      } catch (notifError) {
+        console.error('Failed to create welcome notification:', notifError.message);
+      }
+
       const newUserRows = await query('SELECT * FROM users WHERE id = ?', [newUserId]);
       user = newUserRows.rows[0];
     }
@@ -481,20 +670,131 @@ router.post('/google-signup', async (req, res, next) => {
       firstName: user.first_name,
       lastName: user.last_name,
       name: `${user.first_name} ${user.last_name}`.trim(),
-      avatar: user.avatar_url // Some parts might expect avatar
+      avatar: user.avatar_url,
+      accountStatus: user.account_status,
+      signupMethod: user.signup_method,
+      needsProfileCompletion: needsProfileCompletion
     };
 
     console.log('✨ Google authentication successful for:', email);
-    console.log('📦 Sending user to frontend:', JSON.stringify(normalizedUser));
+    console.log('📦 Sending user to frontend:', { email, accountStatus: user.account_status, needsProfileCompletion });
 
     res.status(200).json({
       success: true,
       user: normalizedUser,
-      token
+      token,
+      isNewAccount,
+      needsProfileCompletion,
+      message: needsProfileCompletion 
+        ? 'We need a few more details to finish setting up your account.'
+        : 'Successfully authenticated with Google!'
     });
 
   } catch (error) {
     console.error('💥 Google Sign-Up intensive error:', error);
+    next(error);
+  }
+});
+
+// Complete profile endpoint (for Google users missing details)
+router.post('/complete-profile', authenticateToken, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { phone } = req.body;
+
+    if (!phone || phone.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required to complete your profile'
+      });
+    }
+
+    // Validate phone number format (Kenyan format)
+    const phoneRegex = /^(?:\+254|254|0)?[17]\d{8}$/;
+    const cleanPhone = phone.replace(/[\s-]/g, '');
+    if (!phoneRegex.test(cleanPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid Kenyan phone number (e.g., 0712345678 or +254712345678)'
+      });
+    }
+
+    // Format phone number consistently
+    let formattedPhone = cleanPhone;
+    if (formattedPhone.startsWith('0')) {
+      formattedPhone = '254' + formattedPhone.slice(1);
+    } else if (formattedPhone.startsWith('+')) {
+      formattedPhone = formattedPhone.slice(1);
+    }
+
+    // Update user profile
+    await query(
+      `UPDATE users 
+       SET phone = ?, account_status = 'complete', profile_completed = 1, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [formattedPhone, userId]
+    );
+
+    console.log(`✅ Profile completed for user ${userId}, phone: ${formattedPhone}`);
+
+    // Get updated user
+    const userResult = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    const user = userResult.rows[0];
+
+    const { password: _, ...userWithoutPassword } = user;
+    const normalizedUser = {
+      ...userWithoutPassword,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      name: `${user.first_name} ${user.last_name}`.trim(),
+      avatar: user.avatar_url,
+      accountStatus: user.account_status,
+      signupMethod: user.signup_method,
+      needsProfileCompletion: false
+    };
+
+    // Create notification
+    try {
+      await query(`INSERT INTO notifications (user_id, type, title, message, is_read) VALUES (?, ?, ?, ?, ?)`,
+        [userId, 'system', '✅ Profile Complete!', 'Your profile is now complete. You can start booking cars!', 0]);
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile completed successfully! You can now access all features.',
+      user: normalizedUser
+    });
+
+  } catch (error) {
+    console.error('Profile completion error:', error);
+    next(error);
+  }
+});
+
+// Get account status endpoint
+router.get('/account-status', authenticateToken, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const result = await query('SELECT account_status, signup_method, phone, profile_completed FROM users WHERE id = ?', [userId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = result.rows[0];
+    const needsProfileCompletion = user.signup_method === 'google' && (!user.phone || user.phone.trim() === '');
+
+    res.json({
+      success: true,
+      accountStatus: user.account_status,
+      signupMethod: user.signup_method,
+      profileCompleted: user.profile_completed === 1,
+      needsProfileCompletion,
+      missingFields: needsProfileCompletion ? ['phone'] : []
+    });
+  } catch (error) {
     next(error);
   }
 });

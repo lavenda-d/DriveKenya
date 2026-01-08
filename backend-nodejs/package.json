@@ -23,6 +23,7 @@
     "express-validator": "^7.0.1",
     "google-auth-library": "^10.5.0",
     "helmet": "^7.2.0",
+    "intasend-node": "^1.1.2",
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
     "ml-matrix": "^6.12.1",

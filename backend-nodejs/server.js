@@ -23,6 +23,7 @@ import reviewRoutes from './routes/reviews.js';
 import messageRoutes from './routes/messages.js';
 import contactRoutes from './routes/contact.js';
 import paymentRoutes from './routes/payments.js';
+import mpesaRoutes from './routes/mpesa.js';
 import notificationRoutes from './routes/notifications.js';
 import adminRoutes from './routes/admin.js';
 import ownerRoutes from './routes/owner.js';
@@ -716,6 +717,7 @@ app.use('/api/contact', contactRoutes);
 // Message endpoints - require authentication  
 app.use('/api/messages', authenticateToken, messageRoutes);
 app.use('/api/payments', authenticateToken, paymentRoutes);
+app.use('/api/mpesa', mpesaRoutes); // M-Pesa routes (webhook is public, others require auth)
 app.use('/api/notifications', notificationRoutes);
 
 // Phase 3 Business Features

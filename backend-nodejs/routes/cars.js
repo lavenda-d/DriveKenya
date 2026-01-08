@@ -34,8 +34,12 @@ router.get('/', async (req, res, next) => {
     } = req.query;
 
     let queryText = `
-      SELECT c.*
+      SELECT c.*, 
+             u.first_name || ' ' || u.last_name as owner_name,
+             u.email as owner_email,
+             u.phone as owner_phone
       FROM cars c
+      LEFT JOIN users u ON c.host_id = u.id
       WHERE c.available = 1
     `;
 

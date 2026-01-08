@@ -39,26 +39,38 @@ const GoogleMap = ({
   const loadGoogleMapsAPI = () => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
+    console.log('🔑 Google Maps API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'Not found');
+    
     if (!apiKey || apiKey === 'your_google_maps_api_key_here') {
-      console.log('🗺️ Google Maps API key not configured, using demo mode');
+      console.error('❌ Google Maps API key not configured in .env file');
+      console.log('💡 Add VITE_GOOGLE_MAPS_API_KEY to frontend/.env and restart dev server');
       setIsLoaded(true);
       return;
     }
 
     if (!window.google) {
+      console.log('📥 Loading Google Maps API...');
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
       script.async = true;
       script.defer = true;
       script.onload = () => {
+        console.log('✅ Google Maps API loaded successfully');
         setIsGoogleMapsLoaded(true);
         initializeMap();
       };
-      script.onerror = () => {
-        console.error('❌ Failed to load Google Maps API');
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Google Maps API. Check if:', error);
+        console.error('   1. API key is valid');
+        console.error('   2. Maps JavaScript API is enabled in Google Cloud Console');
+        console.error('   3. Billing is enabled for your Google Cloud project');
         setIsLoaded(true);
       };
       document.head.appendChild(script);
+    } else {
+      console.log('✅ Google Maps already loaded');
+      setIsGoogleMapsLoaded(true);
+      initializeMap();
     }
   };
 

@@ -1692,14 +1692,191 @@ app.post('/users/:id/verify', (req, res) => {
     }
 });
 
-// User deletion endpoint
+// User deletion endpoint (cascading delete)
 app.post('/users/:id/delete', (req, res) => {
     try {
         const { id } = req.params;
-        db.prepare('DELETE FROM users WHERE id = ?').run(id);
-        res.redirect('/users');
+        console.log(`🗑️ Starting cascade delete for user ${id}...`);
+        
+        // Get user email for pending_users cleanup
+        let userEmail = null;
+        try {
+            const userRow = db.prepare('SELECT email FROM users WHERE id = ?').get(id);
+            if (userRow) userEmail = userRow.email;
+        } catch (e) {}
+        
+        // STEP 1: Delete ticket_messages for user's support tickets FIRST
+        // (ticket_messages has FK to support_tickets, so delete children first)
+        try {
+            const userTickets = db.prepare('SELECT id FROM support_tickets WHERE user_id = ?').all(id);
+            for (const ticket of userTickets) {
+                db.prepare('DELETE FROM ticket_messages WHERE ticket_id = ?').run(ticket.id);
+                console.log(`  ✓ Deleted ticket_messages for ticket ${ticket.id}`);
+            }
+        } catch (e) {}
+        
+        // STEP 2: Delete all user-related records from ALL tables
+        const relatedTables = [
+            // Support tickets (after ticket_messages deleted)
+            { table: 'support_tickets', column: 'user_id' },
+            { table: 'support_tickets', column: 'assigned_to' },
+            { table: 'ticket_messages', column: 'sender_id' },
+            
+            // Chat sessions and messages
+            { table: 'chat_messages', column: 'sender_id' },
+            { table: 'chat_sessions', column: 'user_id' },
+            { table: 'chat_sessions', column: 'agent_id' },
+            { table: 'chat_notifications', column: 'user_id' },
+            
+            // Messages
+            { table: 'messages', column: 'sender_id' },
+            { table: 'messages', column: 'recipient_id' },
+            
+            // Notifications
+            { table: 'notifications', column: 'user_id' },
+            
+            // Bookings
+            { table: 'bookings', column: 'customer_id' },
+            
+            // Reviews
+            { table: 'reviews', column: 'customer_id' },
+            { table: 'reviews', column: 'host_id' },
+            
+            // Rentals and payments
+            { table: 'mpesa_payments', column: 'user_id' },
+            { table: 'rentals', column: 'renter_id' },
+            
+            // Fraud detection
+            { table: 'fraud_alerts', column: 'acknowledged_by' },
+            { table: 'fraud_detections', column: 'user_id' },
+            { table: 'fraud_detections', column: 'reviewed_by' },
+            
+            // Emergency
+            { table: 'emergency_alerts', column: 'user_id' },
+            { table: 'emergency_alerts', column: 'responder_id' },
+            { table: 'emergency_contacts', column: 'user_id' },
+            { table: 'user_emergency_contacts', column: 'user_id' },
+            
+            // User behavior and tracking
+            { table: 'user_behavior_tracking', column: 'user_id' },
+            { table: 'recommendation_feedback', column: 'user_id' },
+            { table: 'location_history', column: 'user_id' },
+            
+            // Performance
+            { table: 'performance_metrics', column: 'user_id' },
+            { table: 'performance_errors', column: 'user_id' },
+            
+            // Authentication
+            { table: 'user_two_factor', column: 'user_id' },
+            { table: 'user_authenticators', column: 'user_id' },
+            { table: 'biometric_credentials', column: 'user_id' },
+            { table: 'two_factor_secrets', column: 'user_id' },
+            { table: 'login_history', column: 'user_id' },
+            { table: 'password_resets', column: 'user_id' },
+            
+            // Documents
+            { table: 'user_documents', column: 'user_id' },
+            { table: 'user_verification_documents', column: 'user_id' },
+            { table: 'user_verification_documents', column: 'reviewed_by' },
+            
+            // Admin and content
+            { table: 'admin_logs', column: 'admin_id' },
+            { table: 'help_articles', column: 'created_by' },
+            { table: 'car_blackout_dates', column: 'created_by' },
+            
+            // Fleet analytics
+            { table: 'fleet_analytics', column: 'owner_id' },
+        ];
+        
+        for (const { table, column } of relatedTables) {
+            try {
+                const result = db.prepare(`DELETE FROM ${table} WHERE ${column} = ?`).run(id);
+                if (result.changes > 0) {
+                    console.log(`  ✓ Deleted ${result.changes} from ${table}.${column}`);
+                }
+            } catch (e) {
+                // Log error for debugging
+                if (!e.message.includes('no such table') && !e.message.includes('no such column')) {
+                    console.log(`  ⚠ Error deleting from ${table}.${column}: ${e.message}`);
+                }
+            }
+        }
+        
+        // Delete pending_users with same email
+        if (userEmail) {
+            try {
+                db.prepare('DELETE FROM pending_users WHERE email = ?').run(userEmail);
+            } catch (e) {}
+        }
+        
+        // STEP 3: Delete cars owned by this user (and their related records first)
+        try {
+            const userCars = db.prepare('SELECT id FROM cars WHERE host_id = ?').all(id);
+            for (const car of userCars) {
+                const carTables = [
+                    'mpesa_payments WHERE rental_id IN (SELECT id FROM rentals WHERE car_id = ?)',
+                    'rentals WHERE car_id = ?',
+                    'reviews WHERE car_id = ?',
+                    'bookings WHERE car_id = ?',
+                    'car_availability_blocks WHERE car_id = ?',
+                    'car_availability WHERE car_id = ?',
+                    'car_maintenance WHERE car_id = ?',
+                    'car_images WHERE car_id = ?',
+                    'car_specs WHERE car_id = ?',
+                    'car_blackout_dates WHERE car_id = ?',
+                    'recommendation_feedback WHERE car_id = ?',
+                ];
+                for (const deleteQuery of carTables) {
+                    try { 
+                        db.prepare(`DELETE FROM ${deleteQuery}`).run(car.id); 
+                    } catch(e) {}
+                }
+                console.log(`  ✓ Deleted related records for car ${car.id}`);
+            }
+            const carResult = db.prepare('DELETE FROM cars WHERE host_id = ?').run(id);
+            if (carResult.changes > 0) {
+                console.log(`  ✓ Deleted ${carResult.changes} cars owned by user`);
+            }
+        } catch (e) {
+            console.log(`  ⚠ Error deleting cars: ${e.message}`);
+        }
+        
+        // STEP 4: Finally delete the user
+        try {
+            db.prepare('DELETE FROM users WHERE id = ?').run(id);
+            console.log(`✅ User ${id} and all related records deleted successfully`);
+            res.redirect('/users');
+        } catch (err) {
+            // Find which table still has FK reference
+            console.error('Delete error:', err.message);
+            console.log('🔍 Searching for remaining FK references...');
+            const allTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+            for (const t of allTables) {
+                try {
+                    const cols = db.prepare(`PRAGMA table_info(${t.name})`).all();
+                    for (const col of cols) {
+                        if (col.name.includes('user') || col.name.includes('sender') || 
+                            col.name.includes('receiver') || col.name.includes('customer') ||
+                            col.name.includes('host') || col.name.includes('owner') ||
+                            col.name.includes('renter') || col.name.includes('admin') ||
+                            col.name.includes('agent') || col.name.includes('responder') ||
+                            col.name.includes('created_by') || col.name.includes('assigned') ||
+                            col.name.includes('reviewed') || col.name.includes('acknowledged')) {
+                            try {
+                                const count = db.prepare(`SELECT COUNT(*) as c FROM ${t.name} WHERE ${col.name} = ?`).get(id);
+                                if (count && count.c > 0) {
+                                    console.log(`  ❌ FOUND: ${t.name}.${col.name} has ${count.c} records`);
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                } catch (e) {}
+            }
+            res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error deleting user: ${err.message}</div>`));
+        }
     } catch (err) {
-        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error: ${err.message}</div>`));
+        console.error('Delete error:', err.message);
+        res.status(500).send(htmlTemplate('Error', `<div class="text-red-600">Error deleting user: ${err.message}</div>`));
     }
 });
 

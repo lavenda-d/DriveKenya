@@ -16,6 +16,8 @@ import GoogleMapEnhanced from './components/GoogleMapEnhanced';
 import VehicleTypeCarousel from './components/VehicleTypeCarousel';
 import OwnerDashboard from './components/OwnerDashboardEnhanced';
 import PricingCalculator from './components/PricingCalculator';
+import ProfileCompletionModal from './components/ProfileCompletionModal';
+import EmailVerificationPending from './components/EmailVerificationPending';
 
 import Phase4Dashboard from './components/Phase4Dashboard';
 // EmergencyButton removed - now in Profile & Settings
@@ -518,7 +520,12 @@ const App: React.FC = () => {
   const [resetMessage, setResetMessage] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
+  
+  // New auth flow states
+  const [showEmailVerificationPending, setShowEmailVerificationPending] = useState(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
+  const [showProfileCompletion, setShowProfileCompletion] = useState(false);
+  const [incompleteUser, setIncompleteUser] = useState<User | null>(null);
   // Booking state
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -678,6 +685,56 @@ const App: React.FC = () => {
       // Clean URL without reload
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+    
+    // Check for email verification success
+    const emailVerified = urlParams.get('emailVerified');
+    const verificationError = urlParams.get('verificationError');
+    const newAccount = urlParams.get('newAccount');
+    
+    if (emailVerified === '1') {
+      if (newAccount === '1') {
+        showToast('🎉 Email verified! Your account has been created. Please log in.', 'success');
+      } else {
+        showToast('✅ Email verified successfully! You can now log in.', 'success');
+      }
+      // Show login modal
+      setTimeout(() => {
+        setShowAuthModal(true);
+        setAuthMode('login');
+      }, 500);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    if (verificationError) {
+      let errorMessage = 'Email verification failed.';
+      const errorEmail = urlParams.get('email');
+      
+      switch (verificationError) {
+        case 'missing_token':
+          errorMessage = 'Invalid verification link. Please request a new one.';
+          break;
+        case 'invalid_token':
+          errorMessage = 'Verification link is invalid or has already been used.';
+          break;
+        case 'token_expired':
+          errorMessage = 'Verification link has expired. Please request a new one.';
+          if (errorEmail) {
+            setPendingVerificationEmail(errorEmail);
+            setShowEmailVerificationPending(true);
+          }
+          break;
+        case 'server_error':
+          errorMessage = 'Server error during verification. Please try again.';
+          break;
+        default:
+          errorMessage = `Verification error: ${verificationError}`;
+      }
+      
+      showToast(`❌ ${errorMessage}`, 'error');
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     return () => {
       window.fetch = originalFetch;
@@ -730,20 +787,30 @@ const App: React.FC = () => {
                 return 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop';
               };
 
+              // Check if vehicle is non-motorized (shouldn't have fuel type or certain transmission)
+              const vehicleType = (car.vehicle_type || 'car').toLowerCase();
+              const isNonMotorized = ['bicycle', 'bike', 'cycle'].includes(vehicleType);
+
               return {
                 id: car.id,
                 name: `${car.make} ${car.model}`,
+                make: car.make,
+                model: car.model,
                 category: car.category || (car.price_per_day > 8000 ? 'luxury' : car.price_per_day > 5000 ? 'suv' : 'economy'),
                 vehicle_type: car.vehicle_type || 'car',
                 price: car.price_per_day,
+                price_per_day: car.price_per_day,
                 image: getCarImage(),
                 features: car.features || [],
-                seats: 5,
-                transmission: car.transmission || 'Automatic',
-                fuel: car.fuel_type || 'Petrol',
+                seats: car.seats || car.number_of_seats || null,
+                // Only add default transmission for motorized vehicles
+                transmission: isNonMotorized ? null : (car.transmission || 'Automatic'),
+                // Only add fuel type for motorized vehicles
+                fuel: isNonMotorized ? null : (car.fuel_type || null),
+                fuel_type: isNonMotorized ? null : (car.fuel_type || null),
                 location: car.location,
-                rating: 4.5 + Math.random() * 0.5,
-                reviews: Math.floor(Math.random() * 200) + 50,
+                rating: car.rating || (4.5 + Math.random() * 0.5),
+                reviews: car.review_count || 0,
                 year: car.year,
                 color: car.color,
                 description: car.description,
@@ -751,7 +818,8 @@ const App: React.FC = () => {
                 availability_status: car.availability_status || 'available',
                 host_id: car.host_id,
                 owner_name: car.owner_name,
-                owner_phone: car.owner_phone
+                owner_phone: car.owner_phone,
+                owner_email: car.owner_email
               };
             });
             setCars(transformedCars);
@@ -884,6 +952,23 @@ const App: React.FC = () => {
           password: formData.password,
           role: formData.role
         });
+        
+        // Check if user needs to complete their profile (Google users missing phone)
+        if (response.success && response.data?.needsProfileCompletion) {
+          const userData = response.data?.user || response.user;
+          const tokenData = response.data?.token || response.token;
+          
+          // Store user and token temporarily
+          setIncompleteUser(userData);
+          setToken(tokenData);
+          authStorage.setToken(tokenData);
+          
+          // Show profile completion modal
+          setShowAuthModal(false);
+          setShowProfileCompletion(true);
+          showToast('Please complete your profile to continue', 'info');
+          return;
+        }
       } else {
         // Transform the form data for registration to match backend expectations
         const registerData = {
@@ -895,6 +980,15 @@ const App: React.FC = () => {
           accountType: formData.role // Also send as accountType for clarity
         };
         response = await authAPI.register(registerData);
+        
+        // Check if email verification is required
+        if (response.success && response.requiresVerification) {
+          setPendingVerificationEmail(response.email || formData.email);
+          setShowAuthModal(false);
+          setShowEmailVerificationPending(true);
+          showToast('Check your email to verify your account!', 'info');
+          return;
+        }
       }
       if (response.success) {
         const userData = response.data?.user || response.user;
@@ -920,6 +1014,15 @@ const App: React.FC = () => {
     } finally {
       setAuthLoading(false);
     }
+  };
+
+  // Handle profile completion (for Google users missing phone)
+  const handleProfileComplete = (updatedUser) => {
+    setUser(updatedUser);
+    authStorage.setUser(updatedUser);
+    setIncompleteUser(null);
+    setShowProfileCompletion(false);
+    showToast('🎉 Profile complete! Welcome to DriveKenya!', 'success');
   };
 
   const handleLogout = () => {
@@ -1347,6 +1450,25 @@ const App: React.FC = () => {
 
         if (data.success) {
           console.log('✅ [DEBUG] Auth successful, setting state...');
+          
+          // Check if account needs profile completion (missing phone number)
+          if (data.needsProfileCompletion) {
+            console.log('📱 [DEBUG] User needs to complete profile (missing phone)');
+            const userData = data.user;
+            const tokenData = data.token;
+            
+            // Store token but keep user as incomplete
+            setToken(tokenData);
+            authStorage.setToken(tokenData);
+            setIncompleteUser(userData);
+            
+            // Show profile completion modal
+            setShowAuthModal(false);
+            setShowProfileCompletion(true);
+            showToast('Almost there! Please add your phone number to complete your profile.', 'info');
+            return;
+          }
+          
           showToast('Successfully authenticated with Google!', 'success');
           if (data.user && data.token) {
             console.log('👤 [DEBUG] Setting user:', data.user.email);
@@ -1410,10 +1532,10 @@ const App: React.FC = () => {
           onClick={() => setShowAuthModal(false)}
         ></div>
 
-        <div className="relative bg-card/95 backdrop-blur-2xl border border-border rounded-[3rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in slide-in-from-bottom-10 duration-700">
+        <div className="relative bg-card/95 backdrop-blur-2xl border border-border rounded-[3rem] w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 fade-in slide-in-from-bottom-10 duration-700">
           {/* Decorative Gradient Blob */}
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] animate-pulse"></div>
-          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-purple-600/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] animate-pulse pointer-events-none"></div>
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-purple-600/10 rounded-full blur-[100px] animate-pulse pointer-events-none" style={{ animationDelay: '2s' }}></div>
 
           <div className="p-10 md:p-14 relative z-10">
             <div className="flex justify-between items-start mb-12">
@@ -1554,6 +1676,24 @@ const App: React.FC = () => {
                     className="w-full px-6 py-4 bg-input/20 border border-input rounded-2xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm font-medium"
                     required
                   />
+                </div>
+              )}
+
+              {/* Phone Number - Required for M-Pesa */}
+              {authMode === 'register' && (
+                <div className="animate-in slide-in-from-left-4 duration-500 delay-300">
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg">🇰🇪</span>
+                    <input
+                      type="tel"
+                      placeholder="Phone Number (e.g., 0712 345 678)"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full pl-12 pr-6 py-4 bg-input/20 border border-input rounded-2xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm font-medium"
+                      required
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 ml-2">Required for M-Pesa payments & booking updates</p>
                 </div>
               )}
 
@@ -3082,10 +3222,20 @@ const App: React.FC = () => {
 
   const handleBackToList = () => {
     setViewingCar(null);
+    setSelectedCar(null);
+  };
+
+  const handleProceedToBooking = () => {
+    if (viewingCar) {
+      setSelectedCar(viewingCar);
+      setShowBookingModal(true);
+      setViewingCar(null);
+      window.scrollTo(0, 0);
+    }
   };
 
   if (viewingCar) {
-    return <CarDetailView car={viewingCar} onBack={handleBackToList} />;
+    return <CarDetailView car={viewingCar} onBack={handleBackToList} onProceedToBooking={handleProceedToBooking} />;
   }
 
   return (
@@ -3122,6 +3272,41 @@ const App: React.FC = () => {
       }} />}
 
       <AuthModal />
+      
+      {/* Email Verification Pending Modal */}
+      {showEmailVerificationPending && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-background/80 backdrop-blur-md"
+            onClick={() => {}}
+          ></div>
+          <div className="relative bg-card/95 backdrop-blur-2xl border border-border rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <EmailVerificationPending
+              email={pendingVerificationEmail}
+              onBackToLogin={() => {
+                setShowEmailVerificationPending(false);
+                setShowAuthModal(true);
+                setAuthMode('login');
+              }}
+              onResendEmail={() => {
+                showToast('Verification email resent!', 'success');
+              }}
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Profile Completion Modal (for Google users missing phone) */}
+      <ProfileCompletionModal
+        isOpen={showProfileCompletion}
+        onClose={() => {
+          // Don't allow closing without completing profile
+          showToast('Please add your phone number to complete your profile', 'warning');
+        }}
+        onComplete={handleProfileComplete}
+        user={incompleteUser}
+      />
+      
       <ForgotPasswordModal />
       <ResetPasswordModal />
       {renderBookingFlow()}

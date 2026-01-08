@@ -5,6 +5,123 @@ import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
 
 /**
+ * Calculate flexible pricing (hourly or daily)
+ * POST /api/pricing/flexible
+ */
+router.post('/flexible', async (req, res) => {
+  try {
+    const { 
+      carId, 
+      startDate, 
+      endDate, 
+      startTime = '09:00', 
+      endTime = '18:00', 
+      rentalType = 'daily',
+      pickupLocation, 
+      dropoffLocation 
+    } = req.body;
+
+    // Validate required fields
+    if (!carId || !startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing required fields: carId, startDate, endDate'
+      });
+    }
+
+    // Validate rental type
+    if (!['hourly', 'daily'].includes(rentalType)) {
+      return res.status(400).json({
+        error: 'Invalid rentalType. Must be "hourly" or "daily"'
+      });
+    }
+
+    const pricing = await PricingService.calculateFlexiblePrice(
+      carId,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      rentalType,
+      pickupLocation,
+      dropoffLocation
+    );
+
+    res.json(pricing);
+  } catch (error) {
+    console.error('❌ Flexible pricing calculation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to calculate pricing',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Calculate overtime charges for a booking
+ * POST /api/pricing/overtime
+ */
+router.post('/overtime', authenticateToken, async (req, res) => {
+  try {
+    const { bookingId, actualReturnDate, actualReturnTime } = req.body;
+
+    // Validate required fields
+    if (!bookingId || !actualReturnDate || !actualReturnTime) {
+      return res.status(400).json({
+        error: 'Missing required fields: bookingId, actualReturnDate, actualReturnTime'
+      });
+    }
+
+    const result = await PricingService.calculateFinalPriceWithOvertime(
+      bookingId,
+      actualReturnDate,
+      actualReturnTime
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Overtime calculation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to calculate overtime charges',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Get hourly rate from daily rate (utility endpoint)
+ * GET /api/pricing/hourly-rate/:dailyRate
+ */
+router.get('/hourly-rate/:dailyRate', (req, res) => {
+  try {
+    const dailyRate = parseFloat(req.params.dailyRate);
+    
+    if (isNaN(dailyRate) || dailyRate <= 0) {
+      return res.status(400).json({
+        error: 'Invalid daily rate. Must be a positive number.'
+      });
+    }
+
+    const hourlyRate = PricingService.calculateHourlyRate(dailyRate);
+
+    res.json({
+      success: true,
+      dailyRate,
+      hourlyRate,
+      formula: 'hourlyRate = ceil((dailyRate × 1.25) / 24)',
+      note: 'Hourly pricing has a 25% premium over daily rate when used for 24 hours'
+    });
+  } catch (error) {
+    console.error('❌ Hourly rate calculation error:', error);
+    res.status(500).json({
+      error: 'Failed to calculate hourly rate',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Calculate dynamic pricing for a rental
  * POST /api/pricing/calculate
  */

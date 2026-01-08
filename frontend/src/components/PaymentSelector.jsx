@@ -1,9 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import MpesaPayment from './MpesaPayment';
+import { mpesaService } from '../services/mpesaService';
 
-const PaymentSelector = ({ selectedPayment, onPaymentSelect, totalAmount, onNext, onPrev, isLoading }) => {
+const PaymentSelector = ({ 
+  selectedPayment, 
+  onPaymentSelect, 
+  totalAmount, 
+  onNext, 
+  onPrev, 
+  isLoading,
+  rentalId,
+  customerPhone = '',
+  customerName = '',
+  onPaymentSuccess,
+}) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showMpesaModal, setShowMpesaModal] = useState(false);
+  const [mpesaEnabled, setMpesaEnabled] = useState(true);
+  const [mpesaPaymentCompleted, setMpesaPaymentCompleted] = useState(false);
+
+  // Check if M-Pesa is configured
+  useEffect(() => {
+    const checkMpesaConfig = async () => {
+      try {
+        const config = await mpesaService.checkConfig();
+        setMpesaEnabled(config.isEnabled);
+      } catch (error) {
+        console.warn('Could not check M-Pesa config:', error);
+      }
+    };
+    checkMpesaConfig();
+  }, []);
 
   const paymentMethods = [
+    {
+      id: 'mpesa',
+      name: 'M-Pesa Mobile Money',
+      description: 'Pay instantly with M-Pesa mobile money',
+      icon: '📱',
+      available: mpesaEnabled,
+      details: mpesaEnabled 
+        ? 'Instant payment via Safaricom M-Pesa • IntaSend Secured' 
+        : 'M-Pesa not configured - contact support',
+      subtitle: 'Recommended ⭐'
+    },
     {
       id: 'cash',
       name: 'Cash Payment',
@@ -14,21 +54,12 @@ const PaymentSelector = ({ selectedPayment, onPaymentSelect, totalAmount, onNext
       subtitle: 'Safe & Secure'
     },
     {
-      id: 'mpesa',
-      name: 'M-Pesa Mobile Money',
-      description: 'Pay instantly with M-Pesa mobile money',
-      icon: '📱',
-      available: true,
-      details: 'Instant payment via Safaricom M-Pesa',
-      subtitle: 'Quick & Convenient'
-    },
-    {
       id: 'card',
       name: 'Credit/Debit Card',
       description: 'Pay with Visa, Mastercard or other cards',
       icon: '💳',
       available: false,
-      details: 'Coming soon - Secure card payments',
+      details: 'Coming soon - Secure card payments via Stripe',
       subtitle: 'Coming Soon'
     },
     {
@@ -46,10 +77,42 @@ const PaymentSelector = ({ selectedPayment, onPaymentSelect, totalAmount, onNext
     const method = paymentMethods.find(m => m.id === paymentId);
     if (method && method.available) {
       onPaymentSelect(paymentId);
+      setMpesaPaymentCompleted(false); // Reset M-Pesa completion state
+      
+      // If M-Pesa selected, show the payment modal immediately
+      if (paymentId === 'mpesa') {
+        setShowMpesaModal(true);
+      }
     }
   };
 
-  const isNextEnabled = selectedPayment && termsAccepted;
+  // Handle M-Pesa payment success
+  const handleMpesaSuccess = (paymentData) => {
+    console.log('M-Pesa payment successful:', paymentData);
+    setMpesaPaymentCompleted(true);
+    setShowMpesaModal(false);
+    setTermsAccepted(true); // Auto-accept terms after successful payment
+    onPaymentSuccess?.(paymentData);
+  };
+
+  // Handle M-Pesa payment error
+  const handleMpesaError = (error) => {
+    console.error('M-Pesa payment error:', error);
+    // Keep modal open for retry
+  };
+
+  // Handle M-Pesa cancel
+  const handleMpesaCancel = () => {
+    setShowMpesaModal(false);
+    // Don't deselect - user might want to try again
+  };
+
+  // For M-Pesa, payment completion is the condition
+  // For cash, just selection + terms
+  const isNextEnabled = selectedPayment && (
+    (selectedPayment === 'mpesa' && mpesaPaymentCompleted) ||
+    (selectedPayment === 'cash' && termsAccepted)
+  );
 
   return (
     <div className="space-y-6">
@@ -149,7 +212,11 @@ const PaymentSelector = ({ selectedPayment, onPaymentSelect, totalAmount, onNext
 
       {/* Selected Payment Details */}
       {selectedPayment && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className={`border rounded-lg p-4 ${
+          (selectedPayment === 'mpesa' && mpesaPaymentCompleted) 
+            ? 'bg-green-100 border-green-300' 
+            : 'bg-green-50 border-green-200'
+        }`}>
           <div className="flex items-center space-x-2 mb-2">
             <span className="text-green-600">✓</span>
             <h4 className="font-semibold text-green-800">Payment Method Selected</h4>
@@ -168,33 +235,67 @@ const PaymentSelector = ({ selectedPayment, onPaymentSelect, totalAmount, onNext
           
           {selectedPayment === 'mpesa' && (
             <div className="text-green-700 text-sm">
-              <p className="mb-2">You've selected <strong>M-Pesa Payment</strong></p>
-              <ul className="space-y-1 text-xs">
-                <li>• You'll receive M-Pesa payment instructions after confirmation</li>
-                <li>• Amount: KSH {totalAmount.toLocaleString()}</li>
-                <li>• Payment must be completed within 24 hours</li>
-                <li>• Vehicle will be reserved after payment confirmation</li>
-              </ul>
+              {mpesaPaymentCompleted ? (
+                <>
+                  <p className="mb-2 font-semibold text-green-800">✅ M-Pesa Payment Completed!</p>
+                  <p className="text-xs text-green-600">Your payment has been received. Click Continue to complete your booking.</p>
+                </>
+              ) : (
+                <>
+                  <p className="mb-2">You've selected <strong>M-Pesa Payment</strong></p>
+                  <ul className="space-y-1 text-xs">
+                    <li>• Click "Pay Now with M-Pesa" to complete payment</li>
+                    <li>• Amount: KSH {totalAmount.toLocaleString()}</li>
+                    <li>• You'll receive an STK push on your phone</li>
+                  </ul>
+                  <button
+                    onClick={() => setShowMpesaModal(true)}
+                    className="mt-3 w-full bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <span>📱</span>
+                    <span>Pay Now with M-Pesa</span>
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* Terms and Conditions */}
-      <div className={`border rounded-lg p-4 ${termsAccepted ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
-        <label className="flex items-start space-x-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={termsAccepted}
-            onChange={(e) => setTermsAccepted(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
-          />
-          <span className={`text-sm ${termsAccepted ? 'text-green-800' : 'text-yellow-800'}`}>
-            I agree to the payment terms and confirm that I understand the selected payment method.
-            {termsAccepted && <span className="ml-2">✅</span>}
-          </span>
-        </label>
-      </div>
+      {/* Terms and Conditions - Only for cash payments */}
+      {selectedPayment === 'cash' && (
+        <div className={`border rounded-lg p-4 ${termsAccepted ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <label className="flex items-start space-x-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+            />
+            <span className={`text-sm ${termsAccepted ? 'text-green-800' : 'text-yellow-800'}`}>
+              I agree to the payment terms and confirm that I understand the selected payment method.
+              {termsAccepted && <span className="ml-2">✅</span>}
+            </span>
+          </label>
+        </div>
+      )}
+
+      {/* M-Pesa Payment Modal */}
+      {showMpesaModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="max-w-md w-full">
+            <MpesaPayment
+              amount={totalAmount}
+              rentalId={rentalId}
+              customerPhone={customerPhone}
+              customerName={customerName}
+              onSuccess={handleMpesaSuccess}
+              onError={handleMpesaError}
+              onCancel={handleMpesaCancel}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Navigation Buttons */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200">

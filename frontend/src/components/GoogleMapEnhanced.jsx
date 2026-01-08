@@ -77,7 +77,6 @@ const GoogleMap = ({
     const checkGoogleMaps = () => {
       if (window.google && window.google.maps) {
         setIsGoogleMapsLoaded(true);
-        initializeMap();
       } else {
         loadGoogleMapsAPI();
       }
@@ -86,39 +85,99 @@ const GoogleMap = ({
     checkGoogleMaps();
   }, []);
 
+  // Initialize map when Google Maps is loaded and component is mounted
+  useEffect(() => {
+    if (isGoogleMapsLoaded && !map && !isLoaded) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        if (mapRef.current) {
+          console.log('✅ Both Google Maps and ref ready, initializing...');
+          initializeMap();
+        } else {
+          console.warn('⚠️ Ref still not ready, retrying...');
+          // Mark as loaded anyway to render the map div
+          setIsLoaded(true);
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isGoogleMapsLoaded, map, isLoaded]);
+
+  // Retry initialization if loaded but map not created yet
+  useEffect(() => {
+    if (isLoaded && isGoogleMapsLoaded && !map && mapRef.current) {
+      console.log('🔄 Retrying map initialization...');
+      initializeMap();
+    }
+  }, [isLoaded, isGoogleMapsLoaded, map]);
+
   // Load Google Maps API dynamically
   const loadGoogleMapsAPI = () => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
+    console.log('🔑 Google Maps API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'Not found');
+    
     if (!apiKey || apiKey === 'your_google_maps_api_key_here') {
-      console.log('🗺️ Google Maps API key not configured, using demo mode');
+      console.error('❌ Google Maps API key not configured in .env file');
+      console.log('💡 Add VITE_GOOGLE_MAPS_API_KEY to frontend/.env and restart dev server');
       setIsLoaded(true);
       return;
     }
 
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        setIsGoogleMapsLoaded(true);
-        initializeMap();
-      };
-      script.onerror = () => {
-        console.error('❌ Failed to load Google Maps API');
-        setIsLoaded(true);
-      };
-      document.head.appendChild(script);
+    // Check if Google Maps is already fully loaded
+    if (window.google && window.google.maps) {
+      console.log('✅ Google Maps already loaded');
+      setIsGoogleMapsLoaded(true);
+      return;
     }
+
+    // Check if script is already being loaded
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+      console.log('⏳ Google Maps script already loading, waiting...');
+      existingScript.addEventListener('load', () => {
+        console.log('✅ Google Maps API loaded successfully');
+        setIsGoogleMapsLoaded(true);
+      });
+      return;
+    }
+
+    // Load the Google Maps script
+    console.log('📥 Loading Google Maps API...');
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      console.log('✅ Google Maps API loaded successfully');
+      setIsGoogleMapsLoaded(true);
+    };
+    script.onerror = (error) => {
+      console.error('❌ Failed to load Google Maps API. Check if:', error);
+      console.error('   1. API key is valid');
+      console.error('   2. Maps JavaScript API is enabled in Google Cloud Console');
+      console.error('   3. Billing is enabled for your Google Cloud project');
+      setIsLoaded(true);
+    };
+    document.head.appendChild(script);
   };
 
   // Initialize Google Maps
   const initializeMap = async () => {
-    if (!mapRef.current || !window.google) {
+    if (!mapRef.current) {
+      console.warn('⚠️ Map ref not ready');
       setIsLoaded(true);
       return;
     }
+
+    if (!window.google || !window.google.maps) {
+      console.error('❌ Google Maps API not loaded properly. window.google:', window.google);
+      setIsLoaded(true);
+      return;
+    }
+
+    console.log('🎨 Initializing map with container:', mapRef.current);
 
     try {
       const mapInstance = new window.google.maps.Map(mapRef.current, {
@@ -171,6 +230,13 @@ const GoogleMap = ({
       });
       directionsRendererInstance.setMap(mapInstance);
       setDirectionsRenderer(directionsRendererInstance);
+
+      // Force map to resize and center properly
+      setTimeout(() => {
+        window.google.maps.event.trigger(mapInstance, 'resize');
+        mapInstance.setCenter(initialCenter);
+        console.log('🔄 Map resized and centered');
+      }, 100);
 
       // Add markers for popular Nairobi locations
       addNairobiLocationMarkers(mapInstance);

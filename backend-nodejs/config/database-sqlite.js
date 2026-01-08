@@ -16,7 +16,23 @@ console.log(`🗄️  Connected to SQLite database at: ${dbPath}`);
 
 // Create tables if they don't exist
 const createTables = (db = sqliteInstance) => {
-  // Users table
+  // Pending users table (for email verification before account creation)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pending_users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      phone TEXT,
+      role TEXT DEFAULT 'customer' CHECK(role IN ('customer', 'admin', 'host')),
+      verification_token TEXT NOT NULL,
+      token_expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Users table with account_status and signup_method
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,6 +46,9 @@ const createTables = (db = sqliteInstance) => {
       avatar_url TEXT,
       is_verified BOOLEAN DEFAULT FALSE,
       profile_completed BOOLEAN DEFAULT FALSE,
+      account_status TEXT DEFAULT 'complete' CHECK(account_status IN ('pending_verification', 'incomplete', 'complete')),
+      signup_method TEXT DEFAULT 'email' CHECK(signup_method IN ('email', 'google')),
+      google_id TEXT,
       last_login_at DATETIME,
       failed_login_attempts INTEGER DEFAULT 0,
       locked_until DATETIME,
@@ -39,6 +58,17 @@ const createTables = (db = sqliteInstance) => {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Add new columns to existing users table if they don't exist
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN account_status TEXT DEFAULT 'complete' CHECK(account_status IN ('pending_verification', 'incomplete', 'complete'))`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN signup_method TEXT DEFAULT 'email' CHECK(signup_method IN ('email', 'google'))`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN google_id TEXT`);
+  } catch (e) { /* column may already exist */ }
 
   // Cars table with enhanced fields for business features
   db.exec(`
@@ -54,6 +84,8 @@ const createTables = (db = sqliteInstance) => {
       color TEXT,
       license_plate TEXT UNIQUE NOT NULL,
       price_per_day DECIMAL(10,2) NOT NULL,
+      price_per_hour DECIMAL(10,2),
+      overtime_penalty_percent DECIMAL(5,2) DEFAULT 10.00,
       location TEXT NOT NULL,
       description TEXT,
       features TEXT,
@@ -71,7 +103,15 @@ const createTables = (db = sqliteInstance) => {
     )
   `);
 
-  // Enhanced bookings table
+  // Add hourly pricing columns to existing cars table
+  try {
+    db.exec(`ALTER TABLE cars ADD COLUMN price_per_hour DECIMAL(10,2)`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE cars ADD COLUMN overtime_penalty_percent DECIMAL(5,2) DEFAULT 10.00`);
+  } catch (e) { /* column may already exist */ }
+
+  // Enhanced bookings table with hourly support
   db.exec(`
     CREATE TABLE IF NOT EXISTS bookings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,14 +119,22 @@ const createTables = (db = sqliteInstance) => {
       car_id INTEGER NOT NULL,
       start_date DATE NOT NULL,
       end_date DATE NOT NULL,
+      start_time TEXT,
+      end_time TEXT,
+      rental_type TEXT DEFAULT 'daily' CHECK(rental_type IN ('hourly', 'daily')),
+      duration_hours INTEGER,
+      duration_days INTEGER,
       total_price DECIMAL(10,2) NOT NULL,
       base_price DECIMAL(10,2) NOT NULL,
+      overtime_charge DECIMAL(10,2) DEFAULT 0.00,
       dynamic_pricing_multiplier DECIMAL(3,2) DEFAULT 1.00,
       platform_fee DECIMAL(10,2) DEFAULT 0.00,
       insurance_fee DECIMAL(10,2) DEFAULT 0.00,
       status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'confirmed', 'active', 'completed', 'cancelled')),
       payment_status TEXT DEFAULT 'pending' CHECK(payment_status IN ('pending', 'paid', 'refunded')),
       payment_method TEXT,
+      actual_return_date DATE,
+      actual_return_time TEXT,
       cancellation_reason TEXT,
       admin_notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -95,6 +143,32 @@ const createTables = (db = sqliteInstance) => {
       FOREIGN KEY (car_id) REFERENCES cars(id)
     )
   `);
+
+  // Add hourly booking columns to existing bookings table
+  try {
+    db.exec(`ALTER TABLE bookings ADD COLUMN start_time TEXT`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE bookings ADD COLUMN end_time TEXT`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE bookings ADD COLUMN rental_type TEXT DEFAULT 'daily'`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE bookings ADD COLUMN duration_hours INTEGER`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE bookings ADD COLUMN duration_days INTEGER`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE bookings ADD COLUMN overtime_charge DECIMAL(10,2) DEFAULT 0.00`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE bookings ADD COLUMN actual_return_date DATE`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE bookings ADD COLUMN actual_return_time TEXT`);
+  } catch (e) { /* column may already exist */ }
 
   // Car availability blocks (for maintenance, personal use, etc.)
   db.exec(`
@@ -156,6 +230,10 @@ const createTables = (db = sqliteInstance) => {
       customer_id INTEGER NOT NULL,
       host_id INTEGER NOT NULL,
       rating INTEGER CHECK(rating >= 1 AND rating <= 5),
+      rating_vehicle INTEGER CHECK(rating_vehicle >= 1 AND rating_vehicle <= 5),
+      rating_cleanliness INTEGER CHECK(rating_cleanliness >= 1 AND rating_cleanliness <= 5),
+      rating_communication INTEGER CHECK(rating_communication >= 1 AND rating_communication <= 5),
+      rating_value INTEGER CHECK(rating_value >= 1 AND rating_value <= 5),
       comment TEXT,
       photos TEXT, -- JSON array of photo URLs
       admin_moderated BOOLEAN DEFAULT FALSE,
@@ -168,6 +246,20 @@ const createTables = (db = sqliteInstance) => {
       FOREIGN KEY (host_id) REFERENCES users(id)
     )
   `);
+
+  // Add missing columns to reviews table if they don't exist
+  try {
+    db.exec(`ALTER TABLE reviews ADD COLUMN rating_vehicle INTEGER CHECK(rating_vehicle >= 1 AND rating_vehicle <= 5)`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE reviews ADD COLUMN rating_cleanliness INTEGER CHECK(rating_cleanliness >= 1 AND rating_cleanliness <= 5)`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE reviews ADD COLUMN rating_communication INTEGER CHECK(rating_communication >= 1 AND rating_communication <= 5)`);
+  } catch (e) { /* column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE reviews ADD COLUMN rating_value INTEGER CHECK(rating_value >= 1 AND rating_value <= 5)`);
+  } catch (e) { /* column may already exist */ }
 
   // Messages table (enhanced for admin support)
   db.exec(`
@@ -520,6 +612,52 @@ const createTables = (db = sqliteInstance) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `);
+
+  // Rentals table (for car rentals/bookings with payment tracking)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS rentals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      car_id INTEGER NOT NULL,
+      renter_id INTEGER NOT NULL,
+      pickup_date DATE NOT NULL,
+      return_date DATE NOT NULL,
+      pickup_location TEXT,
+      dropoff_location TEXT,
+      total_amount DECIMAL(10,2) NOT NULL,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'confirmed', 'active', 'completed', 'cancelled')),
+      payment_status TEXT DEFAULT 'pending' CHECK(payment_status IN ('pending', 'paid', 'failed', 'refunded')),
+      payment_method TEXT DEFAULT 'cash',
+      stripe_session_id TEXT,
+      mpesa_checkout_id TEXT,
+      mpesa_reference TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (car_id) REFERENCES cars(id),
+      FOREIGN KEY (renter_id) REFERENCES users(id)
+    )
+  `);
+
+  // M-Pesa payments table (for IntaSend integration)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS mpesa_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      rental_id INTEGER,
+      invoice_id TEXT UNIQUE NOT NULL,
+      checkout_request_id TEXT,
+      phone_number TEXT NOT NULL,
+      amount DECIMAL(10,2) NOT NULL,
+      currency TEXT DEFAULT 'KES',
+      status TEXT DEFAULT 'pending',
+      mpesa_reference TEXT,
+      failed_reason TEXT,
+      webhook_data TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (rental_id) REFERENCES rentals(id)
     )
   `);
 

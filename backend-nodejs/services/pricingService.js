@@ -2,12 +2,236 @@ import { query } from '../config/database.js';
 
 /**
  * Dynamic Pricing Engine for Car Rental System
- * Handles time-based, demand-based, distance-based, and seasonal pricing
+ * Handles time-based, demand-based, distance-based, seasonal, hourly, and overtime pricing
  */
 
 export class PricingService {
+  
   /**
-   * Calculate dynamic price for a car rental
+   * Calculate hourly rate from daily rate
+   * Formula: Hourly rate is slightly higher so 24 hours costs more than 1 day
+   * Example: Daily rate 280 → Hourly ~15 (24 hrs = 360, giving premium for flexibility)
+   * @param {number} dailyRate - The daily rental rate
+   * @returns {number} Calculated hourly rate
+   */
+  static calculateHourlyRate(dailyRate) {
+    // Hourly rate = (Daily rate * 1.25) / 24
+    // This means 24 hours hourly = ~25% more than daily rate
+    // For 280/day: hourly = (280 * 1.25) / 24 ≈ 14.58 → 15 KES
+    const hourlyRate = Math.ceil((dailyRate * 1.25) / 24);
+    return hourlyRate;
+  }
+
+  /**
+   * Calculate overtime charges
+   * @param {number} baseRate - The hourly or daily rate
+   * @param {number} overtimeUnits - Number of extra hours or days
+   * @param {string} rentalType - 'hourly' or 'daily'
+   * @param {number} penaltyPercent - Overtime penalty percentage (5-10%)
+   * @returns {Object} Overtime breakdown
+   */
+  static calculateOvertimeCharge(baseRate, overtimeUnits, rentalType, penaltyPercent = 10) {
+    // Clamp penalty between 5% and 10%
+    const clampedPenalty = Math.max(5, Math.min(10, penaltyPercent));
+    
+    // Base overtime = rate × units
+    const baseOvertimeCharge = baseRate * overtimeUnits;
+    
+    // Penalty = base overtime × penalty%
+    const penaltyAmount = baseOvertimeCharge * (clampedPenalty / 100);
+    
+    // Total overtime = base + penalty
+    const totalOvertimeCharge = baseOvertimeCharge + penaltyAmount;
+    
+    return {
+      overtimeUnits,
+      unitType: rentalType === 'hourly' ? 'hours' : 'days',
+      baseRate,
+      baseOvertimeCharge: Math.round(baseOvertimeCharge * 100) / 100,
+      penaltyPercent: clampedPenalty,
+      penaltyAmount: Math.round(penaltyAmount * 100) / 100,
+      totalOvertimeCharge: Math.round(totalOvertimeCharge * 100) / 100
+    };
+  }
+
+  /**
+   * Calculate price with hourly/daily option
+   * @param {number} carId - Car ID
+   * @param {string} startDate - Start date (YYYY-MM-DD)
+   * @param {string} endDate - End date (YYYY-MM-DD)  
+   * @param {string} startTime - Start time (HH:MM)
+   * @param {string} endTime - End time (HH:MM)
+   * @param {string} rentalType - 'hourly' or 'daily'
+   * @param {string} pickupLocation - Pickup location
+   * @param {string} dropoffLocation - Dropoff location
+   * @returns {Object} Pricing breakdown
+   */
+  static async calculateFlexiblePrice(carId, startDate, endDate, startTime = '09:00', endTime = '09:00', rentalType = 'daily', pickupLocation = null, dropoffLocation = null) {
+    try {
+      // Get car details including hourly pricing
+      const carResult = await query(
+        'SELECT price_per_day, price_per_hour, overtime_penalty_percent FROM cars WHERE id = ?', 
+        [carId]
+      );
+      
+      if (carResult.rows.length === 0) {
+        throw new Error('Car not found');
+      }
+
+      const car = carResult.rows[0];
+      const dailyRate = parseFloat(car.price_per_day);
+      
+      // Calculate or use stored hourly rate
+      const hourlyRate = car.price_per_hour 
+        ? parseFloat(car.price_per_hour) 
+        : this.calculateHourlyRate(dailyRate);
+      
+      const overtimePenalty = car.overtime_penalty_percent || 10;
+
+      // Calculate duration
+      const start = new Date(`${startDate}T${startTime}`);
+      const end = new Date(`${endDate}T${endTime}`);
+      const diffMs = end - start;
+      const totalHours = Math.ceil(diffMs / (1000 * 60 * 60));
+      const totalDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      let basePrice, duration, rate, unitLabel;
+
+      if (rentalType === 'hourly') {
+        // Hourly pricing
+        rate = hourlyRate;
+        duration = totalHours;
+        unitLabel = 'hour';
+        basePrice = rate * duration;
+      } else {
+        // Daily pricing
+        rate = dailyRate;
+        duration = totalDays || 1; // Minimum 1 day
+        unitLabel = 'day';
+        basePrice = rate * duration;
+      }
+
+      // Platform fee (2%)
+      const platformFee = basePrice * 0.02;
+      
+      // Insurance fee (10%) - DISABLED FOR NOW
+      // const insuranceFee = basePrice * 0.10;
+      const insuranceFee = 0;
+
+      // Total price
+      const totalPrice = basePrice + platformFee;
+
+      return {
+        success: true,
+        rentalType,
+        duration,
+        unitLabel,
+        rates: {
+          perHour: hourlyRate,
+          perDay: dailyRate,
+          activeRate: rate
+        },
+        pricing: {
+          basePrice: Math.round(basePrice * 100) / 100,
+          platformFee: Math.round(platformFee * 100) / 100,
+          // insuranceFee: Math.round(insuranceFee * 100) / 100, // DISABLED
+          totalPrice: Math.round(totalPrice * 100) / 100
+        },
+        overtime: {
+          penaltyPercent: overtimePenalty,
+          perExtraHour: Math.round((hourlyRate * (1 + overtimePenalty / 100)) * 100) / 100,
+          perExtraDay: Math.round((dailyRate * (1 + overtimePenalty / 100)) * 100) / 100
+        },
+        breakdown: {
+          [`${duration} ${unitLabel}${duration > 1 ? 's' : ''} × KES ${rate}`]: `KES ${Math.round(basePrice)}`,
+          'Platform Fee (2%)': `KES ${Math.round(platformFee)}`,
+          // 'Insurance (10%)': `KES ${Math.round(insuranceFee)}`, // DISABLED
+          'Total': `KES ${Math.round(totalPrice)}`
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ Flexible pricing calculation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate final price including overtime charges (for when vehicle is returned)
+   * @param {number} bookingId - Booking ID
+   * @param {string} actualReturnDate - Actual return date
+   * @param {string} actualReturnTime - Actual return time
+   * @returns {Object} Final pricing with overtime
+   */
+  static async calculateFinalPriceWithOvertime(bookingId, actualReturnDate, actualReturnTime) {
+    try {
+      // Get booking details
+      const bookingResult = await query(`
+        SELECT b.*, c.price_per_day, c.price_per_hour, c.overtime_penalty_percent
+        FROM bookings b
+        JOIN cars c ON b.car_id = c.id
+        WHERE b.id = ?
+      `, [bookingId]);
+
+      if (bookingResult.rows.length === 0) {
+        throw new Error('Booking not found');
+      }
+
+      const booking = bookingResult.rows[0];
+      const rentalType = booking.rental_type || 'daily';
+      
+      const dailyRate = parseFloat(booking.price_per_day);
+      const hourlyRate = booking.price_per_hour 
+        ? parseFloat(booking.price_per_hour) 
+        : this.calculateHourlyRate(dailyRate);
+      const penaltyPercent = booking.overtime_penalty_percent || 10;
+
+      // Calculate expected return time
+      const expectedReturn = new Date(`${booking.end_date}T${booking.end_time || '18:00'}`);
+      const actualReturn = new Date(`${actualReturnDate}T${actualReturnTime}`);
+
+      // Calculate overtime
+      const overtimeMs = actualReturn - expectedReturn;
+      let overtimeCharge = 0;
+      let overtimeDetails = null;
+
+      if (overtimeMs > 0) {
+        if (rentalType === 'hourly') {
+          // Calculate extra hours
+          const extraHours = Math.ceil(overtimeMs / (1000 * 60 * 60));
+          overtimeDetails = this.calculateOvertimeCharge(hourlyRate, extraHours, 'hourly', penaltyPercent);
+          overtimeCharge = overtimeDetails.totalOvertimeCharge;
+        } else {
+          // Calculate extra days (any overtime counts as full day)
+          const extraDays = Math.ceil(overtimeMs / (1000 * 60 * 60 * 24));
+          overtimeDetails = this.calculateOvertimeCharge(dailyRate, extraDays, 'daily', penaltyPercent);
+          overtimeCharge = overtimeDetails.totalOvertimeCharge;
+        }
+      }
+
+      const originalTotal = parseFloat(booking.total_price);
+      const newTotal = originalTotal + overtimeCharge;
+
+      return {
+        success: true,
+        bookingId,
+        originalTotal: Math.round(originalTotal * 100) / 100,
+        overtimeCharge: Math.round(overtimeCharge * 100) / 100,
+        newTotal: Math.round(newTotal * 100) / 100,
+        overtime: overtimeDetails,
+        expectedReturn: expectedReturn.toISOString(),
+        actualReturn: actualReturn.toISOString(),
+        wasLate: overtimeMs > 0
+      };
+
+    } catch (error) {
+      console.error('❌ Overtime calculation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate dynamic price for a car rental (original method - enhanced)
    * @param {number} carId - Car ID
    * @param {string} startDate - Rental start date (YYYY-MM-DD)
    * @param {string} endDate - Rental end date (YYYY-MM-DD)
@@ -18,12 +242,16 @@ export class PricingService {
   static async calculateDynamicPrice(carId, startDate, endDate, pickupLocation = null, dropoffLocation = null) {
     try {
       // Get base car price
-      const carResult = await query('SELECT price_per_day FROM cars WHERE id = ?', [carId]);
+      const carResult = await query('SELECT price_per_day, price_per_hour, overtime_penalty_percent FROM cars WHERE id = ?', [carId]);
       if (carResult.rows.length === 0) {
         throw new Error('Car not found');
       }
 
-      const basePricePerDay = parseFloat(carResult.rows[0].price_per_day);
+      const car = carResult.rows[0];
+      const basePricePerDay = parseFloat(car.price_per_day);
+      const hourlyRate = car.price_per_hour 
+        ? parseFloat(car.price_per_hour) 
+        : this.calculateHourlyRate(basePricePerDay);
 
       // Calculate rental duration
       const start = new Date(startDate);
@@ -96,14 +324,15 @@ export class PricingService {
         }
       }
 
-      // Platform fee (5% of base price)
-      const platformFee = basePrice * 0.05;
+      // Platform fee (2% of base price)
+      const platformFee = basePrice * 0.02;
 
-      // Insurance fee (10% of total price)
+      // Insurance fee (10% of total price) - DISABLED FOR NOW
       const adjustedPrice = basePrice * totalMultiplier;
-      const insuranceFee = adjustedPrice * 0.10;
+      // const insuranceFee = adjustedPrice * 0.10;
+      const insuranceFee = 0;
 
-      const totalPrice = adjustedPrice + platformFee + insuranceFee;
+      const totalPrice = adjustedPrice + platformFee;
 
       return {
         basePrice: basePrice.toFixed(2),
@@ -114,12 +343,18 @@ export class PricingService {
         dynamicMultiplier: totalMultiplier.toFixed(2),
         durationInDays,
         appliedRules,
+        rates: {
+          perDay: basePricePerDay,
+          perHour: hourlyRate,
+          overtimePenaltyPercent: car.overtime_penalty_percent || 10
+        },
         breakdown: {
           basePricePerDay: basePricePerDay.toFixed(2),
+          basePricePerHour: hourlyRate.toFixed(2),
           totalDays: durationInDays,
           multiplierApplied: totalMultiplier.toFixed(2),
-          platformFeeRate: '5%',
-          insuranceFeeRate: '10%'
+          platformFeeRate: '2%'
+          // insuranceFeeRate: '10%' // DISABLED
         }
       };
 
