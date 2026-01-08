@@ -1,16 +1,13 @@
-const CACHE_NAME = 'driveKenya-v1.0.0';
-const STATIC_CACHE_NAME = 'driveKenya-static-v1.0.0';
-const DYNAMIC_CACHE_NAME = 'driveKenya-dynamic-v1.0.0';
+const CACHE_NAME = 'driveKenya-v1.0.2';
+const STATIC_CACHE_NAME = 'driveKenya-static-v1.0.2';
+const DYNAMIC_CACHE_NAME = 'driveKenya-dynamic-v1.0.2';
 
-// Files to cache immediately (App Shell)
+// In development, use network-first for everything
+const IS_DEVELOPMENT = self.location.hostname === 'localhost';
+
+// Files to cache immediately (App Shell) - minimal for dev
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/src/main.tsx',
-  '/src/App.tsx',
-  '/src/index.css',
-  '/offline.html', // Offline fallback page
-  // Fonts and critical CSS will be cached dynamically
+  '/offline.html', // Only cache offline fallback
 ];
 
 // API endpoints to cache
@@ -59,10 +56,10 @@ self.addEventListener('activate', (event) => {
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              // Delete old caches
-              return cacheName !== STATIC_CACHE_NAME &&
-                cacheName !== DYNAMIC_CACHE_NAME &&
-                cacheName.startsWith('driveKenya-');
+              // Delete ALL old driveKenya caches
+              return cacheName.startsWith('driveKenya-') && 
+                     cacheName !== STATIC_CACHE_NAME &&
+                     cacheName !== DYNAMIC_CACHE_NAME;
             })
             .map((cacheName) => {
               console.log('🗑️ Service Worker: Deleting old cache', cacheName);
@@ -92,7 +89,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle different types of requests
+  // In development (localhost), ALWAYS use network-first for everything
+  if (IS_DEVELOPMENT) {
+    event.respondWith(
+      fetch(request)
+        .catch(() => caches.match(request))
+        .catch(() => caches.match('/offline.html'))
+    );
+    return;
+  }
+
+  // Handle different types of requests (production only)
   if (url.pathname.startsWith('/api/')) {
     // API requests
     event.respondWith(handleApiRequest(request));
